@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef, createContext, useContext } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-import { investor, projects, myProjects, allDocuments, allDistributions, generalDocuments, messages, fmt, fmtCurrency } from "./data.js";
+import { login as apiLogin, logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, fmt, fmtCurrency } from "./api.js";
 
 // ─── THEME ───────────────────────────────────────────────
 const serif = "'Cormorant Garamond', Georgia, serif";
@@ -179,7 +179,7 @@ function ProgressBar({ value, color }) {
 }
 
 // ─── PAGE: OVERVIEW ──────────────────────────────────────
-function Overview({ onNavigate }) {
+function Overview({ onNavigate, investor, projects, myProjects, allDistributions, msgs }) {
   const { bg, surface, line, t1, t2, t3, hover } = useTheme();
   return (
     <>
@@ -280,7 +280,7 @@ function Overview({ onNavigate }) {
       {/* Recent messages preview */}
       <SectionHeader title="Recent Messages" right={<span style={{ color: red, cursor: "pointer" }} onClick={() => onNavigate("messages")}>All messages →</span>} />
       <div style={{ border: `1px solid ${line}`, borderRadius: 2, overflow: "hidden" }}>
-        {messages.slice(0, 3).map((m, i) => (
+        {msgs.slice(0, 3).map((m, i) => (
           <div key={m.id} style={{ display: "flex", gap: 16, padding: "16px 20px", borderBottom: i < 2 ? `1px solid ${line}` : "none", cursor: "pointer", transition: "background .12s" }}
             onMouseEnter={e => e.currentTarget.style.background = hover}
             onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
@@ -301,7 +301,7 @@ function Overview({ onNavigate }) {
 }
 
 // ─── PAGE: PORTFOLIO ─────────────────────────────────────
-function Portfolio() {
+function Portfolio({ myProjects }) {
   const { bg, surface, line, t1, t2, t3, hover } = useTheme();
   const [selected, setSelected] = useState(null);
   const project = selected !== null ? myProjects[selected] : null;
@@ -391,7 +391,7 @@ function Portfolio() {
 }
 
 // ─── PAGE: CAP TABLE ─────────────────────────────────────
-function CapTablePage() {
+function CapTablePage({ myProjects, investor }) {
   const { bg, surface, line, t1, t2, t3 } = useTheme();
   const [selectedIdx, setSelectedIdx] = useState(0);
   const project = myProjects[selectedIdx];
@@ -480,7 +480,7 @@ function CapTablePage() {
 }
 
 // ─── PAGE: DOCUMENTS ─────────────────────────────────────
-function DocumentsPage({ toast }) {
+function DocumentsPage({ toast, allDocuments, myProjects, investor }) {
   const { bg, surface, line, t1, t2, t3, hover } = useTheme();
   const [filter, setFilter] = useState("All");
   const [projectFilter, setProjectFilter] = useState("All");
@@ -630,7 +630,7 @@ function DocumentsPage({ toast }) {
 }
 
 // ─── PAGE: DISTRIBUTIONS ─────────────────────────────────
-function DistributionsPage() {
+function DistributionsPage({ allDistributions, myProjects }) {
   const { bg, surface, line, t1, t2, t3 } = useTheme();
   const total = allDistributions.reduce((a, d) => a + d.amount, 0);
   return (
@@ -670,7 +670,7 @@ function DistributionsPage() {
 }
 
 // ─── PAGE: MESSAGES ──────────────────────────────────────
-function MessagesPage({ toast, msgs, setMsgs }) {
+function MessagesPage({ toast, msgs, setMsgs, investor }) {
   const { bg, surface, line, t1, t2, t3, hover } = useTheme();
   const [selected, setSelected] = useState(null);
   const [reply, setReply] = useState("");
@@ -765,19 +765,17 @@ function LoginPage({ onLogin }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     setError("");
     setLoading(true);
-    setTimeout(() => {
-      if (email === "j.chen@pacificventures.ca" && password === "northstar2025") {
-        sessionStorage.setItem("northstar_auth", "true");
-        onLogin();
-      } else {
-        setError("Invalid email or password");
-        setLoading(false);
-      }
-    }, 600);
+    try {
+      const user = await apiLogin(email, password);
+      onLogin(user);
+    } catch (err) {
+      setError(err.message || "Invalid email or password");
+      setLoading(false);
+    }
   }
 
   // Northstar's actual project images
@@ -837,9 +835,9 @@ function LoginPage({ onLogin }) {
             {/* Stats */}
             <div style={{ display: "flex", gap: 48, marginBottom: 48, paddingBottom: 40, borderBottom: "1px solid #ECEAE5" }}>
               {[
-                { value: `$${fmtCurrency(projects.reduce((s, p) => s + p.totalRaise, 0)).slice(1)}`, label: "Total Development" },
-                { value: projects.length, label: "Projects" },
-                { value: `${projects.reduce((s, p) => s + (p.units || 0), 0)}+`, label: "Units" },
+                { value: "$22.3M", label: "Total Development" },
+                { value: "4", label: "Projects" },
+                { value: "212+", label: "Units" },
               ].map((s, i) => (
                 <div key={i} style={{ animation: `slideUp ${.8 + i * .15}s ease` }}>
                   <div style={{ fontSize: 30, fontWeight: 300, color: darkText, marginBottom: 4 }}>{s.value}</div>
@@ -937,12 +935,47 @@ function LoginPage({ onLogin }) {
 
 // ─── APP ─────────────────────────────────────────────────
 export default function App() {
-  const [authed, setAuthed] = useState(() => sessionStorage.getItem("northstar_auth") === "true");
+  const [authed, setAuthed] = useState(checkAuthed);
+  const [user, setUser] = useState(null);
+  const [appData, setAppData] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [themeMode, setThemeMode] = useState(() => localStorage.getItem("northstar_theme") || "light");
   const [view, setView] = useState("overview");
-  const [msgs, setMsgs] = useState(messages.map(m => ({ ...m })));
+  const [msgs, setMsgs] = useState([]);
   const toast = useToast();
   const th = themes[themeMode];
+
+  // Load data after auth
+  async function loadData(u) {
+    try {
+      setLoading(true);
+      const [myProjects, docs, dists, msgList, allProjects] = await Promise.all([
+        fetchInvestorProjects(u.id),
+        fetchDocuments(u.id),
+        fetchDistributions(u.id),
+        fetchMessages(),
+        fetchProjects(),
+      ]);
+      setAppData({ investor: u, projects: allProjects, myProjects, allDocuments: docs, allDistributions: dists });
+      setMsgs(msgList.map(m => ({ ...m })));
+    } catch (err) {
+      console.error("Failed to load data:", err);
+      apiLogout();
+      setAuthed(false);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // On mount, if token exists, fetch user + data
+  useEffect(() => {
+    if (authed) {
+      getMe().then(u => { setUser(u); return loadData(u); }).catch(() => { setAuthed(false); setLoading(false); });
+    } else {
+      setLoading(false);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function toggleTheme() {
     const next = themeMode === "dark" ? "light" : "dark";
@@ -951,24 +984,38 @@ export default function App() {
   }
 
   function handleLogout() {
-    sessionStorage.removeItem("northstar_auth");
+    apiLogout();
     setAuthed(false);
+    setUser(null);
+    setAppData(null);
     setView("overview");
   }
 
-  if (!authed) return (
+  async function handleLogin(u) {
+    setUser(u);
+    setAuthed(true);
+    await loadData(u);
+  }
+
+  if (!authed || !appData) return (
     <ThemeContext.Provider value={th}>
-      <LoginPage onLogin={() => setAuthed(true)} />
+      {loading ? (
+        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: th.bg, fontFamily: sans, color: th.t2 }}>Loading...</div>
+      ) : (
+        <LoginPage onLogin={handleLogin} />
+      )}
     </ThemeContext.Provider>
   );
 
+  const { investor, projects, myProjects, allDocuments, allDistributions } = appData;
+
   const pages = {
-    overview: <Overview onNavigate={setView} />,
-    portfolio: <Portfolio />,
-    captable: <CapTablePage />,
-    documents: <DocumentsPage toast={toast} />,
-    distributions: <DistributionsPage />,
-    messages: <MessagesPage toast={toast} msgs={msgs} setMsgs={setMsgs} />,
+    overview: <Overview onNavigate={setView} investor={investor} projects={projects} myProjects={myProjects} allDistributions={allDistributions} msgs={msgs} />,
+    portfolio: <Portfolio myProjects={myProjects} />,
+    captable: <CapTablePage myProjects={myProjects} investor={investor} />,
+    documents: <DocumentsPage toast={toast} allDocuments={allDocuments} myProjects={myProjects} investor={investor} />,
+    distributions: <DistributionsPage allDistributions={allDistributions} myProjects={myProjects} />,
+    messages: <MessagesPage toast={toast} msgs={msgs} setMsgs={setMsgs} investor={investor} />,
   };
 
   const navItems = [
