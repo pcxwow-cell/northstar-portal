@@ -72,6 +72,15 @@ router.get("/:id/download", async (req, res, next) => {
       if (!hasAccess) return res.status(403).json({ error: "Access denied" });
     }
 
+    // Track download in DocumentAssignment
+    if (req.user.role === "INVESTOR") {
+      await prisma.documentAssignment.upsert({
+        where: { documentId_userId: { documentId: doc.id, userId: req.user.id } },
+        create: { documentId: doc.id, userId: req.user.id, downloadedAt: new Date(), viewedAt: new Date() },
+        update: { downloadedAt: new Date(), ...(!doc.viewedAt ? { viewedAt: new Date() } : {}) },
+      });
+    }
+
     // If doc has a storage key, serve from storage adapter
     if (doc.storageKey) {
       const stream = await storage.getStream(doc.storageKey);

@@ -303,6 +303,99 @@ router.post("/investors/:id/assign-project", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ─── DOCUMENT MANAGEMENT ───
+router.get("/documents", async (req, res, next) => {
+  try {
+    const { projectId, category, search } = req.query;
+    const where = {};
+    if (projectId) where.projectId = parseInt(projectId);
+    if (category) where.category = category;
+    if (search) where.name = { contains: search };
+
+    const docs = await prisma.document.findMany({
+      where,
+      include: {
+        project: { select: { name: true } },
+        assignments: { include: { user: { select: { id: true, name: true } } } },
+      },
+      orderBy: { id: "desc" },
+    });
+
+    // For project-scoped docs, count investors in that project
+    const projectInvestorCounts = {};
+    for (const d of docs) {
+      if (d.projectId && !projectInvestorCounts[d.projectId]) {
+        projectInvestorCounts[d.projectId] = await prisma.investorProject.count({ where: { projectId: d.projectId } });
+      }
+    }
+
+    res.json(docs.map(d => {
+      const totalInvestors = d.projectId ? (projectInvestorCounts[d.projectId] || 0) : (d.assignments.length || 0);
+      const viewed = d.assignments.filter(a => a.viewedAt).length;
+      const downloaded = d.assignments.filter(a => a.downloadedAt).length;
+      return {
+        id: d.id, name: d.name, category: d.category, date: d.date, size: d.size,
+        status: d.status, project: d.project?.name || "General", projectId: d.projectId,
+        storageKey: d.storageKey,
+        totalInvestors, viewed, downloaded,
+        assignments: d.assignments.map(a => ({
+          userId: a.user.id, userName: a.user.name,
+          viewedAt: a.viewedAt, downloadedAt: a.downloadedAt, acknowledgedAt: a.acknowledgedAt,
+        })),
+      };
+    }));
+  } catch (err) { next(err); }
+});
+
+// Document detail with full access audit
+router.get("/documents/:id", async (req, res, next) => {
+  try {
+    const doc = await prisma.document.findUnique({
+      where: { id: parseInt(req.params.id) },
+      include: {
+        project: { select: { id: true, name: true } },
+        assignments: { include: { user: { select: { id: true, name: true, email: true } } } },
+      },
+    });
+    if (!doc) return res.status(404).json({ error: "Document not found" });
+
+    // If project-scoped, also show all investors in the project
+    let projectInvestors = [];
+    if (doc.projectId) {
+      const ips = await prisma.investorProject.findMany({
+        where: { projectId: doc.projectId },
+        include: { user: { select: { id: true, name: true, email: true } } },
+      });
+      projectInvestors = ips.map(ip => {
+        const assignment = doc.assignments.find(a => a.userId === ip.userId);
+        return {
+          id: ip.user.id, name: ip.user.name, email: ip.user.email,
+          hasAccess: true,
+          viewedAt: assignment?.viewedAt || null,
+          downloadedAt: assignment?.downloadedAt || null,
+          acknowledgedAt: assignment?.acknowledgedAt || null,
+        };
+      });
+    }
+
+    // Individually assigned investors (not via project)
+    const directAssignments = doc.assignments
+      .filter(a => !projectInvestors.some(pi => pi.id === a.userId))
+      .map(a => ({
+        id: a.user.id, name: a.user.name, email: a.user.email,
+        hasAccess: true, directAssignment: true,
+        viewedAt: a.viewedAt, downloadedAt: a.downloadedAt, acknowledgedAt: a.acknowledgedAt,
+      }));
+
+    res.json({
+      id: doc.id, name: doc.name, category: doc.category, date: doc.date, size: doc.size,
+      status: doc.status, file: doc.file, storageKey: doc.storageKey,
+      project: doc.project ? { id: doc.project.id, name: doc.project.name } : null,
+      accessList: [...projectInvestors, ...directAssignments],
+    });
+  } catch (err) { next(err); }
+});
+
 // ─── INVESTOR PROFILE (single investor detail) ───
 router.get("/investors/:id/profile", async (req, res, next) => {
   try {

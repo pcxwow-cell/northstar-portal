@@ -1017,13 +1017,17 @@ function LoginPage({ onLogin }) {
                 {loading ? "Signing in..." : "Sign In"}
               </button>
               <div style={{ marginTop: 24, padding: "14px 16px", border: "1px solid #ECEAE5", borderRadius: 4, background: cream }}>
-                <div style={{ fontSize: 9, color: "#AAA", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Demo Credentials</div>
-                <div style={{ fontSize: 11, color: "#999", marginBottom: 4 }}>Investor:</div>
-                <div style={{ fontSize: 12, color: "#666", fontFamily: "monospace" }}>j.chen@pacificventures.ca</div>
-                <div style={{ fontSize: 12, color: "#666", fontFamily: "monospace", marginBottom: 10 }}>northstar2025</div>
-                <div style={{ fontSize: 11, color: "#999", marginBottom: 4 }}>Admin:</div>
-                <div style={{ fontSize: 12, color: "#666", fontFamily: "monospace" }}>admin@northstardevelopment.ca</div>
-                <div style={{ fontSize: 12, color: "#666", fontFamily: "monospace" }}>admin2025</div>
+                <div style={{ fontSize: 9, color: "#AAA", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 10 }}>Quick Demo Login</div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button type="button" onClick={() => { setEmail("j.chen@pacificventures.ca"); setPassword("northstar2025"); setTimeout(() => document.querySelector("form")?.requestSubmit(), 100); }}
+                    style={{ flex: 1, padding: "10px", background: "#fff", border: "1px solid #DDD", borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: darkText, fontWeight: 500 }}>
+                    Investor Demo
+                  </button>
+                  <button type="button" onClick={() => { setEmail("admin@northstardevelopment.ca"); setPassword("admin2025"); setTimeout(() => document.querySelector("form")?.requestSubmit(), 100); }}
+                    style={{ flex: 1, padding: "10px", background: "#fff", border: `1px solid ${red}40`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: red, fontWeight: 500 }}>
+                    Admin Demo
+                  </button>
+                </div>
               </div>
             </form>
             <p style={{ fontSize: 12, color: "#999", textAlign: "center", marginTop: 20 }}>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchDashboard, fetchAdminProjects, updateProject, postUpdate, fetchAdminInvestors, sendMessage, uploadDocument, inviteInvestor, updateInvestor, approveInvestor, deactivateInvestor, resetInvestorPassword, assignInvestorProject, updateInvestorKPI, fetchThreads, fetchThread, createThread, replyToThread, fetchInvestorProfile, fetchGroups, createGroup, updateGroup, deleteGroup, fetchGroupDetail, addGroupMembers, removeGroupMember, fetchStaff, createStaff, updateStaff, fmt, fmtCurrency } from "./api.js";
+import { fetchDashboard, fetchAdminProjects, updateProject, postUpdate, fetchAdminInvestors, sendMessage, uploadDocument, inviteInvestor, updateInvestor, approveInvestor, deactivateInvestor, resetInvestorPassword, assignInvestorProject, updateInvestorKPI, fetchThreads, fetchThread, createThread, replyToThread, fetchInvestorProfile, fetchGroups, createGroup, updateGroup, deleteGroup, fetchGroupDetail, addGroupMembers, removeGroupMember, fetchStaff, createStaff, updateStaff, fetchAdminDocuments, fetchAdminDocumentDetail, fmt, fmtCurrency } from "./api.js";
 
 const sans = "'DM Sans', -apple-system, sans-serif";
 const red = "#EA2028";
@@ -18,7 +18,7 @@ export default function AdminPanel({ user, onLogout }) {
     { id: "dashboard", label: "Dashboard" },
     { id: "projects", label: "Projects" },
     { id: "investors", label: "Investors" },
-    { id: "documents", label: "Upload Docs" },
+    { id: "documents", label: "Documents" },
     { id: "groups", label: "Groups" },
     { id: "staff", label: "Staff" },
     { id: "inbox", label: "Inbox" },
@@ -33,7 +33,7 @@ export default function AdminPanel({ user, onLogout }) {
     investors: profileId
       ? <InvestorProfile investorId={profileId} onBack={() => setProfileId(null)} toast={showToast} />
       : <InvestorManager toast={showToast} onViewProfile={(id) => setProfileId(id)} />,
-    documents: <DocumentUploader toast={showToast} />,
+    documents: <DocumentManager toast={showToast} />,
     groups: <GroupManager toast={showToast} />,
     staff: <StaffManager toast={showToast} />,
     inbox: <AdminInbox user={user} toast={showToast} />,
@@ -338,84 +338,195 @@ function KPIInput({ label, defaultValue, onSave }) {
   );
 }
 
-// ─── DOCUMENT UPLOADER ───
-function DocumentUploader({ toast }) {
+// ─── DOCUMENT MANAGER (dashboard + detail + upload) ───
+function DocumentManager({ toast }) {
+  const [docs, setDocs] = useState([]);
   const [projects, setProjects] = useState([]);
-  const [investors, setInvestors] = useState([]);
-  const [name, setName] = useState(""); const [category, setCategory] = useState("Reporting");
-  const [projectId, setProjectId] = useState(""); const [file, setFile] = useState(null);
-  const [targetInvestors, setTargetInvestors] = useState([]);
+  const [projectFilter, setProjectFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [search, setSearch] = useState("");
+  const [selectedDoc, setSelectedDoc] = useState(null);
+  const [docDetail, setDocDetail] = useState(null);
+  const [showUpload, setShowUpload] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Upload state
+  const [uploadName, setUploadName] = useState("");
+  const [uploadCategory, setUploadCategory] = useState("Reporting");
+  const [uploadProjectId, setUploadProjectId] = useState("");
+  const [uploadFile, setUploadFile] = useState(null);
   const [uploading, setUploading] = useState(false);
 
-  useEffect(() => { fetchAdminProjects().then(setProjects); fetchAdminInvestors().then(setInvestors); }, []);
+  useEffect(() => { loadDocs(); fetchAdminProjects().then(setProjects); }, []);
+  useEffect(() => { loadDocs(); }, [projectFilter, categoryFilter, search]);
+
+  async function loadDocs() {
+    try {
+      const params = {};
+      if (projectFilter) params.projectId = projectFilter;
+      if (categoryFilter) params.category = categoryFilter;
+      if (search) params.search = search;
+      const d = await fetchAdminDocuments(params);
+      setDocs(d);
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  }
+
+  async function openDoc(doc) {
+    setSelectedDoc(doc);
+    try { const detail = await fetchAdminDocumentDetail(doc.id); setDocDetail(detail); } catch (e) { toast("Failed to load document", "error"); }
+  }
 
   async function handleUpload(e) {
     e.preventDefault();
-    if (!file || !name) return toast("Name and file are required", "error");
+    if (!uploadFile || !uploadName) return toast("Name and file required", "error");
     setUploading(true);
     try {
       const formData = new FormData();
-      formData.append("name", name); formData.append("category", category);
-      if (projectId) formData.append("projectId", projectId);
-      formData.append("file", file);
+      formData.append("name", uploadName);
+      formData.append("category", uploadCategory);
+      if (uploadProjectId) formData.append("projectId", uploadProjectId);
+      formData.append("file", uploadFile);
       await uploadDocument(formData);
-      toast("Document uploaded" + (targetInvestors.length ? ` and assigned to ${targetInvestors.length} investor(s)` : ""));
-      setName(""); setFile(null); setProjectId(""); setTargetInvestors([]);
+      toast("Document uploaded");
+      setShowUpload(false); setUploadName(""); setUploadFile(null); setUploadProjectId("");
+      loadDocs();
     } catch (err) { toast(err.message, "error"); }
     finally { setUploading(false); }
   }
 
-  function toggleInvestor(id) {
-    setTargetInvestors(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  const categories = ["Reporting", "Property Update", "Offering", "Capital Call", "Legal", "Tax", "Distribution"];
+
+  // Document detail view
+  if (docDetail) {
+    return (
+      <>
+        <p style={{ fontSize: 12, color: red, cursor: "pointer", marginBottom: 24 }} onClick={() => { setSelectedDoc(null); setDocDetail(null); }}>← Back to documents</p>
+        <div style={{ marginBottom: 24 }}>
+          <h2 style={{ fontSize: 22, fontWeight: 400, marginBottom: 6 }}>{docDetail.name}</h2>
+          <div style={{ fontSize: 12, color: "#999" }}>
+            {docDetail.project?.name || "General"} · {docDetail.category} · {docDetail.date} · {docDetail.size}
+            <span style={{ marginLeft: 8, padding: "2px 8px", borderRadius: 3, fontSize: 10, background: docDetail.status === "published" ? "#EFE" : "#FFF8E1", color: docDetail.status === "published" ? green : "#B8860B" }}>{docDetail.status}</span>
+          </div>
+        </div>
+
+        {/* Access audit table */}
+        <div style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, overflow: "hidden" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 120px 120px 120px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: "#999", textTransform: "uppercase", letterSpacing: ".06em" }}>
+            <span>Investor</span><span>Email</span><span>Viewed</span><span>Downloaded</span><span>Acknowledged</span>
+          </div>
+          {docDetail.accessList.length > 0 ? docDetail.accessList.map((a, i) => (
+            <div key={a.id} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 120px 120px 120px", padding: "12px 20px", borderBottom: i < docDetail.accessList.length - 1 ? "1px solid #F0EDE8" : "none", fontSize: 13, alignItems: "center" }}>
+              <span style={{ fontWeight: 500 }}>
+                {a.name}
+                {a.directAssignment && <span style={{ fontSize: 10, color: red, marginLeft: 6 }}>Direct</span>}
+              </span>
+              <span style={{ color: "#666" }}>{a.email}</span>
+              <span style={{ color: a.viewedAt ? green : "#CCC" }}>{a.viewedAt ? new Date(a.viewedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}</span>
+              <span style={{ color: a.downloadedAt ? green : "#CCC" }}>{a.downloadedAt ? new Date(a.downloadedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}</span>
+              <span style={{ color: a.acknowledgedAt ? green : "#CCC" }}>{a.acknowledgedAt ? new Date(a.acknowledgedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}</span>
+            </div>
+          )) : (
+            <div style={{ padding: 20, color: "#999", textAlign: "center", fontSize: 13 }}>No investor access records</div>
+          )}
+        </div>
+      </>
+    );
   }
 
+  // Upload form
+  if (showUpload) {
+    return (
+      <>
+        <p style={{ fontSize: 12, color: red, cursor: "pointer", marginBottom: 24 }} onClick={() => setShowUpload(false)}>← Back to documents</p>
+        <h2 style={{ fontSize: 22, fontWeight: 400, marginBottom: 24 }}>Upload Document</h2>
+        <form onSubmit={handleUpload} style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: "28px 24px", maxWidth: 520 }}>
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Document Name</label>
+            <input value={uploadName} onChange={e => setUploadName(e.target.value)} placeholder="Q3 2025 — Porthaven Quarterly Report" style={inputStyle} required />
+          </div>
+          <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Category</label>
+              <select value={uploadCategory} onChange={e => setUploadCategory(e.target.value)} style={inputStyle}>
+                {categories.map(c => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Project</label>
+              <select value={uploadProjectId} onChange={e => setUploadProjectId(e.target.value)} style={inputStyle}>
+                <option value="">General (all investors)</option>
+                {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+          </div>
+          <div style={{ marginBottom: 24 }}>
+            <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>File</label>
+            <input type="file" accept=".pdf,.doc,.docx,.xlsx,.csv" onChange={e => setUploadFile(e.target.files[0])} style={{ fontSize: 13 }} required />
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button type="button" onClick={() => setShowUpload(false)} style={btnOutline}>Cancel</button>
+            <button type="submit" disabled={uploading} style={{ ...btnStyle, padding: "10px 24px", opacity: uploading ? 0.5 : 1 }}>
+              {uploading ? "Uploading..." : "Upload"}
+            </button>
+          </div>
+        </form>
+      </>
+    );
+  }
+
+  // Document list dashboard
   return (
     <>
-      <h1 style={{ fontSize: 28, fontWeight: 300, marginBottom: 32 }}>Upload Document</h1>
-      <form onSubmit={handleUpload} style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: "32px 28px", maxWidth: 560 }}>
-        <div style={{ marginBottom: 20 }}>
-          <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Document Name</label>
-          <input value={name} onChange={e => setName(e.target.value)} placeholder="Q3 2025 — Porthaven Quarterly Report" style={inputStyle} required />
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <div>
+          <h1 style={{ fontSize: 28, fontWeight: 300 }}>Documents</h1>
+          <p style={{ fontSize: 13, color: "#999", marginTop: 4 }}>{docs.length} documents</p>
         </div>
-        <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
-          <div style={{ flex: 1 }}>
-            <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Category</label>
-            <select value={category} onChange={e => setCategory(e.target.value)} style={inputStyle}>
-              <option>Reporting</option><option>Property Update</option><option>Offering</option>
-              <option>Capital Call</option><option>Legal</option><option>Tax</option><option>Distribution</option>
-            </select>
-          </div>
-          <div style={{ flex: 1 }}>
-            <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Project</label>
-            <select value={projectId} onChange={e => setProjectId(e.target.value)} style={inputStyle}>
-              <option value="">General (all investors)</option>
-              {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-          </div>
-        </div>
+        <button onClick={() => setShowUpload(true)} style={btnStyle}>Upload Document</button>
+      </div>
 
-        {/* Target specific investors */}
-        <div style={{ marginBottom: 20 }}>
-          <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Assign to Specific Investors (optional)</label>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {investors.map(inv => (
-              <label key={inv.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, cursor: "pointer", padding: "4px 10px", background: targetInvestors.includes(inv.id) ? "#FEE" : "#F8F7F4", border: `1px solid ${targetInvestors.includes(inv.id) ? red : "#E8E5DE"}`, borderRadius: 4 }}>
-                <input type="checkbox" checked={targetInvestors.includes(inv.id)} onChange={() => toggleInvestor(inv.id)} style={{ accentColor: red }} />
-                {inv.name}
-              </label>
-            ))}
-          </div>
-          {targetInvestors.length === 0 && <div style={{ fontSize: 11, color: "#BBB", marginTop: 4 }}>Leave empty to make visible to all investors in the project</div>}
-        </div>
+      {/* Filters */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search documents..." style={{ ...inputStyle, flex: 1 }} />
+        <select value={projectFilter} onChange={e => setProjectFilter(e.target.value)} style={{ ...inputStyle, width: 160 }}>
+          <option value="">All Projects</option>
+          {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+        </select>
+        <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} style={{ ...inputStyle, width: 160 }}>
+          <option value="">All Categories</option>
+          {categories.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </div>
 
-        <div style={{ marginBottom: 24 }}>
-          <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>File</label>
-          <input type="file" accept=".pdf,.doc,.docx,.xlsx,.csv" onChange={e => setFile(e.target.files[0])} style={{ fontSize: 13 }} required />
+      {/* Document table */}
+      {loading ? <p style={{ color: "#999" }}>Loading...</p> : (
+        <div style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, overflow: "hidden" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 100px 100px 80px 80px 80px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: "#999", textTransform: "uppercase", letterSpacing: ".06em" }}>
+            <span>Document</span><span>Project</span><span>Category</span><span>Investors</span><span>Viewed</span><span>Downloaded</span>
+          </div>
+          {docs.map((d, i) => (
+            <div key={d.id} onClick={() => openDoc(d)} style={{
+              display: "grid", gridTemplateColumns: "2fr 100px 100px 80px 80px 80px",
+              padding: "14px 20px", borderBottom: i < docs.length - 1 ? "1px solid #F0EDE8" : "none",
+              cursor: "pointer", fontSize: 13, alignItems: "center",
+            }}
+              onMouseEnter={e => e.currentTarget.style.background = "#FAFAF8"}
+              onMouseLeave={e => e.currentTarget.style.background = "#fff"}>
+              <div>
+                <div style={{ fontWeight: 500 }}>{d.name}</div>
+                <div style={{ fontSize: 11, color: "#BBB" }}>{d.date} · {d.size}</div>
+              </div>
+              <span style={{ fontSize: 12, color: "#666" }}>{d.project}</span>
+              <span style={{ fontSize: 11, padding: "2px 8px", background: "#F0EDE8", borderRadius: 3 }}>{d.category}</span>
+              <span>{d.totalInvestors}</span>
+              <span style={{ color: d.viewed > 0 ? green : "#CCC" }}>{d.viewed}</span>
+              <span style={{ color: d.downloaded > 0 ? green : "#CCC" }}>{d.downloaded}</span>
+            </div>
+          ))}
+          {docs.length === 0 && <div style={{ padding: 24, color: "#999", textAlign: "center" }}>No documents found</div>}
         </div>
-        <button type="submit" disabled={uploading} style={{ ...btnStyle, padding: "12px 24px", fontSize: 14, opacity: uploading ? 0.6 : 1 }}>
-          {uploading ? "Uploading..." : "Upload Document"}
-        </button>
-      </form>
+      )}
     </>
   );
 }

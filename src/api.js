@@ -226,6 +226,16 @@ export async function updateStaff(id, data) {
   return apiFetch(`/admin/staff/${id}`, { method: "PUT", body: JSON.stringify(data) });
 }
 
+// Admin documents
+export async function fetchAdminDocuments(params = {}) {
+  const qs = new URLSearchParams(params).toString();
+  return apiFetch(`/admin/documents${qs ? "?" + qs : ""}`);
+}
+
+export async function fetchAdminDocumentDetail(id) {
+  return apiFetch(`/admin/documents/${id}`);
+}
+
 export async function sendMessage(data) {
   return apiFetch("/admin/messages", { method: "POST", body: JSON.stringify(data) });
 }
