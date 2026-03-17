@@ -833,7 +833,7 @@ function LoginPage({ onLogin }) {
 // ─── APP ─────────────────────────────────────────────────
 export default function App() {
   const [authed, setAuthed] = useState(() => sessionStorage.getItem("northstar_auth") === "true");
-  const [themeMode, setThemeMode] = useState(() => localStorage.getItem("northstar_theme") || "dark");
+  const [themeMode, setThemeMode] = useState(() => localStorage.getItem("northstar_theme") || "light");
   const [view, setView] = useState("overview");
   const [msgs, setMsgs] = useState(messages.map(m => ({ ...m })));
   const toast = useToast();
