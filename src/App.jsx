@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef, createContext, useContext } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-import { investor, fund, properties, capTable, waterfall, documents, distributions, performanceHistory, messages, fmt, fmtCurrency } from "./data.js";
+import { investor, projects, myProjects, allDocuments, allDistributions, generalDocuments, messages, fmt, fmtCurrency } from "./data.js";
 
 // ─── THEME ───────────────────────────────────────────────
 const serif = "'Cormorant Garamond', Georgia, serif";
@@ -16,7 +16,6 @@ const themes = {
 const ThemeContext = createContext(themes.dark);
 const useTheme = () => useContext(ThemeContext);
 
-// Default aliases for module-level use (overridden per-component via useTheme)
 const bg = "#060606", surface = "#0C0C0C", line = "#1A1A1A", t1 = "#E8E4DE", t2 = "#8C887F", t3 = "#4A4843";
 
 // ─── TOAST SYSTEM ────────────────────────────────────────
@@ -26,7 +25,7 @@ function ToastContainer({ toasts, onDismiss }) {
     <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 1000, display: "flex", flexDirection: "column", gap: 8 }}>
       {toasts.map(t => (
         <div key={t.id} onClick={() => onDismiss(t.id)} style={{
-          background: "#1A1A1A", border: `1px solid ${t.type === "success" ? green : t.type === "error" ? red : line}`,
+          background: surface, border: `1px solid ${t.type === "success" ? green : t.type === "error" ? red : line}`,
           borderRadius: 4, padding: "12px 20px", minWidth: 280, maxWidth: 400,
           fontFamily: sans, fontSize: 13, color: t1, cursor: "pointer",
           animation: "fadeIn .2s ease", boxShadow: "0 8px 32px rgba(0,0,0,.5)",
@@ -74,14 +73,14 @@ function Modal({ open, onClose, children }) {
 }
 
 // ─── SHARED COMPONENTS ───────────────────────────────────
-function ChartTooltip({ active, payload, label }) {
+function ChartTooltip({ active, payload, label, prefix = "$", suffix = "K" }) {
   const { bg, surface, line, t1, t2, t3 } = useTheme();
   if (!active || !payload?.length) return null;
   return (
     <div style={{ background: surface, border: `1px solid ${line}`, borderRadius: 3, padding: "8px 12px", fontSize: 12, fontFamily: sans }}>
       <div style={{ color: t3, marginBottom: 4 }}>{label}</div>
       {payload.map((p, i) => (
-        <div key={i} style={{ color: p.color || t1 }}>{p.name}: ${p.value}M</div>
+        <div key={i} style={{ color: p.color || t1 }}>{p.name}: {prefix}{fmt(p.value)}{suffix}</div>
       ))}
     </div>
   );
@@ -90,9 +89,7 @@ function ChartTooltip({ active, payload, label }) {
 function StatusBadge({ status }) {
   const { bg, surface, line, t1, t2, t3 } = useTheme();
   const colors = {
-    "Completed": green,
-    "Under Construction": "#8B7128",
-    "Pre-Development": red,
+    "Completed": green, "Under Construction": "#8B7128", "Pre-Development": red,
   };
   const c = colors[status] || t3;
   return (
@@ -148,7 +145,7 @@ function ProgressBar({ value, color }) {
   const { bg, surface, line, t1, t2, t3 } = useTheme();
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <div style={{ flex: 1, height: 3, background: "#1A1A1A", borderRadius: 1, overflow: "hidden" }}>
+      <div style={{ flex: 1, height: 3, background: line, borderRadius: 1, overflow: "hidden" }}>
         <div style={{ width: `${value}%`, height: "100%", background: color || red, borderRadius: 1, transition: "width .8s ease" }} />
       </div>
       <span style={{ fontSize: 11, color: t3, minWidth: 28, textAlign: "right" }}>{value}%</span>
@@ -162,103 +159,98 @@ function Overview({ onNavigate }) {
   return (
     <>
       {/* Hero */}
-      <div style={{ marginBottom: 56 }}>
+      <div style={{ marginBottom: 48 }}>
         <p style={{ fontSize: 11, letterSpacing: ".14em", textTransform: "uppercase", color: t3, marginBottom: 10 }}>
-          {fund.name} — Portfolio Summary
+          Your Investments
         </p>
-        <h1 style={{ fontFamily: serif, fontSize: 48, fontWeight: 300, lineHeight: 1.05, color: t1, letterSpacing: "-.02em" }}>
-          ${fmt(fund.nav)}
+        <h1 style={{ fontFamily: serif, fontSize: 40, fontWeight: 300, lineHeight: 1.1, color: t1, letterSpacing: "-.02em" }}>
+          {myProjects.length} Active Projects
         </h1>
         <p style={{ fontSize: 14, color: t2, marginTop: 10 }}>
-          Net asset value across {properties.length} properties · <span style={{ color: green }}>+{fund.irr}% net IRR</span> · {fund.moic}x MOIC
+          Northstar Pacific Development Group · {investor.role}
         </p>
       </div>
 
-      {/* Metrics */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 1, background: line, borderRadius: 2, overflow: "hidden", marginBottom: 56 }}>
-        {[
-          { label: "Total Committed", value: `$${fmt(fund.committed)}` },
-          { label: "Capital Called", value: `$${fmt(fund.called)}` },
-          { label: "Distributions Paid", value: `$${fmt(fund.distributed)}` },
-          { label: "Blended Net IRR", value: `${fund.irr}%` },
-        ].map((m, i) => (
-          <div key={i} style={{ background: surface, padding: "28px 24px" }}>
-            <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: t3, marginBottom: 12 }}>{m.label}</div>
-            <div style={{ fontSize: 24, fontWeight: 300, fontFamily: serif, color: t1 }}>{m.value}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Performance + Distributions */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 48, marginBottom: 64 }}>
-        <div>
-          <SectionHeader title="Performance" right="NAV vs. benchmark · trailing 12mo" />
-          <div style={{ border: `1px solid ${line}`, borderRadius: 2, padding: "24px 20px 16px", background: surface }}>
-            <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={performanceHistory}>
-                <defs>
-                  <linearGradient id="ng" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={red} stopOpacity={.12} />
-                    <stop offset="100%" stopColor={red} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: t3, fontSize: 11 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: t3, fontSize: 11 }} tickFormatter={v => `$${v}M`} domain={[11, 16]} />
-                <Tooltip content={<ChartTooltip />} />
-                <Area type="monotone" dataKey="nav" stroke={red} strokeWidth={1.5} fill="url(#ng)" name="Portfolio" />
-                <Area type="monotone" dataKey="benchmark" stroke={t3} strokeWidth={1} strokeDasharray="3 3" fill="none" name="Benchmark" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-        <div>
-          <SectionHeader title="Distributions" right="Quarterly" />
-          <div style={{ border: `1px solid ${line}`, borderRadius: 2, padding: "24px 16px 16px", background: surface }}>
-            <ResponsiveContainer width="100%" height={140}>
-              <BarChart data={distributions.map(d => ({ q: d.quarter.replace("20", "'"), v: d.amount / 1000 }))} barSize={18}>
-                <XAxis dataKey="q" axisLine={false} tickLine={false} tick={{ fill: t3, fontSize: 10 }} />
-                <YAxis hide domain={[0, 120]} />
-                <Bar dataKey="v" fill={red} radius={[1, 1, 0, 0]} opacity={.8} />
-              </BarChart>
-            </ResponsiveContainer>
-            <div style={{ borderTop: `1px solid ${line}`, marginTop: 16, paddingTop: 16, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div>
-                <div style={{ fontSize: 10, color: t3, textTransform: "uppercase", letterSpacing: ".08em" }}>YTD Total</div>
-                <div style={{ fontSize: 16, fontFamily: serif, marginTop: 4 }}>$193,000</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 10, color: t3, textTransform: "uppercase", letterSpacing: ".08em" }}>Avg. Yield</div>
-                <div style={{ fontSize: 16, fontFamily: serif, marginTop: 4, color: green }}>7.2%</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Properties preview */}
-      <SectionHeader title="Properties" right={<span style={{ color: red, cursor: "pointer" }} onClick={() => onNavigate("portfolio")}>View all →</span>} />
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 1, background: line, borderRadius: 2, overflow: "hidden", marginBottom: 64 }}>
-        {properties.map((p, i) => (
-          <div key={i} style={{ background: surface, padding: "24px", cursor: "pointer", transition: "background .12s" }}
+      {/* Project cards */}
+      <SectionHeader title="Projects" right={<span style={{ color: red, cursor: "pointer" }} onClick={() => onNavigate("portfolio")}>View details →</span>} />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 1, background: line, borderRadius: 2, overflow: "hidden", marginBottom: 48 }}>
+        {myProjects.map((p) => (
+          <div key={p.id} style={{ background: surface, padding: "28px", cursor: "pointer", transition: "background .12s" }}
             onMouseEnter={e => e.currentTarget.style.background = hover}
             onMouseLeave={e => e.currentTarget.style.background = surface}
             onClick={() => onNavigate("portfolio")}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
               <div>
-                <div style={{ fontFamily: serif, fontSize: 18, fontWeight: 500, letterSpacing: ".02em" }}>{p.name}</div>
-                <div style={{ fontSize: 12, color: t3, marginTop: 2 }}>{p.location}</div>
+                <div style={{ fontFamily: serif, fontSize: 20, fontWeight: 500, letterSpacing: ".02em" }}>{p.name}</div>
+                <div style={{ fontSize: 12, color: t3, marginTop: 3 }}>{p.location} · {p.type}</div>
               </div>
               <StatusBadge status={p.status} />
             </div>
-            <div style={{ fontSize: 12, color: t2, marginBottom: 16 }}>{p.type}</div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 8 }}>
-              <span style={{ color: t3 }}>Value: <span style={{ color: t1 }}>${fmt(p.currentValue)}</span></span>
-              <span style={{ color: green }}>{p.irr}% IRR</span>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 16 }}>
+              <div>
+                <div style={{ fontSize: 10, color: t3, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>Invested</div>
+                <div style={{ fontSize: 16, fontFamily: serif }}>${fmt(p.investorCommitted)}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 10, color: t3, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>Current Value</div>
+                <div style={{ fontSize: 16, fontFamily: serif }}>${fmt(p.currentValue)}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 10, color: t3, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>Net IRR</div>
+                <div style={{ fontSize: 16, fontFamily: serif, color: green }}>{p.irr}%</div>
+              </div>
             </div>
             <ProgressBar value={p.completion} color={p.completion === 100 ? green : red} />
           </div>
         ))}
       </div>
+
+      {/* Performance charts side by side */}
+      <SectionHeader title="Value Tracking" right="Trailing 12 months" />
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 48 }}>
+        {myProjects.map(p => (
+          <div key={p.id} style={{ border: `1px solid ${line}`, borderRadius: 2, padding: "20px", background: surface }}>
+            <div style={{ fontSize: 13, fontFamily: serif, fontWeight: 500, marginBottom: 4 }}>{p.name}</div>
+            <div style={{ fontSize: 11, color: t3, marginBottom: 16 }}>{p.status} · {p.moic}x MOIC</div>
+            <ResponsiveContainer width="100%" height={140}>
+              <AreaChart data={p.performanceHistory}>
+                <defs>
+                  <linearGradient id={`ng${p.id}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={red} stopOpacity={.12} />
+                    <stop offset="100%" stopColor={red} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: t3, fontSize: 10 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: t3, fontSize: 10 }} tickFormatter={v => `$${v}K`} />
+                <Tooltip content={<ChartTooltip prefix="$" suffix="K" />} />
+                <Area type="monotone" dataKey="value" stroke={red} strokeWidth={1.5} fill={`url(#ng${p.id})`} name="Value" />
+                <Area type="monotone" dataKey="benchmark" stroke={t3} strokeWidth={1} strokeDasharray="3 3" fill="none" name="Cost Basis" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        ))}
+      </div>
+
+      {/* Distributions summary */}
+      {allDistributions.length > 0 && (
+        <>
+          <SectionHeader title="Recent Distributions" right={<span style={{ color: red, cursor: "pointer" }} onClick={() => onNavigate("distributions")}>View all →</span>} />
+          <div style={{ border: `1px solid ${line}`, borderRadius: 2, padding: "20px", background: surface, marginBottom: 48 }}>
+            <ResponsiveContainer width="100%" height={120}>
+              <BarChart data={allDistributions.slice().reverse().map(d => ({ q: `${d.quarter.replace("20", "'")}`, v: d.amount / 1000, project: d.project }))} barSize={20}>
+                <XAxis dataKey="q" axisLine={false} tickLine={false} tick={{ fill: t3, fontSize: 10 }} />
+                <YAxis hide />
+                <Tooltip content={<ChartTooltip prefix="$" suffix="K" />} />
+                <Bar dataKey="v" fill={red} radius={[1, 1, 0, 0]} opacity={.8} name="Distribution" />
+              </BarChart>
+            </ResponsiveContainer>
+            <div style={{ borderTop: `1px solid ${line}`, marginTop: 12, paddingTop: 12, display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+              <span style={{ color: t3 }}>Total Distributed: <span style={{ color: t1 }}>${fmt(allDistributions.reduce((s, d) => s + d.amount, 0))}</span></span>
+              <span style={{ color: t3 }}>From: <span style={{ color: t2 }}>{[...new Set(allDistributions.map(d => d.project))].join(", ")}</span></span>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Recent messages preview */}
       <SectionHeader title="Recent Messages" right={<span style={{ color: red, cursor: "pointer" }} onClick={() => onNavigate("messages")}>All messages →</span>} />
@@ -287,25 +279,25 @@ function Overview({ onNavigate }) {
 function Portfolio() {
   const { bg, surface, line, t1, t2, t3, hover } = useTheme();
   const [selected, setSelected] = useState(null);
-  const property = selected !== null ? properties[selected] : null;
+  const project = selected !== null ? myProjects[selected] : null;
 
-  if (property) {
+  if (project) {
     return (
       <>
         <p style={{ fontSize: 12, color: red, cursor: "pointer", marginBottom: 24 }} onClick={() => setSelected(null)}>← Back to portfolio</p>
         <div style={{ marginBottom: 40 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 8 }}>
-            <h1 style={{ fontFamily: serif, fontSize: 36, fontWeight: 400 }}>{property.name}</h1>
-            <StatusBadge status={property.status} />
+            <h1 style={{ fontFamily: serif, fontSize: 36, fontWeight: 400 }}>{project.name}</h1>
+            <StatusBadge status={project.status} />
           </div>
-          <p style={{ fontSize: 14, color: t2 }}>{property.location} · {property.type}</p>
+          <p style={{ fontSize: 14, color: t2 }}>{project.location} · {project.type}</p>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 1, background: line, borderRadius: 2, overflow: "hidden", marginBottom: 40 }}>
           {[
-            { label: "Invested", value: `$${fmt(property.invested)}` },
-            { label: "Current Value", value: `$${fmt(property.currentValue)}` },
-            { label: "Net IRR", value: `${property.irr}%` },
-            { label: "MOIC", value: `${property.moic}x` },
+            { label: "Your Committed", value: `$${fmt(project.investorCommitted)}` },
+            { label: "Current Value", value: `$${fmt(project.currentValue)}` },
+            { label: "Net IRR", value: `${project.irr}%` },
+            { label: "MOIC", value: `${project.moic}x` },
           ].map((m, i) => (
             <div key={i} style={{ background: surface, padding: "24px" }}>
               <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: t3, marginBottom: 10 }}>{m.label}</div>
@@ -316,13 +308,13 @@ function Portfolio() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48, marginBottom: 40 }}>
           <div>
             <SectionHeader title="About" />
-            <p style={{ fontSize: 13, color: t2, lineHeight: 1.7, marginBottom: 20 }}>{property.description}</p>
+            <p style={{ fontSize: 13, color: t2, lineHeight: 1.7, marginBottom: 20 }}>{project.description}</p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
               {[
-                { label: "Size", value: `${property.sqft} sf` },
-                { label: "Units", value: property.units || "N/A" },
-                { label: "Completion", value: `${property.completion}%` },
-                { label: "Strategy", value: fund.strategy.split("—")[0].trim() },
+                { label: "Size", value: `${project.sqft} sf` },
+                { label: "Units", value: project.units || "N/A" },
+                { label: "Completion", value: `${project.completion}%` },
+                { label: "Total Raise", value: fmtCurrency(project.totalRaise) },
               ].map((d, i) => (
                 <div key={i} style={{ padding: "12px 0", borderBottom: `1px solid ${line}` }}>
                   <div style={{ fontSize: 10, color: t3, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>{d.label}</div>
@@ -333,8 +325,8 @@ function Portfolio() {
           </div>
           <div>
             <SectionHeader title="Construction Updates" />
-            {property.updates.map((u, i) => (
-              <div key={i} style={{ padding: "16px 0", borderBottom: i < property.updates.length - 1 ? `1px solid ${line}` : "none" }}>
+            {project.updates.map((u, i) => (
+              <div key={i} style={{ padding: "16px 0", borderBottom: i < project.updates.length - 1 ? `1px solid ${line}` : "none" }}>
                 <div style={{ fontSize: 11, color: t3, marginBottom: 6 }}>{u.date}</div>
                 <div style={{ fontSize: 13, color: t2, lineHeight: 1.6 }}>{u.text}</div>
               </div>
@@ -349,24 +341,24 @@ function Portfolio() {
     <>
       <div style={{ marginBottom: 40 }}>
         <h1 style={{ fontFamily: serif, fontSize: 36, fontWeight: 300 }}>Portfolio</h1>
-        <p style={{ fontSize: 14, color: t2, marginTop: 6 }}>{properties.length} active investments · ${fmt(fund.nav)} total NAV</p>
+        <p style={{ fontSize: 14, color: t2, marginTop: 6 }}>{myProjects.length} investments · ${fmt(myProjects.reduce((s, p) => s + p.currentValue, 0))} total value</p>
       </div>
       <Table
         columns={[
-          { key: "name", label: "Property", render: r => (
+          { key: "name", label: "Project", render: r => (
             <div>
               <div style={{ fontFamily: serif, fontSize: 15, fontWeight: 500, letterSpacing: ".02em" }}>{r.name}</div>
               <div style={{ fontSize: 11, color: t3, marginTop: 2 }}>{r.type}</div>
             </div>
           )},
           { key: "status", label: "Status", render: r => <StatusBadge status={r.status} /> },
-          { key: "invested", label: "Invested", render: r => <span style={{ color: t2 }}>${fmt(r.invested)}</span> },
+          { key: "investorCommitted", label: "Committed", render: r => `$${fmt(r.investorCommitted)}` },
           { key: "currentValue", label: "Current Value", render: r => `$${fmt(r.currentValue)}` },
           { key: "irr", label: "Net IRR", render: r => <span style={{ color: green }}>{r.irr}%</span> },
           { key: "moic", label: "MOIC", render: r => <span style={{ color: t2 }}>{r.moic}x</span> },
           { key: "completion", label: "Progress", width: 120, render: r => <ProgressBar value={r.completion} color={r.completion === 100 ? green : red} /> },
         ]}
-        rows={properties}
+        rows={myProjects}
         onRowClick={(_, i) => setSelected(i)}
       />
     </>
@@ -376,19 +368,35 @@ function Portfolio() {
 // ─── PAGE: CAP TABLE ─────────────────────────────────────
 function CapTablePage() {
   const { bg, surface, line, t1, t2, t3 } = useTheme();
+  const [selectedIdx, setSelectedIdx] = useState(0);
+  const project = myProjects[selectedIdx];
+
   return (
     <>
       <div style={{ marginBottom: 40 }}>
         <h1 style={{ fontFamily: serif, fontSize: 36, fontWeight: 300 }}>Cap Table</h1>
-        <p style={{ fontSize: 14, color: t2, marginTop: 6 }}>{fund.name} · {capTable.length} stakeholders</p>
+        <p style={{ fontSize: 14, color: t2, marginTop: 6 }}>Project-level capitalization</p>
+      </div>
+
+      {/* Project selector */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
+        {myProjects.map((p, i) => (
+          <span key={p.id} onClick={() => setSelectedIdx(i)} style={{
+            fontSize: 12, padding: "6px 16px", borderRadius: 2, cursor: "pointer",
+            border: `1px solid ${selectedIdx === i ? red + "55" : line}`,
+            color: selectedIdx === i ? t1 : t3,
+            background: selectedIdx === i ? `${red}11` : "transparent",
+            transition: "all .15s",
+          }}>{p.name}</span>
+        ))}
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 1, background: line, borderRadius: 2, overflow: "hidden", marginBottom: 40 }}>
         {[
-          { label: "Total Committed", value: `$${fmt(fund.committed)}` },
-          { label: "Capital Called", value: `$${fmt(fund.called)}` },
-          { label: "Call Ratio", value: `${Math.round((fund.called / fund.committed) * 100)}%` },
-          { label: "Unfunded", value: `$${fmt(fund.committed - fund.called)}` },
+          { label: "Total Raise", value: fmtCurrency(project.totalRaise) },
+          { label: "Capital Called", value: fmtCurrency(project.capTable.reduce((s, r) => s + r.called, 0)) },
+          { label: "Stakeholders", value: project.capTable.length },
+          { label: "Your Ownership", value: `${project.capTable.find(r => r.holder === investor.name)?.ownership || 0}%` },
         ].map((m, i) => (
           <div key={i} style={{ background: surface, padding: "24px" }}>
             <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: t3, marginBottom: 10 }}>{m.label}</div>
@@ -406,40 +414,42 @@ function CapTablePage() {
           { key: "unfunded", label: "Unfunded", render: r => <span style={{ color: r.unfunded > 0 ? "#8B7128" : t3 }}>${fmt(r.unfunded)}</span> },
           { key: "ownership", label: "Ownership", width: 140, render: r => (
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ width: 60, height: 3, background: "#1A1A1A", borderRadius: 1, overflow: "hidden" }}>
-                <div style={{ width: `${(r.ownership / 25) * 100}%`, height: "100%", background: red, opacity: .6, borderRadius: 1 }} />
+              <div style={{ width: 60, height: 3, background: line, borderRadius: 1, overflow: "hidden" }}>
+                <div style={{ width: `${(r.ownership / 35) * 100}%`, height: "100%", background: red, opacity: .6, borderRadius: 1 }} />
               </div>
               <span style={{ color: t2, fontSize: 12 }}>{r.ownership}%</span>
             </div>
           )},
         ]}
-        rows={capTable}
+        rows={project.capTable}
       />
 
       {/* Waterfall */}
-      <div style={{ marginTop: 48 }}>
-        <SectionHeader title="Distribution Waterfall" right={`${waterfall.prefReturn}% pref · ${waterfall.carry}% carry`} />
-        <div style={{ border: `1px solid ${line}`, borderRadius: 2, overflow: "hidden" }}>
-          {waterfall.tiers.map((tier, i) => (
-            <div key={i} style={{ display: "grid", gridTemplateColumns: "200px 1fr 1fr 120px", padding: "16px 20px", borderBottom: i < waterfall.tiers.length - 1 ? `1px solid ${line}` : "none", alignItems: "center" }}>
-              <div style={{ fontFamily: serif, fontSize: 14 }}>{tier.name}</div>
-              <div style={{ fontSize: 12 }}>
-                <span style={{ color: t3 }}>LP: </span><span style={{ color: t2 }}>{tier.lpShare}</span>
-                <span style={{ color: t3, marginLeft: 16 }}>GP: </span><span style={{ color: t2 }}>{tier.gpShare}</span>
+      {project.waterfall.tiers.length > 0 && (
+        <div style={{ marginTop: 48 }}>
+          <SectionHeader title="Distribution Waterfall" right={`${project.waterfall.prefReturn}% pref · ${project.waterfall.carry}% carry`} />
+          <div style={{ border: `1px solid ${line}`, borderRadius: 2, overflow: "hidden" }}>
+            {project.waterfall.tiers.map((tier, i) => (
+              <div key={i} style={{ display: "grid", gridTemplateColumns: "200px 1fr 1fr 120px", padding: "16px 20px", borderBottom: i < project.waterfall.tiers.length - 1 ? `1px solid ${line}` : "none", alignItems: "center" }}>
+                <div style={{ fontFamily: serif, fontSize: 14 }}>{tier.name}</div>
+                <div style={{ fontSize: 12 }}>
+                  <span style={{ color: t3 }}>LP: </span><span style={{ color: t2 }}>{tier.lpShare}</span>
+                  <span style={{ color: t3, marginLeft: 16 }}>GP: </span><span style={{ color: t2 }}>{tier.gpShare}</span>
+                </div>
+                <div style={{ fontSize: 12, color: t3 }}>{tier.threshold}</div>
+                <div style={{ textAlign: "right" }}>
+                  <span style={{
+                    fontSize: 10, padding: "3px 8px", borderRadius: 2,
+                    background: tier.status === "complete" ? `${green}18` : tier.status === "accruing" ? `${red}18` : `${t3}18`,
+                    color: tier.status === "complete" ? green : tier.status === "accruing" ? red : t3,
+                    textTransform: "uppercase", letterSpacing: ".06em"
+                  }}>{tier.status}</span>
+                </div>
               </div>
-              <div style={{ fontSize: 12, color: t3 }}>{tier.threshold}</div>
-              <div style={{ textAlign: "right" }}>
-                <span style={{
-                  fontSize: 10, padding: "3px 8px", borderRadius: 2,
-                  background: tier.status === "complete" ? `${green}18` : tier.status === "accruing" ? `${red}18` : `${t3}18`,
-                  color: tier.status === "complete" ? green : tier.status === "accruing" ? red : t3,
-                  textTransform: "uppercase", letterSpacing: ".06em"
-                }}>{tier.status}</span>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 }
@@ -448,11 +458,16 @@ function CapTablePage() {
 function DocumentsPage({ toast }) {
   const { bg, surface, line, t1, t2, t3, hover } = useTheme();
   const [filter, setFilter] = useState("All");
+  const [projectFilter, setProjectFilter] = useState("All");
   const [signModal, setSignModal] = useState(null);
   const [reviewDoc, setReviewDoc] = useState(null);
   const [signedDocs, setSignedDocs] = useState({});
-  const categories = ["All", ...new Set(documents.map(d => d.category))];
-  const filtered = filter === "All" ? documents : documents.filter(d => d.category === filter);
+  const categories = ["All", ...new Set(allDocuments.map(d => d.category))];
+  const projectNames = ["All", ...new Set(allDocuments.map(d => d.project))];
+  const filtered = allDocuments.filter(d =>
+    (filter === "All" || d.category === filter) &&
+    (projectFilter === "All" || d.project === projectFilter)
+  );
 
   function handleAction(d, e) {
     e.stopPropagation();
@@ -461,7 +476,6 @@ function DocumentsPage({ toast }) {
     } else if (d.status === "action_required") {
       setReviewDoc(d);
     } else {
-      // Download — open PDF in new tab
       window.open(d.file, "_blank");
       toast.add(`Downloading ${d.name}`, "success");
     }
@@ -484,16 +498,28 @@ function DocumentsPage({ toast }) {
     <>
       <div style={{ marginBottom: 40 }}>
         <h1 style={{ fontFamily: serif, fontSize: 36, fontWeight: 300 }}>Documents</h1>
-        <p style={{ fontSize: 14, color: t2, marginTop: 6 }}>{documents.length} documents · {documents.filter(d => d.status !== "published" && !signedDocs[d.id]).length} requiring action</p>
+        <p style={{ fontSize: 14, color: t2, marginTop: 6 }}>{allDocuments.length} documents · {allDocuments.filter(d => d.status !== "published" && !signedDocs[d.id]).length} requiring action</p>
       </div>
 
+      {/* Project filter */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+        {projectNames.map(p => (
+          <span key={p} onClick={() => setProjectFilter(p)} style={{
+            fontSize: 12, padding: "6px 14px", borderRadius: 2, cursor: "pointer",
+            border: `1px solid ${projectFilter === p ? red + "55" : line}`,
+            color: projectFilter === p ? t1 : t3,
+            background: projectFilter === p ? `${red}11` : "transparent",
+            transition: "all .15s",
+          }}>{p}</span>
+        ))}
+      </div>
+      {/* Category filter */}
       <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
         {categories.map(c => (
           <span key={c} onClick={() => setFilter(c)} style={{
-            fontSize: 12, padding: "6px 14px", borderRadius: 2, cursor: "pointer",
-            border: `1px solid ${filter === c ? red + "55" : line}`,
-            color: filter === c ? t1 : t3,
-            background: filter === c ? `${red}11` : "transparent",
+            fontSize: 11, padding: "4px 10px", borderRadius: 2, cursor: "pointer",
+            border: `1px solid ${filter === c ? line : "transparent"}`,
+            color: filter === c ? t2 : t3,
             transition: "all .15s",
           }}>{c}</span>
         ))}
@@ -501,7 +527,7 @@ function DocumentsPage({ toast }) {
 
       <div style={{ border: `1px solid ${line}`, borderRadius: 2, overflow: "hidden" }}>
         {filtered.map((d, i) => (
-          <div key={d.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: i < filtered.length - 1 ? `1px solid ${line}` : "none", cursor: "pointer", transition: "background .12s" }}
+          <div key={`${d.id}-${d.project}`} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: i < filtered.length - 1 ? `1px solid ${line}` : "none", cursor: "pointer", transition: "background .12s" }}
             onMouseEnter={e => e.currentTarget.style.background = hover}
             onMouseLeave={e => e.currentTarget.style.background = "transparent"}
             onClick={() => { window.open(d.file, "_blank"); }}>
@@ -512,7 +538,7 @@ function DocumentsPage({ toast }) {
                 {d.status === "pending_signature" && !signedDocs[d.id] && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 2, background: `#8B712822`, color: "#8B7128", textTransform: "uppercase", letterSpacing: ".06em" }}>Pending Signature</span>}
                 {signedDocs[d.id] && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 2, background: `${green}22`, color: green, textTransform: "uppercase", letterSpacing: ".06em" }}>Signed</span>}
               </div>
-              <div style={{ fontSize: 11, color: t3, marginTop: 3 }}>{d.category} · {d.date} · {d.size}</div>
+              <div style={{ fontSize: 11, color: t3, marginTop: 3 }}>{d.project} · {d.category} · {d.date} · {d.size}</div>
             </div>
             <span onClick={(e) => handleAction(d, e)} style={{
               fontSize: 11, padding: "5px 12px", borderRadius: 2, transition: "all .15s",
@@ -562,7 +588,7 @@ function DocumentsPage({ toast }) {
             </div>
             <h2 style={{ fontFamily: serif, fontSize: 22, fontWeight: 400, marginBottom: 8 }}>{reviewDoc.name}</h2>
             <p style={{ fontSize: 13, color: t2, lineHeight: 1.7, marginBottom: 20 }}>
-              This document requires your review and acknowledgment. Please read the attached notice carefully and confirm receipt.
+              This document requires your review and acknowledgment.
             </p>
             <div style={{ border: `1px solid ${line}`, borderRadius: 2, padding: 20, marginBottom: 24, background: surface }}>
               <iframe src={reviewDoc.file} style={{ width: "100%", height: 300, border: "none", borderRadius: 2 }} title={reviewDoc.name} />
@@ -581,18 +607,18 @@ function DocumentsPage({ toast }) {
 // ─── PAGE: DISTRIBUTIONS ─────────────────────────────────
 function DistributionsPage() {
   const { bg, surface, line, t1, t2, t3 } = useTheme();
-  const total = distributions.reduce((a, d) => a + d.amount, 0);
+  const total = allDistributions.reduce((a, d) => a + d.amount, 0);
   return (
     <>
       <div style={{ marginBottom: 40 }}>
         <h1 style={{ fontFamily: serif, fontSize: 36, fontWeight: 300 }}>Distributions</h1>
-        <p style={{ fontSize: 14, color: t2, marginTop: 6 }}>${fmt(total)} total distributed · {distributions.length} payments</p>
+        <p style={{ fontSize: 14, color: t2, marginTop: 6 }}>${fmt(total)} total distributed · {allDistributions.length} payments</p>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 1, background: line, borderRadius: 2, overflow: "hidden", marginBottom: 40 }}>
         {[
           { label: "Total Distributed", value: `$${fmt(total)}` },
-          { label: "YTD Distributions", value: "$193,000" },
+          { label: "Projects", value: [...new Set(allDistributions.map(d => d.project))].join(", ") || "—" },
           { label: "Next Estimated", value: "Oct 2025" },
         ].map((m, i) => (
           <div key={i} style={{ background: surface, padding: "24px" }}>
@@ -605,13 +631,14 @@ function DistributionsPage() {
       <SectionHeader title="Distribution History" />
       <Table
         columns={[
+          { key: "project", label: "Project", render: r => <span style={{ fontFamily: serif, fontWeight: 500 }}>{r.project}</span> },
           { key: "quarter", label: "Period" },
           { key: "date", label: "Payment Date", render: r => <span style={{ color: t2 }}>{r.date}</span> },
           { key: "amount", label: "Amount", render: r => `$${fmt(r.amount)}` },
           { key: "type", label: "Type", render: r => <span style={{ color: t3 }}>{r.type}</span> },
           { key: "status", label: "Status", align: "right", render: () => <span style={{ fontSize: 11, color: green }}>Paid</span> },
         ]}
-        rows={distributions}
+        rows={allDistributions}
       />
     </>
   );
@@ -627,7 +654,6 @@ function MessagesPage({ toast, msgs, setMsgs }) {
 
   function handleSelect(i) {
     setSelected(i);
-    // Mark as read
     setMsgs(prev => prev.map((m, idx) => idx === i ? { ...m, unread: false } : m));
   }
 
@@ -657,7 +683,6 @@ function MessagesPage({ toast, msgs, setMsgs }) {
             Best regards,<br />{msg.from}
           </p>
         </div>
-        {/* Replies */}
         {msgReplies.map((r, i) => (
           <div key={i} style={{ marginTop: 16, border: `1px solid ${line}`, borderRadius: 2, padding: "20px 32px", background: hover }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
@@ -732,13 +757,9 @@ function LoginPage({ onLogin }) {
 
   return (
     <div style={{ background: bg, minHeight: "100vh", fontFamily: sans, color: t1, display: "flex", flexDirection: "column" }}>
-      <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } @keyframes fadeInSlow { from { opacity: 0; } to { opacity: 1; } }`}</style>
-
-      {/* Splash Hero */}
+      <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "48px 24px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 80, maxWidth: 900, width: "100%", alignItems: "center", animation: "fadeIn .5s ease" }}>
-
-          {/* Left — Brand & highlights */}
           <div>
             <div style={{ marginBottom: 40 }}>
               <div style={{ fontFamily: serif, fontSize: 42, fontWeight: 400, letterSpacing: ".08em", lineHeight: 1.1 }}>NORTHSTAR</div>
@@ -749,9 +770,9 @@ function LoginPage({ onLogin }) {
             </h2>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1, background: line, borderRadius: 2, overflow: "hidden", marginBottom: 32 }}>
               {[
-                { label: "Fund AUM", value: "$25M" },
-                { label: "Net IRR", value: "17.9%" },
-                { label: "Properties", value: "4" },
+                { label: "Active Projects", value: projects.length },
+                { label: "Under Development", value: projects.filter(p => p.status !== "Completed").length },
+                { label: "Western Canada", value: "Focus" },
               ].map((m, i) => (
                 <div key={i} style={{ background: surface, padding: "20px 16px" }}>
                   <div style={{ fontSize: 9, letterSpacing: ".12em", textTransform: "uppercase", color: t3, marginBottom: 8 }}>{m.label}</div>
@@ -761,11 +782,9 @@ function LoginPage({ onLogin }) {
             </div>
             <p style={{ fontSize: 13, color: t3, lineHeight: 1.7 }}>
               Value-add multifamily & mixed-use investments across Western Canada.
-              Track your portfolio, review documents, and monitor construction progress — all in one place.
+              Track your projects, review documents, and monitor construction progress — all in one place.
             </p>
           </div>
-
-          {/* Right — Login form */}
           <div>
             <form onSubmit={handleSubmit} style={{ border: `1px solid ${line}`, borderRadius: 4, padding: 32, background: surface }}>
               <h2 style={{ fontFamily: serif, fontSize: 20, fontWeight: 400, marginBottom: 4 }}>Investor Portal</h2>
@@ -775,16 +794,14 @@ function LoginPage({ onLogin }) {
               )}
               <div style={{ marginBottom: 16 }}>
                 <label style={{ display: "block", fontSize: 11, color: t3, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 6 }}>Email</label>
-                <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
-                  placeholder="investor@example.com"
+                <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="investor@example.com"
                   style={{ width: "100%", padding: "10px 12px", background: bg, border: `1px solid ${line}`, borderRadius: 2, color: t1, fontSize: 13, fontFamily: sans, outline: "none", boxSizing: "border-box" }}
                   onFocus={e => e.target.style.borderColor = `${red}66`}
                   onBlur={e => e.target.style.borderColor = line} />
               </div>
               <div style={{ marginBottom: 24 }}>
                 <label style={{ display: "block", fontSize: 11, color: t3, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 6 }}>Password</label>
-                <input type="password" value={password} onChange={e => setPassword(e.target.value)} required
-                  placeholder="••••••••"
+                <input type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••"
                   style={{ width: "100%", padding: "10px 12px", background: bg, border: `1px solid ${line}`, borderRadius: 2, color: t1, fontSize: 13, fontFamily: sans, outline: "none", boxSizing: "border-box" }}
                   onFocus={e => e.target.style.borderColor = `${red}66`}
                   onBlur={e => e.target.style.borderColor = line} />
@@ -805,8 +822,6 @@ function LoginPage({ onLogin }) {
           </div>
         </div>
       </div>
-
-      {/* Footer */}
       <footer style={{ borderTop: `1px solid ${line}`, padding: "20px 48px", display: "flex", justifyContent: "space-between", fontSize: 11, color: t3 }}>
         <span>© 2026 Northstar Pacific Development Group</span>
         <span>710 – 1199 W Pender, Vancouver BC V6E 2R1</span>
@@ -864,7 +879,6 @@ export default function App() {
     <ThemeContext.Provider value={th}>
     <div style={{ background: th.bg, color: th.t1, fontFamily: sans, minHeight: "100vh", transition: "background .3s, color .3s" }}>
       <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
-      {/* Header */}
       <header style={{
         borderBottom: `1px solid ${th.line}`, display: "flex", alignItems: "center",
         justifyContent: "space-between", padding: "0 48px", height: 60,
@@ -916,18 +930,15 @@ export default function App() {
         </div>
       </header>
 
-      {/* Content */}
       <main style={{ maxWidth: 1080, margin: "0 auto", padding: "48px 48px 96px" }}>
         {pages[view]}
       </main>
 
-      {/* Footer */}
       <footer style={{ borderTop: `1px solid ${th.line}`, padding: "20px 48px", display: "flex", justifyContent: "space-between", fontSize: 11, color: th.t3 }}>
         <span>© 2026 Northstar Pacific Development Group</span>
         <span>710 – 1199 W Pender, Vancouver BC V6E 2R1</span>
       </footer>
 
-      {/* Toasts */}
       <ToastContainer toasts={toast.toasts} onDismiss={toast.dismiss} />
     </div>
     </ThemeContext.Provider>);
