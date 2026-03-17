@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
 
 const app = express();
 const PORT = process.env.API_PORT || 3001;
@@ -28,6 +29,9 @@ app.use("/api/v1/investors", authenticate, require("./routes/investors"));
 app.use("/api/v1/documents", authenticate, require("./routes/documents"));
 app.use("/api/v1/distributions", authenticate, require("./routes/distributions"));
 app.use("/api/v1/messages", authenticate, require("./routes/messages"));
+
+// Serve uploaded files (local storage only — S3 uses signed URLs)
+app.use("/uploads", express.static(path.resolve(__dirname, "../uploads")));
 
 // Health check
 app.get("/api/v1/health", (req, res) => res.json({ status: "ok" }));

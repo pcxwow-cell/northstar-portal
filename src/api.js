@@ -85,6 +85,30 @@ export async function fetchMessages() {
   return apiFetch("/messages");
 }
 
+// ─── Document download ───
+export async function downloadDocument(docId) {
+  const token = getToken();
+  const res = await fetch(`${API_BASE}/documents/${docId}/download`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || "Download failed");
+  }
+  // Trigger browser download
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const disposition = res.headers.get("Content-Disposition");
+  const filename = disposition?.match(/filename="(.+)"/)?.[1] || "document.pdf";
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 // ─── Utility (kept from data.js) ───
 export const fmt = (n) => {
   if (typeof n !== "number") return n;

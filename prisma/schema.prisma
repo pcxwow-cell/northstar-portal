@@ -126,8 +126,9 @@ model Document {
   date      String // "Jul 15, 2025"
   size      String // "2.4 MB"
   status    String @default("published") // published | action_required | pending_signature
-  file      String // "/docs/filename.pdf"
-  createdAt DateTime @default(now()) @map("created_at")
+  file       String // "/docs/filename.pdf" or "/uploads/..."
+  storageKey String? @map("storage_key") // key in storage adapter (local path or S3 key)
+  createdAt  DateTime @default(now()) @map("created_at")
 
   project Project? @relation(fields: [projectId], references: [id])
 

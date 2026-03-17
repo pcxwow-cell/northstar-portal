@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef, createContext, useContext } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-import { login as apiLogin, logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, fmt, fmtCurrency } from "./api.js";
+import { login as apiLogin, logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, downloadDocument, fmt, fmtCurrency } from "./api.js";
 
 // ─── THEME ───────────────────────────────────────────────
 const serif = "'Cormorant Garamond', Georgia, serif";
@@ -501,8 +501,11 @@ function DocumentsPage({ toast, allDocuments, myProjects, investor }) {
     } else if (d.status === "action_required") {
       setReviewDoc(d);
     } else {
-      window.open(d.file, "_blank");
-      toast.add(`Downloading ${d.name}`, "success");
+      downloadDocument(d.id).then(() => {
+        toast.add(`Downloaded ${d.name}`, "success");
+      }).catch((err) => {
+        toast.add(err.message || "Download failed", "error");
+      });
     }
   }
 
