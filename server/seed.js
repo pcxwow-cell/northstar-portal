@@ -225,6 +225,68 @@ async function main() {
   }
   console.log("  Messages: " + messagesData.length);
 
+  // ─── Message Threads (new threaded messaging) ───
+  await prisma.threadRecipient.deleteMany();
+  await prisma.threadMessage.deleteMany();
+  await prisma.messageThread.deleteMany();
+
+  const threadsData = [
+    {
+      subject: "Porthaven Q2 Update",
+      creatorId: 2, targetType: "ALL",
+      body: "Construction remains on schedule. We've reached 68% completion and the exterior cladding is progressing well on the south facade. Interior framing is complete on floors 1-3, and mechanical rough-in has commenced. The retail pre-leasing efforts continue with strong interest from two national tenants. We anticipate finalizing LOIs in Q3.\n\nPlease don't hesitate to reach out with any questions.\n\nBest regards,\nGord Wylie\nPresident, Northstar Pacific Development Group",
+      senderName: "Gord Wylie", senderRole: "President",
+    },
+    {
+      subject: "Livy — Development Permit Filed",
+      creatorId: 2, targetType: "PROJECT", targetProjectId: 2,
+      body: "Pleased to confirm the development permit application for Livy has been formally submitted to the City of Port Coquitlam. The application includes the finalized architectural plans by RHA Architecture with the optimized unit mix we discussed in our last update.\n\nKey milestones ahead:\n• City review period: 8-12 weeks\n• Public hearing (if required): Q4 2025\n• Permit issuance target: Q1 2026\n\nWe'll keep you updated on the progress.\n\nBest,\nJeff Brown\nEVP, Northstar Pacific Development Group",
+      senderName: "Jeff Brown", senderRole: "EVP",
+    },
+    {
+      subject: "Capital Call #4 — Action Required",
+      creatorId: 2, targetType: "PROJECT", targetProjectId: 2,
+      body: "Please find attached the capital call notice for the Livy development. The call amount of $175,000 is due by June 30, 2025.\n\nThis capital call will fund the development permit fees, final architectural drawings, and initial site preparation work.\n\nPayment instructions are included in the attached notice. Please confirm receipt and anticipated funding date.\n\nThank you,\nNorthstar Investor Relations",
+      senderName: "Northstar IR", senderRole: "Investor Relations",
+    },
+    {
+      subject: "Q1 2025 Distribution Notice",
+      creatorId: 2, targetType: "PROJECT", targetProjectId: 1,
+      body: "I'm pleased to confirm the Q1 2025 distribution of $6,800 from Porthaven has been processed and will be deposited to your account on file within 3-5 business days.\n\nThis distribution represents income from the retail pre-lease deposits received during the quarter. A detailed distribution statement is available in your Documents section.\n\nBest regards,\nGord Wylie",
+      senderName: "Gord Wylie", senderRole: "President",
+    },
+    {
+      subject: "2024 K-1 Tax Documents Available",
+      creatorId: 2, targetType: "ALL",
+      body: "Your K-1 tax documents for fiscal year 2024 are now available in the Documents section of your portal. Please download and provide to your tax advisor at your earliest convenience.\n\nIf you have questions regarding the K-1 or need a corrected form, please reply to this message or contact us at ir@northstardevelopment.ca.\n\nThank you,\nNorthstar Investor Relations",
+      senderName: "Northstar IR", senderRole: "Investor Relations",
+    },
+  ];
+
+  for (let i = 0; i < threadsData.length; i++) {
+    const t = threadsData[i];
+    const thread = await prisma.messageThread.create({
+      data: {
+        subject: t.subject,
+        creator: { connect: { id: t.creatorId } },
+        targetType: t.targetType,
+        ...(t.targetProjectId ? { targetProject: { connect: { id: t.targetProjectId } } } : {}),
+        messages: {
+          create: { sender: { connect: { id: t.creatorId } }, body: t.body },
+        },
+      },
+    });
+    // Add investor as recipient (first 2 unread, rest read)
+    await prisma.threadRecipient.create({
+      data: { threadId: thread.id, userId: 1, unread: i < 2 },
+    });
+    // Add admin as recipient (read)
+    await prisma.threadRecipient.create({
+      data: { threadId: thread.id, userId: 2, unread: false },
+    });
+  }
+  console.log("  MessageThreads: " + threadsData.length);
+
   console.log("\nSeed complete!");
 }
 

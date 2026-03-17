@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef, createContext, useContext } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-import { login as apiLogin, logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, downloadDocument, fmt, fmtCurrency } from "./api.js";
+import { login as apiLogin, logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, downloadDocument, fetchThreads, fetchThread, createThread, replyToThread, fmt, fmtCurrency } from "./api.js";
 import AdminPanel from "./Admin.jsx";
 
 // ─── THEME ───────────────────────────────────────────────
@@ -673,90 +673,191 @@ function DistributionsPage({ allDistributions, myProjects }) {
   );
 }
 
-// ─── PAGE: MESSAGES ──────────────────────────────────────
-function MessagesPage({ toast, msgs, setMsgs, investor }) {
+// ─── PAGE: MESSAGES (Threaded) ──────────────────────────
+function MessagesPage({ toast, investor }) {
   const { bg, surface, line, t1, t2, t3, hover } = useTheme();
-  const [selected, setSelected] = useState(null);
+  const [threads, setThreads] = useState([]);
+  const [selectedThread, setSelectedThread] = useState(null);
+  const [threadDetail, setThreadDetail] = useState(null);
   const [reply, setReply] = useState("");
-  const [replies, setReplies] = useState({});
-  const msg = selected !== null ? msgs[selected] : null;
+  const [composing, setComposing] = useState(false);
+  const [composeSubject, setComposeSubject] = useState("");
+  const [composeBody, setComposeBody] = useState("");
+  const [sending, setSending] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  function handleSelect(i) {
-    setSelected(i);
-    setMsgs(prev => prev.map((m, idx) => idx === i ? { ...m, unread: false } : m));
+  useEffect(() => { loadThreads(); }, []);
+
+  async function loadThreads() {
+    try { const t = await fetchThreads(); setThreads(t); } catch (e) { console.error(e); }
+    finally { setLoading(false); }
   }
 
-  function handleSend() {
-    if (!reply.trim()) return;
-    const newReply = { from: investor.name, text: reply, date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) };
-    setReplies(prev => ({ ...prev, [msg.id]: [...(prev[msg.id] || []), newReply] }));
-    setReply("");
-    toast.add("Reply sent", "success");
+  async function openThread(thread) {
+    setSelectedThread(thread);
+    try {
+      const detail = await fetchThread(thread.id);
+      setThreadDetail(detail);
+      // Update unread status in list
+      setThreads(prev => prev.map(t => t.id === thread.id ? { ...t, unread: false } : t));
+    } catch (e) { toast.add("Failed to load thread", "error"); }
   }
 
-  if (msg) {
-    const msgReplies = replies[msg.id] || [];
+  async function handleReply() {
+    if (!reply.trim() || !threadDetail) return;
+    setSending(true);
+    try {
+      const msg = await replyToThread(threadDetail.id, reply);
+      setThreadDetail(prev => ({ ...prev, messages: [...prev.messages, msg] }));
+      setReply("");
+      toast.add("Reply sent", "success");
+    } catch (e) { toast.add(e.message, "error"); }
+    finally { setSending(false); }
+  }
+
+  async function handleCompose(e) {
+    e.preventDefault();
+    if (!composeSubject.trim() || !composeBody.trim()) return;
+    setSending(true);
+    try {
+      await createThread({ subject: composeSubject, body: composeBody });
+      toast.add("Message sent to Northstar", "success");
+      setComposing(false); setComposeSubject(""); setComposeBody("");
+      loadThreads();
+    } catch (e) { toast.add(e.message, "error"); }
+    finally { setSending(false); }
+  }
+
+  // Thread detail view
+  if (threadDetail) {
     return (
       <>
-        <p style={{ fontSize: 12, color: red, cursor: "pointer", marginBottom: 24 }} onClick={() => { setSelected(null); setReply(""); }}>← Back to messages</p>
+        <p style={{ fontSize: 12, color: red, cursor: "pointer", marginBottom: 24 }} onClick={() => { setSelectedThread(null); setThreadDetail(null); setReply(""); }}>← Back to messages</p>
         <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontFamily: serif, fontSize: 28, fontWeight: 400, marginBottom: 8 }}>{msg.subject}</h1>
-          <div style={{ fontSize: 12, color: t3 }}>{msg.from} · {msg.role} · {msg.date}</div>
-        </div>
-        <div style={{ border: `1px solid ${line}`, borderRadius: 2, padding: "32px", background: surface }}>
-          <p style={{ fontSize: 14, color: t2, lineHeight: 1.8 }}>{msg.preview}</p>
-          <p style={{ fontSize: 14, color: t2, lineHeight: 1.8, marginTop: 16 }}>
-            We continue to be pleased with the progress across the portfolio. Please don't hesitate to reach out if you have any questions or would like to schedule a call to discuss further.
-          </p>
-          <p style={{ fontSize: 14, color: t2, lineHeight: 1.8, marginTop: 16 }}>
-            Best regards,<br />{msg.from}
-          </p>
-        </div>
-        {msgReplies.map((r, i) => (
-          <div key={i} style={{ marginTop: 16, border: `1px solid ${line}`, borderRadius: 2, padding: "20px 32px", background: hover }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-              <span style={{ fontSize: 12, color: t1, fontWeight: 500 }}>{r.from}</span>
-              <span style={{ fontSize: 11, color: t3 }}>{r.date}</span>
-            </div>
-            <p style={{ fontSize: 14, color: t2, lineHeight: 1.8 }}>{r.text}</p>
+          <h1 style={{ fontFamily: serif, fontSize: 28, fontWeight: 400, marginBottom: 8 }}>{threadDetail.subject}</h1>
+          <div style={{ fontSize: 12, color: t3 }}>
+            {threadDetail.messages.length} message{threadDetail.messages.length > 1 ? "s" : ""} · Started by {threadDetail.creator.name}
+            {threadDetail.project && <span> · {threadDetail.project}</span>}
           </div>
-        ))}
-        <div style={{ marginTop: 24, padding: "16px 20px", border: `1px solid ${line}`, borderRadius: 2, display: "flex", alignItems: "center", gap: 12 }}>
-          <input type="text" placeholder="Type a reply..." value={reply} onChange={e => setReply(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && handleSend()}
-            style={{ flex: 1, background: "transparent", border: "none", color: t1, fontSize: 13, fontFamily: sans, outline: "none" }} />
-          <span onClick={handleSend} style={{
-            fontSize: 12, padding: "6px 16px", borderRadius: 2, cursor: "pointer",
-            background: reply.trim() ? red : `${red}44`, color: "#fff", transition: "background .15s",
-          }}>Send</span>
+        </div>
+
+        {/* Message thread */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
+          {threadDetail.messages.map((m) => {
+            const isMe = m.sender.role === "INVESTOR";
+            return (
+              <div key={m.id} style={{
+                border: `1px solid ${line}`, borderRadius: 6, padding: "20px 24px",
+                background: isMe ? hover : surface,
+                marginLeft: isMe ? 48 : 0, marginRight: isMe ? 0 : 48,
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ width: 28, height: 28, borderRadius: "50%", background: isMe ? `${red}22` : `${line}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 600, color: isMe ? red : t2 }}>
+                      {m.sender.initials || m.sender.name.split(" ").map(n => n[0]).join("")}
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: t1 }}>{m.sender.name}</span>
+                    {!isMe && <span style={{ fontSize: 11, color: t3 }}>· {m.sender.role === "ADMIN" ? "Northstar" : m.sender.role}</span>}
+                  </div>
+                  <span style={{ fontSize: 11, color: t3 }}>{new Date(m.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}</span>
+                </div>
+                <div style={{ fontSize: 14, color: t2, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>{m.body}</div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Reply box */}
+        <div style={{ border: `1px solid ${line}`, borderRadius: 6, padding: "16px 20px", background: surface }}>
+          <textarea value={reply} onChange={e => setReply(e.target.value)} placeholder="Write a reply..."
+            rows={3} style={{ width: "100%", background: "transparent", border: "none", color: t1, fontSize: 14, fontFamily: sans, outline: "none", resize: "vertical", boxSizing: "border-box", lineHeight: 1.6 }} />
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+            <span onClick={!sending ? handleReply : undefined} style={{
+              fontSize: 13, padding: "8px 20px", borderRadius: 4, cursor: sending ? "default" : "pointer",
+              background: reply.trim() && !sending ? red : `${red}44`, color: "#fff", fontWeight: 500,
+            }}>{sending ? "Sending..." : "Send Reply"}</span>
+          </div>
         </div>
       </>
     );
   }
 
+  // Compose view
+  if (composing) {
+    return (
+      <>
+        <p style={{ fontSize: 12, color: red, cursor: "pointer", marginBottom: 24 }} onClick={() => setComposing(false)}>← Back to messages</p>
+        <h1 style={{ fontFamily: serif, fontSize: 28, fontWeight: 400, marginBottom: 32 }}>New Message</h1>
+        <form onSubmit={handleCompose} style={{ border: `1px solid ${line}`, borderRadius: 6, padding: "28px 24px", background: surface }}>
+          <div style={{ fontSize: 12, color: t3, marginBottom: 20, padding: "10px 14px", background: hover, borderRadius: 4 }}>
+            To: Northstar Pacific Development Group
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <input value={composeSubject} onChange={e => setComposeSubject(e.target.value)} placeholder="Subject" required
+              style={{ width: "100%", padding: "12px 14px", background: "transparent", border: `1px solid ${line}`, borderRadius: 4, color: t1, fontSize: 14, fontFamily: sans, outline: "none", boxSizing: "border-box" }} />
+          </div>
+          <div style={{ marginBottom: 20 }}>
+            <textarea value={composeBody} onChange={e => setComposeBody(e.target.value)} placeholder="Write your message..." rows={6} required
+              style={{ width: "100%", padding: "12px 14px", background: "transparent", border: `1px solid ${line}`, borderRadius: 4, color: t1, fontSize: 14, fontFamily: sans, outline: "none", resize: "vertical", boxSizing: "border-box", lineHeight: 1.6 }} />
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
+            <span onClick={() => setComposing(false)} style={{ fontSize: 13, padding: "10px 20px", borderRadius: 4, cursor: "pointer", border: `1px solid ${line}`, color: t2 }}>Cancel</span>
+            <button type="submit" disabled={sending} style={{ fontSize: 13, padding: "10px 24px", borderRadius: 4, cursor: sending ? "default" : "pointer", background: sending ? `${red}88` : red, color: "#fff", border: "none", fontWeight: 500, fontFamily: sans }}>
+              {sending ? "Sending..." : "Send Message"}
+            </button>
+          </div>
+        </form>
+      </>
+    );
+  }
+
+  // Thread list
+  const unreadCount = threads.filter(t => t.unread).length;
   return (
     <>
-      <div style={{ marginBottom: 40 }}>
-        <h1 style={{ fontFamily: serif, fontSize: 36, fontWeight: 300 }}>Messages</h1>
-        <p style={{ fontSize: 14, color: t2, marginTop: 6 }}>{msgs.filter(m => m.unread).length} unread · {msgs.length} total</p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 40 }}>
+        <div>
+          <h1 style={{ fontFamily: serif, fontSize: 36, fontWeight: 300 }}>Messages</h1>
+          <p style={{ fontSize: 14, color: t2, marginTop: 6 }}>{unreadCount} unread · {threads.length} conversations</p>
+        </div>
+        <span onClick={() => setComposing(true)} style={{ fontSize: 13, padding: "10px 20px", borderRadius: 4, cursor: "pointer", background: red, color: "#fff", fontWeight: 500 }}>New Message</span>
       </div>
-      <div style={{ border: `1px solid ${line}`, borderRadius: 2, overflow: "hidden" }}>
-        {msgs.map((m, i) => (
-          <div key={m.id} onClick={() => handleSelect(i)} style={{ display: "flex", gap: 16, padding: "18px 20px", borderBottom: i < msgs.length - 1 ? `1px solid ${line}` : "none", cursor: "pointer", transition: "background .12s" }}
-            onMouseEnter={e => e.currentTarget.style.background = hover}
-            onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-            <div style={{ width: 6, height: 6, borderRadius: "50%", background: m.unread ? red : "transparent", marginTop: 7, flexShrink: 0 }} />
-            <div style={{ flex: 1 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                <span style={{ fontSize: 13, fontWeight: m.unread ? 500 : 400 }}>{m.subject}</span>
-                <span style={{ fontSize: 11, color: t3 }}>{m.date}</span>
+      {loading ? (
+        <p style={{ color: t3 }}>Loading...</p>
+      ) : threads.length === 0 ? (
+        <div style={{ textAlign: "center", padding: 60, color: t3 }}>
+          <p style={{ fontSize: 15, marginBottom: 12 }}>No messages yet</p>
+          <span onClick={() => setComposing(true)} style={{ fontSize: 13, color: red, cursor: "pointer" }}>Send your first message →</span>
+        </div>
+      ) : (
+        <div style={{ border: `1px solid ${line}`, borderRadius: 4, overflow: "hidden" }}>
+          {threads.map((t, i) => (
+            <div key={t.id} onClick={() => openThread(t)} style={{ display: "flex", gap: 14, padding: "18px 20px", borderBottom: i < threads.length - 1 ? `1px solid ${line}` : "none", cursor: "pointer", transition: "background .12s", background: t.unread ? `${red}06` : "transparent" }}
+              onMouseEnter={e => e.currentTarget.style.background = hover}
+              onMouseLeave={e => e.currentTarget.style.background = t.unread ? `${red}06` : "transparent"}>
+              <div style={{ width: 7, height: 7, borderRadius: "50%", background: t.unread ? red : "transparent", marginTop: 7, flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                  <span style={{ fontSize: 14, fontWeight: t.unread ? 600 : 400, color: t1 }}>{t.subject}</span>
+                  <span style={{ fontSize: 11, color: t3, flexShrink: 0, marginLeft: 12 }}>
+                    {t.lastMessage ? new Date(t.lastMessage.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}
+                  </span>
+                </div>
+                <div style={{ fontSize: 12, color: t3 }}>
+                  {t.lastMessage?.sender.name || t.creator.name}
+                  {t.messageCount > 1 && <span> · {t.messageCount} messages</span>}
+                  {t.project && <span> · {t.project}</span>}
+                </div>
+                {t.lastMessage && (
+                  <div style={{ fontSize: 12, color: t3, marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {t.lastMessage.body.substring(0, 120)}{t.lastMessage.body.length > 120 ? "..." : ""}
+                  </div>
+                )}
               </div>
-              <div style={{ fontSize: 12, color: t3 }}>{m.from} · {m.role}</div>
-              <div style={{ fontSize: 12, color: t3, marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 700 }}>{m.preview}</div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </>
   );
 }
@@ -1039,7 +1140,7 @@ export default function App() {
     captable: <CapTablePage myProjects={myProjects} investor={investor} />,
     documents: <DocumentsPage toast={toast} allDocuments={allDocuments} myProjects={myProjects} investor={investor} />,
     distributions: <DistributionsPage allDistributions={allDistributions} myProjects={myProjects} />,
-    messages: <MessagesPage toast={toast} msgs={msgs} setMsgs={setMsgs} investor={investor} />,
+    messages: <MessagesPage toast={toast} investor={investor} />,
   };
 
   const navItems = [

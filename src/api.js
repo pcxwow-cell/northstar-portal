@@ -109,6 +109,27 @@ export async function downloadDocument(docId) {
   URL.revokeObjectURL(url);
 }
 
+// ─── Threads (messaging) ───
+export async function fetchThreads() {
+  return apiFetch("/threads");
+}
+
+export async function fetchThread(id) {
+  return apiFetch(`/threads/${id}`);
+}
+
+export async function createThread(data) {
+  return apiFetch("/threads", { method: "POST", body: JSON.stringify(data) });
+}
+
+export async function replyToThread(id, body) {
+  return apiFetch(`/threads/${id}/reply`, { method: "POST", body: JSON.stringify({ body }) });
+}
+
+export async function markThreadRead(id) {
+  return apiFetch(`/threads/${id}/read`, { method: "POST" });
+}
+
 // ─── Admin endpoints ───
 export async function fetchDashboard() {
   return apiFetch("/admin/dashboard");

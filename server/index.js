@@ -29,6 +29,7 @@ app.use("/api/v1/investors", authenticate, require("./routes/investors"));
 app.use("/api/v1/documents", authenticate, require("./routes/documents"));
 app.use("/api/v1/distributions", authenticate, require("./routes/distributions"));
 app.use("/api/v1/messages", authenticate, require("./routes/messages"));
+app.use("/api/v1/threads", authenticate, require("./routes/threads"));
 app.use("/api/v1/admin", authenticate, require("./routes/admin"));
 
 // Serve uploaded files (local storage only — S3 uses signed URLs)
