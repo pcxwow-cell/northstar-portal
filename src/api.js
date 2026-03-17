@@ -6,9 +6,15 @@
 import { investor as demoInvestor, projects as demoProjects, myProjects as demoMyProjects, allDocuments as demoAllDocuments, allDistributions as demoAllDistributions, generalDocuments as demoGeneralDocuments, messages as demoMessages } from "./data.js";
 
 const API_BASE = "/api/v1";
-let _demoMode = false;
+let _demoMode = !!localStorage.getItem("northstar_demo_mode");
 
 export function isDemoMode() { return _demoMode; }
+
+function setDemoMode(val) {
+  _demoMode = val;
+  if (val) localStorage.setItem("northstar_demo_mode", "true");
+  else localStorage.removeItem("northstar_demo_mode");
+}
 
 function getToken() {
   return localStorage.getItem("northstar_token");
@@ -36,15 +42,22 @@ async function apiFetch(path, options = {}) {
       throw new Error("Session expired. Please log in again.");
     }
 
-    // Vite proxy returns 500 when backend is unreachable
-    if (res.status === 500) {
+    // Detect unreachable backend:
+    // - Vite proxy returns 500 with ECONNREFUSED when backend is down
+    // - Vercel returns 404 HTML page when no API route exists
+    if (res.status === 500 || res.status === 404) {
+      const contentType = res.headers.get("content-type") || "";
       const body = await res.text();
-      if (body.includes("ECONNREFUSED") || body.includes("proxy error") || body === "") {
-        _demoMode = true;
+      const isApiDown = body.includes("ECONNREFUSED") || body.includes("proxy error") || body === ""
+        || (res.status === 404 && contentType.includes("text/html")) // Vercel 404 page
+        || (res.status === 404 && !contentType.includes("application/json")); // No JSON = no backend
+      if (isApiDown) {
+        setDemoMode(true);
         throw new TypeError("API unreachable");
       }
-      const json = JSON.parse(body).error || `API error 500`;
-      throw new Error(json);
+      // Real API error (JSON response from our backend)
+      try { const json = JSON.parse(body); throw new Error(json.error || `API error ${res.status}`); }
+      catch (e) { if (e.message.includes("API error")) throw e; throw new Error(`API error ${res.status}`); }
     }
 
     if (!res.ok) {
@@ -56,7 +69,7 @@ async function apiFetch(path, options = {}) {
   } catch (err) {
     // Network error — API unreachable. Switch to demo mode.
     if (err.message === "Failed to fetch" || err.name === "TypeError" || err.message === "API unreachable") {
-      _demoMode = true;
+      setDemoMode(true);
       throw err;
     }
     throw err;
@@ -74,8 +87,8 @@ export async function login(email, password) {
     return data.user;
   } catch (err) {
     // Demo mode fallback — accept hardcoded credentials
-    if (_demoMode || err.message === "Failed to fetch") {
-      _demoMode = true;
+    if (_demoMode || err.message === "Failed to fetch" || err.message === "API unreachable") {
+      setDemoMode(true);
       if (email === "j.chen@pacificventures.ca" && password === "northstar2025") {
         localStorage.setItem("northstar_demo_role", "INVESTOR");
         return { id: 1, name: "James Chen", initials: "JC", email, role: "Limited Partner" };
@@ -103,7 +116,7 @@ export async function getMe() {
 export function logout() {
   setToken(null);
   localStorage.removeItem("northstar_demo_role");
-  _demoMode = false;
+  setDemoMode(false);
 }
 
 // ─── Data fetching (with demo fallback) ───
