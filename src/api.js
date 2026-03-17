@@ -227,6 +227,14 @@ export async function updateStaff(id, data) {
 }
 
 // Admin documents
+export async function fetchAdminProjectDetail(id) {
+  return apiFetch(`/admin/projects/${id}`);
+}
+
+export async function updateWaterfall(projectId, data) {
+  return apiFetch(`/admin/projects/${projectId}/waterfall`, { method: "PUT", body: JSON.stringify(data) });
+}
+
 export async function fetchAdminDocuments(params = {}) {
   const qs = new URLSearchParams(params).toString();
   return apiFetch(`/admin/documents${qs ? "?" + qs : ""}`);

@@ -38,6 +38,51 @@ router.get("/projects", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// Admin project detail — full view with investors, docs, updates, cap table
+router.get("/projects/:id", async (req, res, next) => {
+  try {
+    const project = await prisma.project.findUnique({
+      where: { id: parseInt(req.params.id) },
+      include: {
+        investorProjects: { include: { user: { select: { id: true, name: true, email: true } } } },
+        capTableEntries: true,
+        waterfallTiers: { orderBy: { tierOrder: "asc" } },
+        distributions: true,
+        documents: { include: { assignments: { include: { user: { select: { id: true, name: true } } } } } },
+        updates: { orderBy: { id: "desc" } },
+      },
+    });
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    res.json({
+      id: project.id, name: project.name, location: project.location, type: project.type,
+      status: project.status, description: project.description, sqft: project.sqft,
+      units: project.units, completion: project.completionPct, totalRaise: project.totalRaise,
+      prefReturn: project.prefReturnPct, catchUp: project.gpCatchupPct, carry: project.carryPct,
+      investors: project.investorProjects.map(ip => ({
+        userId: ip.user.id, name: ip.user.name, email: ip.user.email,
+        committed: ip.committed, called: ip.called, currentValue: ip.currentValue, irr: ip.irr, moic: ip.moic,
+      })),
+      capTable: project.capTableEntries.map(e => ({
+        id: e.id, holder: e.holderName, type: e.holderType,
+        committed: e.committed, called: e.called, ownership: e.ownershipPct, unfunded: e.unfunded,
+      })),
+      waterfall: {
+        tiers: project.waterfallTiers.map(t => ({
+          id: t.id, name: t.tierName, lpShare: t.lpShare, gpShare: t.gpShare, threshold: t.threshold, status: t.status,
+        })),
+        prefReturn: project.prefReturnPct, catchUp: project.gpCatchupPct, carry: project.carryPct,
+      },
+      distributions: project.distributions.map(d => ({ quarter: d.quarter, date: d.date, amount: d.amount, type: d.type })),
+      documents: project.documents.map(d => ({
+        id: d.id, name: d.name, category: d.category, date: d.date, size: d.size, status: d.status,
+        viewedBy: d.assignments.filter(a => a.viewedAt).length,
+      })),
+      updates: project.updates.map(u => ({ id: u.id, date: u.date, text: u.text })),
+    });
+  } catch (err) { next(err); }
+});
+
 router.put("/projects/:id", async (req, res, next) => {
   try {
     const { name, location, type, status, description, sqft, units, completionPct, totalRaise } = req.body;
@@ -56,6 +101,23 @@ router.put("/projects/:id", async (req, res, next) => {
       },
     });
     res.json({ id: project.id, name: project.name, status: project.status, completion: project.completionPct });
+  } catch (err) { next(err); }
+});
+
+// ─── WATERFALL CONFIG ───
+router.put("/projects/:id/waterfall", async (req, res, next) => {
+  try {
+    const { prefReturn, catchUp, carry } = req.body;
+    const id = parseInt(req.params.id);
+    await prisma.project.update({
+      where: { id },
+      data: {
+        ...(prefReturn !== undefined && { prefReturnPct: prefReturn }),
+        ...(catchUp !== undefined && { gpCatchupPct: catchUp }),
+        ...(carry !== undefined && { carryPct: carry }),
+      },
+    });
+    res.json({ ok: true });
   } catch (err) { next(err); }
 });
 

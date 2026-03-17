@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchDashboard, fetchAdminProjects, updateProject, postUpdate, fetchAdminInvestors, sendMessage, uploadDocument, inviteInvestor, updateInvestor, approveInvestor, deactivateInvestor, resetInvestorPassword, assignInvestorProject, updateInvestorKPI, fetchThreads, fetchThread, createThread, replyToThread, fetchInvestorProfile, fetchGroups, createGroup, updateGroup, deleteGroup, fetchGroupDetail, addGroupMembers, removeGroupMember, fetchStaff, createStaff, updateStaff, fetchAdminDocuments, fetchAdminDocumentDetail, fmt, fmtCurrency } from "./api.js";
+import { fetchDashboard, fetchAdminProjects, updateProject, postUpdate, fetchAdminInvestors, sendMessage, uploadDocument, inviteInvestor, updateInvestor, approveInvestor, deactivateInvestor, resetInvestorPassword, assignInvestorProject, updateInvestorKPI, fetchThreads, fetchThread, createThread, replyToThread, fetchInvestorProfile, fetchGroups, createGroup, updateGroup, deleteGroup, fetchGroupDetail, addGroupMembers, removeGroupMember, fetchStaff, createStaff, updateStaff, fetchAdminDocuments, fetchAdminDocumentDetail, fetchAdminProjectDetail, updateWaterfall, fmt, fmtCurrency } from "./api.js";
 
 const sans = "'DM Sans', -apple-system, sans-serif";
 const red = "#EA2028";
@@ -24,12 +24,15 @@ export default function AdminPanel({ user, onLogout }) {
     { id: "inbox", label: "Inbox" },
   ];
 
-  // Investor profile sub-view
+  // Sub-view navigation
   const [profileId, setProfileId] = useState(null);
+  const [projectDetailId, setProjectDetailId] = useState(null);
 
   const pages = {
     dashboard: <Dashboard />,
-    projects: <ProjectManager toast={showToast} />,
+    projects: projectDetailId
+      ? <ProjectDetail projectId={projectDetailId} onBack={() => setProjectDetailId(null)} toast={showToast} />
+      : <ProjectManager toast={showToast} onViewProject={(id) => setProjectDetailId(id)} />,
     investors: profileId
       ? <InvestorProfile investorId={profileId} onBack={() => setProfileId(null)} toast={showToast} />
       : <InvestorManager toast={showToast} onViewProfile={(id) => setProfileId(id)} />,
@@ -105,7 +108,7 @@ function Dashboard() {
 }
 
 // ─── PROJECT MANAGER ───
-function ProjectManager({ toast }) {
+function ProjectManager({ toast, onViewProject }) {
   const [projects, setProjects] = useState([]);
   const [editing, setEditing] = useState(null);
   const [updateText, setUpdateText] = useState("");
@@ -130,7 +133,10 @@ function ProjectManager({ toast }) {
                 <div style={{ fontSize: 18, fontWeight: 500 }}>{p.name}</div>
                 <div style={{ fontSize: 12, color: "#999" }}>{p.location} · {p.investorCount} investors · {p.docCount} docs</div>
               </div>
-              <button onClick={() => setEditing(editing === p.id ? null : p.id)} style={btnOutline}>{editing === p.id ? "Close" : "Edit"}</button>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button onClick={() => onViewProject?.(p.id)} style={btnStyle}>View</button>
+                <button onClick={() => setEditing(editing === p.id ? null : p.id)} style={btnOutline}>{editing === p.id ? "Close" : "Edit"}</button>
+              </div>
             </div>
             <div style={{ display: "flex", gap: 32, fontSize: 13, color: "#666" }}>
               <span>Status: <strong>{p.status}</strong></span>
@@ -335,6 +341,235 @@ function KPIInput({ label, defaultValue, onSave }) {
       <label style={{ fontSize: 10, color: "#AAA" }}>{label}</label>
       <input value={val} onChange={e => setVal(e.target.value)} onBlur={() => onSave(val)} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} />
     </div>
+  );
+}
+
+// ─── PROJECT DETAIL PAGE ───
+function ProjectDetail({ projectId, onBack, toast }) {
+  const [project, setProject] = useState(null);
+  const [tab, setTab] = useState("overview");
+  const [updateText, setUpdateText] = useState("");
+  const [editingKPI, setEditingKPI] = useState(null);
+
+  useEffect(() => { load(); }, [projectId]);
+  async function load() { fetchAdminProjectDetail(projectId).then(setProject); }
+
+  async function handleSaveField(field, value) {
+    try { await updateProject(projectId, { [field]: value }); toast("Updated"); load(); } catch (e) { toast(e.message, "error"); }
+  }
+
+  async function handleSaveWaterfall(field, value) {
+    try { await updateWaterfall(projectId, { [field]: parseFloat(value) }); toast("Waterfall updated"); load(); } catch (e) { toast(e.message, "error"); }
+  }
+
+  async function handlePostUpdate() {
+    if (!updateText.trim()) return;
+    try { await postUpdate(projectId, updateText); toast("Update posted"); setUpdateText(""); load(); } catch (e) { toast(e.message, "error"); }
+  }
+
+  async function handleSaveInvestorKPI(userId, field, value) {
+    try { await updateInvestorKPI(userId, projectId, { [field]: parseFloat(value) }); toast("KPI updated"); load(); } catch (e) { toast(e.message, "error"); }
+  }
+
+  if (!project) return <p style={{ color: "#999" }}>Loading...</p>;
+
+  const section = { background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: "20px 24px", marginBottom: 16 };
+  const tabs = ["overview", "investors", "documents", "updates", "waterfall"];
+
+  return (
+    <>
+      <p style={{ fontSize: 12, color: red, cursor: "pointer", marginBottom: 24 }} onClick={onBack}>← Back to projects</p>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 28, fontWeight: 300 }}>{project.name}</h1>
+        <div style={{ fontSize: 13, color: "#999" }}>{project.location} · {project.type}</div>
+      </div>
+
+      {/* KPI cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12, marginBottom: 24 }}>
+        {[
+          { label: "Status", value: project.status },
+          { label: "Completion", value: `${project.completion}%` },
+          { label: "Total Raise", value: fmtCurrency(project.totalRaise) },
+          { label: "Investors", value: project.investors.length },
+          { label: "Documents", value: project.documents.length },
+        ].map((s, i) => (
+          <div key={i} style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: "16px 20px" }}>
+            <div style={{ fontSize: 22, fontWeight: 300, marginBottom: 2 }}>{s.value}</div>
+            <div style={{ fontSize: 10, color: "#999", textTransform: "uppercase", letterSpacing: ".08em" }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: "flex", gap: 0, borderBottom: "1px solid #E8E5DE", marginBottom: 20 }}>
+        {tabs.map(t => (
+          <span key={t} onClick={() => setTab(t)} style={{
+            fontSize: 13, padding: "10px 20px", cursor: "pointer", textTransform: "capitalize",
+            color: tab === t ? darkText : "#999", fontWeight: tab === t ? 500 : 400,
+            borderBottom: tab === t ? `2px solid ${red}` : "2px solid transparent",
+          }}>{t}</span>
+        ))}
+      </div>
+
+      {/* Overview tab */}
+      {tab === "overview" && (
+        <div style={section}>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 11, color: "#888" }}>Description</label>
+            <p style={{ fontSize: 14, color: "#444", lineHeight: 1.6, marginTop: 4 }}>{project.description}</p>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+            <div>
+              <label style={{ fontSize: 11, color: "#888" }}>Status</label>
+              <select defaultValue={project.status} onChange={e => handleSaveField("status", e.target.value)} style={{ ...inputStyle, marginTop: 4 }}>
+                <option>Pre-Development</option><option>Under Construction</option><option>Completed</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: "#888" }}>Completion %</label>
+              <input type="number" min="0" max="100" defaultValue={project.completion} onBlur={e => handleSaveField("completionPct", parseInt(e.target.value))} style={{ ...inputStyle, marginTop: 4 }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: "#888" }}>Total Raise ($)</label>
+              <input type="number" defaultValue={project.totalRaise} onBlur={e => handleSaveField("totalRaise", parseFloat(e.target.value))} style={{ ...inputStyle, marginTop: 4 }} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Investors tab */}
+      {tab === "investors" && (
+        <div style={section}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#666", marginBottom: 14 }}>LP Investors ({project.investors.length})</div>
+          {project.investors.length > 0 ? project.investors.map((inv) => (
+            <div key={inv.userId} style={{ padding: "12px 0", borderBottom: "1px solid #F0EDE8" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <div>
+                  <span style={{ fontSize: 14, fontWeight: 500 }}>{inv.name}</span>
+                  <span style={{ fontSize: 12, color: "#999", marginLeft: 8 }}>{inv.email}</span>
+                </div>
+                <button onClick={() => setEditingKPI(editingKPI === inv.userId ? null : inv.userId)} style={{ ...btnOutline, padding: "4px 10px", fontSize: 11 }}>
+                  {editingKPI === inv.userId ? "Done" : "Edit KPIs"}
+                </button>
+              </div>
+              {editingKPI === inv.userId ? (
+                <div style={{ display: "flex", gap: 10 }}>
+                  {[
+                    { label: "Committed", field: "committed", val: inv.committed },
+                    { label: "Called", field: "called", val: inv.called },
+                    { label: "Value", field: "currentValue", val: inv.currentValue },
+                    { label: "IRR %", field: "irr", val: inv.irr },
+                    { label: "MOIC", field: "moic", val: inv.moic },
+                  ].map(k => (
+                    <div key={k.field} style={{ flex: 1 }}>
+                      <label style={{ fontSize: 10, color: "#AAA" }}>{k.label}</label>
+                      <input defaultValue={k.val ?? ""} onBlur={e => handleSaveInvestorKPI(inv.userId, k.field, e.target.value)} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ display: "flex", gap: 24, fontSize: 13, color: "#666" }}>
+                  <span>${fmt(inv.committed)} committed</span>
+                  <span>${fmt(inv.currentValue)} value</span>
+                  <span>{inv.irr}% IRR</span>
+                  <span>{inv.moic}x MOIC</span>
+                </div>
+              )}
+            </div>
+          )) : <p style={{ color: "#BBB", fontSize: 13, fontStyle: "italic" }}>No investors assigned</p>}
+
+          {/* Cap table */}
+          {project.capTable.length > 0 && (
+            <>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#666", marginTop: 24, marginBottom: 14 }}>Cap Table</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 120px 100px 100px 80px 80px", fontSize: 11, color: "#999", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
+                <span>Holder</span><span>Class</span><span>Committed</span><span>Called</span><span>Unfunded</span><span>Ownership</span>
+              </div>
+              {project.capTable.map(e => (
+                <div key={e.id} style={{ display: "grid", gridTemplateColumns: "1fr 120px 100px 100px 80px 80px", padding: "10px 0", borderBottom: "1px solid #F5F3F0", fontSize: 13 }}>
+                  <span style={{ fontWeight: 500 }}>{e.holder}</span>
+                  <span style={{ color: "#666" }}>{e.type}</span>
+                  <span>${fmt(e.committed)}</span>
+                  <span>${fmt(e.called)}</span>
+                  <span>${fmt(e.unfunded)}</span>
+                  <span>{e.ownership}%</span>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Documents tab */}
+      {tab === "documents" && (
+        <div style={section}>
+          {project.documents.length > 0 ? project.documents.map((d, i) => (
+            <div key={d.id} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: i < project.documents.length - 1 ? "1px solid #F5F3F0" : "none", fontSize: 13 }}>
+              <div>
+                <div style={{ fontWeight: 500 }}>{d.name}</div>
+                <div style={{ fontSize: 11, color: "#BBB" }}>{d.category} · {d.date} · {d.size}</div>
+              </div>
+              <span style={{ fontSize: 12, color: d.viewedBy > 0 ? green : "#CCC" }}>{d.viewedBy} viewed</span>
+            </div>
+          )) : <p style={{ color: "#BBB", fontSize: 13, fontStyle: "italic" }}>No documents</p>}
+        </div>
+      )}
+
+      {/* Updates tab */}
+      {tab === "updates" && (
+        <>
+          <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+            <input value={updateText} onChange={e => setUpdateText(e.target.value)} placeholder="Post a construction update..." style={{ ...inputStyle, flex: 1 }} />
+            <button onClick={handlePostUpdate} style={btnStyle}>Post</button>
+          </div>
+          <div style={section}>
+            {project.updates.length > 0 ? project.updates.map((u, i) => (
+              <div key={u.id} style={{ padding: "12px 0", borderBottom: i < project.updates.length - 1 ? "1px solid #F5F3F0" : "none" }}>
+                <div style={{ fontSize: 11, color: "#999", marginBottom: 4 }}>{u.date}</div>
+                <div style={{ fontSize: 13, color: "#444", lineHeight: 1.6 }}>{u.text}</div>
+              </div>
+            )) : <p style={{ color: "#BBB", fontSize: 13, fontStyle: "italic" }}>No updates posted</p>}
+          </div>
+        </>
+      )}
+
+      {/* Waterfall tab */}
+      {tab === "waterfall" && (
+        <div style={section}>
+          <div style={{ display: "flex", gap: 16, marginBottom: 20 }}>
+            <div>
+              <label style={{ fontSize: 11, color: "#888" }}>Pref Return %</label>
+              <input type="number" step="0.1" defaultValue={project.prefReturn} onBlur={e => handleSaveWaterfall("prefReturn", e.target.value)} style={{ ...inputStyle, width: 100, marginTop: 4 }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: "#888" }}>GP Catch-Up %</label>
+              <input type="number" defaultValue={project.catchUp} onBlur={e => handleSaveWaterfall("catchUp", e.target.value)} style={{ ...inputStyle, width: 100, marginTop: 4 }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: "#888" }}>Carry %</label>
+              <input type="number" defaultValue={project.carry} onBlur={e => handleSaveWaterfall("carry", e.target.value)} style={{ ...inputStyle, width: 100, marginTop: 4 }} />
+            </div>
+          </div>
+          {project.waterfall.tiers.length > 0 && (
+            <>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#666", marginBottom: 12 }}>Distribution Tiers</div>
+              {project.waterfall.tiers.map((t) => (
+                <div key={t.id} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #F5F3F0", fontSize: 13 }}>
+                  <div>
+                    <span style={{ fontWeight: 500 }}>{t.name}</span>
+                    <span style={{ color: "#999", marginLeft: 12 }}>LP: {t.lpShare} · GP: {t.gpShare}</span>
+                  </div>
+                  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                    <span style={{ color: "#999", fontSize: 12 }}>{t.threshold}</span>
+                    <span style={{ padding: "2px 8px", borderRadius: 3, fontSize: 10, background: t.status === "complete" ? "#EFE" : t.status === "accruing" ? "#FFF8E1" : "#F0EDE8", color: t.status === "complete" ? green : t.status === "accruing" ? "#B8860B" : "#999" }}>{t.status}</span>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+    </>
   );
 }
 
