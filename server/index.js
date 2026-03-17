@@ -17,12 +17,17 @@ if (process.env.NODE_ENV !== "production") {
   });
 }
 
-// Routes
-app.use("/api/v1/projects", require("./routes/projects"));
-app.use("/api/v1/investors", require("./routes/investors"));
-app.use("/api/v1/documents", require("./routes/documents"));
-app.use("/api/v1/distributions", require("./routes/distributions"));
-app.use("/api/v1/messages", require("./routes/messages"));
+const { authenticate } = require("./middleware/auth");
+
+// Public routes
+app.use("/api/v1/auth", require("./routes/auth"));
+
+// Protected routes (require valid JWT)
+app.use("/api/v1/projects", authenticate, require("./routes/projects"));
+app.use("/api/v1/investors", authenticate, require("./routes/investors"));
+app.use("/api/v1/documents", authenticate, require("./routes/documents"));
+app.use("/api/v1/distributions", authenticate, require("./routes/distributions"));
+app.use("/api/v1/messages", authenticate, require("./routes/messages"));
 
 // Health check
 app.get("/api/v1/health", (req, res) => res.json({ status: "ok" }));

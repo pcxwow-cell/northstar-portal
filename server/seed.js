@@ -1,4 +1,5 @@
 require("dotenv").config();
+const bcrypt = require("bcryptjs");
 const prisma = require("./prisma");
 
 async function main() {
@@ -17,11 +18,14 @@ async function main() {
   await prisma.user.deleteMany();
 
   // ─── Users ───
+  const investorHash = await bcrypt.hash("northstar2025", 10);
+  const adminHash = await bcrypt.hash("admin2025", 10);
+
   const investor = await prisma.user.create({
     data: {
       id: 1,
       email: "j.chen@pacificventures.ca",
-      passwordHash: "$2b$10$placeholder", // Sprint 2 will add real bcrypt hash
+      passwordHash: investorHash,
       name: "James Chen",
       initials: "JC",
       role: "INVESTOR",
@@ -33,7 +37,7 @@ async function main() {
     data: {
       id: 2,
       email: "admin@northstardevelopment.ca",
-      passwordHash: "$2b$10$placeholder",
+      passwordHash: adminHash,
       name: "Northstar Admin",
       initials: "NA",
       role: "ADMIN",
