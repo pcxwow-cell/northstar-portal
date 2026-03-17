@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, createContext, useContext } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { investor, fund, properties, capTable, waterfall, documents, distributions, performanceHistory, messages, fmt, fmtCurrency } from "./data.js";
 
@@ -6,16 +6,22 @@ import { investor, fund, properties, capTable, waterfall, documents, distributio
 const serif = "'Cormorant Garamond', Georgia, serif";
 const sans = "'DM Sans', -apple-system, sans-serif";
 const red = "#B33A3A";
-const bg = "#060606";
-const surface = "#0C0C0C";
-const line = "#1A1A1A";
-const t1 = "#E8E4DE";
-const t2 = "#8C887F";
-const t3 = "#4A4843";
 const green = "#3D7A54";
+
+const themes = {
+  dark: { bg: "#060606", surface: "#0C0C0C", line: "#1A1A1A", t1: "#E8E4DE", t2: "#8C887F", t3: "#4A4843", hover: "#0F0F0F", headerBg: "#060606F0", avatarGrad: "linear-gradient(135deg, #222, #181818)" },
+  light: { bg: "#F5F3EF", surface: "#FFFFFF", line: "#E2DFD8", t1: "#1A1816", t2: "#5C5850", t3: "#9C978D", hover: "#EDE9E3", headerBg: "#F5F3EFF0", avatarGrad: "linear-gradient(135deg, #DDD, #C8C8C8)" },
+};
+
+const ThemeContext = createContext(themes.dark);
+const useTheme = () => useContext(ThemeContext);
+
+// Default aliases for module-level use (overridden per-component via useTheme)
+const bg = "#060606", surface = "#0C0C0C", line = "#1A1A1A", t1 = "#E8E4DE", t2 = "#8C887F", t3 = "#4A4843";
 
 // ─── TOAST SYSTEM ────────────────────────────────────────
 function ToastContainer({ toasts, onDismiss }) {
+  const { bg, surface, line, t1, t2, t3 } = useTheme();
   return (
     <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 1000, display: "flex", flexDirection: "column", gap: 8 }}>
       {toasts.map(t => (
@@ -49,6 +55,7 @@ function useToast() {
 
 // ─── MODAL ───────────────────────────────────────────────
 function Modal({ open, onClose, children }) {
+  const { bg, surface, line, t1, t2, t3 } = useTheme();
   if (!open) return null;
   return (
     <div onClick={onClose} style={{
@@ -57,7 +64,7 @@ function Modal({ open, onClose, children }) {
       backdropFilter: "blur(4px)", animation: "fadeIn .15s ease",
     }}>
       <div onClick={e => e.stopPropagation()} style={{
-        background: "#111", border: `1px solid ${line}`, borderRadius: 4,
+        background: surface, border: `1px solid ${line}`, borderRadius: 4,
         padding: "32px", maxWidth: 520, width: "90%", maxHeight: "80vh", overflow: "auto",
       }}>
         {children}
@@ -68,9 +75,10 @@ function Modal({ open, onClose, children }) {
 
 // ─── SHARED COMPONENTS ───────────────────────────────────
 function ChartTooltip({ active, payload, label }) {
+  const { bg, surface, line, t1, t2, t3 } = useTheme();
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background: "#111", border: `1px solid ${line}`, borderRadius: 3, padding: "8px 12px", fontSize: 12, fontFamily: sans }}>
+    <div style={{ background: surface, border: `1px solid ${line}`, borderRadius: 3, padding: "8px 12px", fontSize: 12, fontFamily: sans }}>
       <div style={{ color: t3, marginBottom: 4 }}>{label}</div>
       {payload.map((p, i) => (
         <div key={i} style={{ color: p.color || t1 }}>{p.name}: ${p.value}M</div>
@@ -80,6 +88,7 @@ function ChartTooltip({ active, payload, label }) {
 }
 
 function StatusBadge({ status }) {
+  const { bg, surface, line, t1, t2, t3 } = useTheme();
   const colors = {
     "Completed": green,
     "Under Construction": "#8B7128",
@@ -94,6 +103,7 @@ function StatusBadge({ status }) {
 }
 
 function SectionHeader({ title, right }) {
+  const { bg, surface, line, t1, t2, t3 } = useTheme();
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 20 }}>
       <h2 style={{ fontFamily: serif, fontSize: 22, fontWeight: 400, color: t1 }}>{title}</h2>
@@ -103,6 +113,7 @@ function SectionHeader({ title, right }) {
 }
 
 function Table({ columns, rows, onRowClick }) {
+  const { bg, surface, line, t1, t2, t3, hover } = useTheme();
   return (
     <div style={{ border: `1px solid ${line}`, borderRadius: 2, overflow: "hidden" }}>
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
@@ -118,7 +129,7 @@ function Table({ columns, rows, onRowClick }) {
         <tbody>
           {rows.map((row, i) => (
             <tr key={i} onClick={() => onRowClick?.(row, i)} style={{ borderBottom: i < rows.length - 1 ? `1px solid ${line}` : "none", cursor: onRowClick ? "pointer" : "default", transition: "background .12s" }}
-              onMouseEnter={e => e.currentTarget.style.background = "#0F0F0F"}
+              onMouseEnter={e => e.currentTarget.style.background = hover}
               onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
               {columns.map(c => (
                 <td key={c.key} style={{ padding: "14px 16px", textAlign: c.align || "left" }}>
@@ -134,6 +145,7 @@ function Table({ columns, rows, onRowClick }) {
 }
 
 function ProgressBar({ value, color }) {
+  const { bg, surface, line, t1, t2, t3 } = useTheme();
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
       <div style={{ flex: 1, height: 3, background: "#1A1A1A", borderRadius: 1, overflow: "hidden" }}>
@@ -146,6 +158,7 @@ function ProgressBar({ value, color }) {
 
 // ─── PAGE: OVERVIEW ──────────────────────────────────────
 function Overview({ onNavigate }) {
+  const { bg, surface, line, t1, t2, t3, hover } = useTheme();
   return (
     <>
       {/* Hero */}
@@ -227,7 +240,7 @@ function Overview({ onNavigate }) {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 1, background: line, borderRadius: 2, overflow: "hidden", marginBottom: 64 }}>
         {properties.map((p, i) => (
           <div key={i} style={{ background: surface, padding: "24px", cursor: "pointer", transition: "background .12s" }}
-            onMouseEnter={e => e.currentTarget.style.background = "#0F0F0F"}
+            onMouseEnter={e => e.currentTarget.style.background = hover}
             onMouseLeave={e => e.currentTarget.style.background = surface}
             onClick={() => onNavigate("portfolio")}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
@@ -252,7 +265,7 @@ function Overview({ onNavigate }) {
       <div style={{ border: `1px solid ${line}`, borderRadius: 2, overflow: "hidden" }}>
         {messages.slice(0, 3).map((m, i) => (
           <div key={m.id} style={{ display: "flex", gap: 16, padding: "16px 20px", borderBottom: i < 2 ? `1px solid ${line}` : "none", cursor: "pointer", transition: "background .12s" }}
-            onMouseEnter={e => e.currentTarget.style.background = "#0F0F0F"}
+            onMouseEnter={e => e.currentTarget.style.background = hover}
             onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
             <div style={{ width: 6, height: 6, borderRadius: "50%", background: m.unread ? red : "transparent", marginTop: 6, flexShrink: 0 }} />
             <div style={{ flex: 1 }}>
@@ -272,6 +285,7 @@ function Overview({ onNavigate }) {
 
 // ─── PAGE: PORTFOLIO ─────────────────────────────────────
 function Portfolio() {
+  const { bg, surface, line, t1, t2, t3, hover } = useTheme();
   const [selected, setSelected] = useState(null);
   const property = selected !== null ? properties[selected] : null;
 
@@ -361,6 +375,7 @@ function Portfolio() {
 
 // ─── PAGE: CAP TABLE ─────────────────────────────────────
 function CapTablePage() {
+  const { bg, surface, line, t1, t2, t3 } = useTheme();
   return (
     <>
       <div style={{ marginBottom: 40 }}>
@@ -431,6 +446,7 @@ function CapTablePage() {
 
 // ─── PAGE: DOCUMENTS ─────────────────────────────────────
 function DocumentsPage({ toast }) {
+  const { bg, surface, line, t1, t2, t3, hover } = useTheme();
   const [filter, setFilter] = useState("All");
   const [signModal, setSignModal] = useState(null);
   const [reviewDoc, setReviewDoc] = useState(null);
@@ -486,7 +502,7 @@ function DocumentsPage({ toast }) {
       <div style={{ border: `1px solid ${line}`, borderRadius: 2, overflow: "hidden" }}>
         {filtered.map((d, i) => (
           <div key={d.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: i < filtered.length - 1 ? `1px solid ${line}` : "none", cursor: "pointer", transition: "background .12s" }}
-            onMouseEnter={e => e.currentTarget.style.background = "#0F0F0F"}
+            onMouseEnter={e => e.currentTarget.style.background = hover}
             onMouseLeave={e => e.currentTarget.style.background = "transparent"}
             onClick={() => { window.open(d.file, "_blank"); }}>
             <div style={{ flex: 1 }}>
@@ -564,6 +580,7 @@ function DocumentsPage({ toast }) {
 
 // ─── PAGE: DISTRIBUTIONS ─────────────────────────────────
 function DistributionsPage() {
+  const { bg, surface, line, t1, t2, t3 } = useTheme();
   const total = distributions.reduce((a, d) => a + d.amount, 0);
   return (
     <>
@@ -602,6 +619,7 @@ function DistributionsPage() {
 
 // ─── PAGE: MESSAGES ──────────────────────────────────────
 function MessagesPage({ toast, msgs, setMsgs }) {
+  const { bg, surface, line, t1, t2, t3, hover } = useTheme();
   const [selected, setSelected] = useState(null);
   const [reply, setReply] = useState("");
   const [replies, setReplies] = useState({});
@@ -641,7 +659,7 @@ function MessagesPage({ toast, msgs, setMsgs }) {
         </div>
         {/* Replies */}
         {msgReplies.map((r, i) => (
-          <div key={i} style={{ marginTop: 16, border: `1px solid ${line}`, borderRadius: 2, padding: "20px 32px", background: "#0A0A0A" }}>
+          <div key={i} style={{ marginTop: 16, border: `1px solid ${line}`, borderRadius: 2, padding: "20px 32px", background: hover }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
               <span style={{ fontSize: 12, color: t1, fontWeight: 500 }}>{r.from}</span>
               <span style={{ fontSize: 11, color: t3 }}>{r.date}</span>
@@ -671,7 +689,7 @@ function MessagesPage({ toast, msgs, setMsgs }) {
       <div style={{ border: `1px solid ${line}`, borderRadius: 2, overflow: "hidden" }}>
         {msgs.map((m, i) => (
           <div key={m.id} onClick={() => handleSelect(i)} style={{ display: "flex", gap: 16, padding: "18px 20px", borderBottom: i < msgs.length - 1 ? `1px solid ${line}` : "none", cursor: "pointer", transition: "background .12s" }}
-            onMouseEnter={e => e.currentTarget.style.background = "#0F0F0F"}
+            onMouseEnter={e => e.currentTarget.style.background = hover}
             onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
             <div style={{ width: 6, height: 6, borderRadius: "50%", background: m.unread ? red : "transparent", marginTop: 7, flexShrink: 0 }} />
             <div style={{ flex: 1 }}>
@@ -689,11 +707,140 @@ function MessagesPage({ toast, msgs, setMsgs }) {
   );
 }
 
+// ─── LOGIN PAGE ─────────────────────────────────────────
+function LoginPage({ onLogin }) {
+  const { bg, surface, line, t1, t2, t3 } = useTheme();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    setTimeout(() => {
+      if (email === "j.chen@pacificventures.ca" && password === "northstar2025") {
+        sessionStorage.setItem("northstar_auth", "true");
+        onLogin();
+      } else {
+        setError("Invalid email or password");
+        setLoading(false);
+      }
+    }, 600);
+  }
+
+  return (
+    <div style={{ background: bg, minHeight: "100vh", fontFamily: sans, color: t1, display: "flex", flexDirection: "column" }}>
+      <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } @keyframes fadeInSlow { from { opacity: 0; } to { opacity: 1; } }`}</style>
+
+      {/* Splash Hero */}
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "48px 24px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 80, maxWidth: 900, width: "100%", alignItems: "center", animation: "fadeIn .5s ease" }}>
+
+          {/* Left — Brand & highlights */}
+          <div>
+            <div style={{ marginBottom: 40 }}>
+              <div style={{ fontFamily: serif, fontSize: 42, fontWeight: 400, letterSpacing: ".08em", lineHeight: 1.1 }}>NORTHSTAR</div>
+              <div style={{ fontSize: 12, letterSpacing: ".18em", color: t3, textTransform: "uppercase", marginTop: 8 }}>Pacific Development Group</div>
+            </div>
+            <h2 style={{ fontFamily: serif, fontSize: 26, fontWeight: 300, lineHeight: 1.4, color: t2, marginBottom: 32 }}>
+              Institutional-grade real estate<br />investment, made transparent.
+            </h2>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1, background: line, borderRadius: 2, overflow: "hidden", marginBottom: 32 }}>
+              {[
+                { label: "Fund AUM", value: "$25M" },
+                { label: "Net IRR", value: "17.9%" },
+                { label: "Properties", value: "4" },
+              ].map((m, i) => (
+                <div key={i} style={{ background: surface, padding: "20px 16px" }}>
+                  <div style={{ fontSize: 9, letterSpacing: ".12em", textTransform: "uppercase", color: t3, marginBottom: 8 }}>{m.label}</div>
+                  <div style={{ fontSize: 22, fontFamily: serif, fontWeight: 400, color: t1 }}>{m.value}</div>
+                </div>
+              ))}
+            </div>
+            <p style={{ fontSize: 13, color: t3, lineHeight: 1.7 }}>
+              Value-add multifamily & mixed-use investments across Western Canada.
+              Track your portfolio, review documents, and monitor construction progress — all in one place.
+            </p>
+          </div>
+
+          {/* Right — Login form */}
+          <div>
+            <form onSubmit={handleSubmit} style={{ border: `1px solid ${line}`, borderRadius: 4, padding: 32, background: surface }}>
+              <h2 style={{ fontFamily: serif, fontSize: 20, fontWeight: 400, marginBottom: 4 }}>Investor Portal</h2>
+              <p style={{ fontSize: 12, color: t3, marginBottom: 24 }}>Sign in to access your account</p>
+              {error && (
+                <div style={{ fontSize: 12, color: red, padding: "8px 12px", border: `1px solid ${red}33`, borderRadius: 2, marginBottom: 16, background: `${red}0A` }}>{error}</div>
+              )}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: 11, color: t3, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 6 }}>Email</label>
+                <input type="email" value={email} onChange={e => setEmail(e.target.value)} required
+                  placeholder="investor@example.com"
+                  style={{ width: "100%", padding: "10px 12px", background: bg, border: `1px solid ${line}`, borderRadius: 2, color: t1, fontSize: 13, fontFamily: sans, outline: "none", boxSizing: "border-box" }}
+                  onFocus={e => e.target.style.borderColor = `${red}66`}
+                  onBlur={e => e.target.style.borderColor = line} />
+              </div>
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ display: "block", fontSize: 11, color: t3, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 6 }}>Password</label>
+                <input type="password" value={password} onChange={e => setPassword(e.target.value)} required
+                  placeholder="••••••••"
+                  style={{ width: "100%", padding: "10px 12px", background: bg, border: `1px solid ${line}`, borderRadius: 2, color: t1, fontSize: 13, fontFamily: sans, outline: "none", boxSizing: "border-box" }}
+                  onFocus={e => e.target.style.borderColor = `${red}66`}
+                  onBlur={e => e.target.style.borderColor = line} />
+              </div>
+              <button type="submit" disabled={loading} style={{
+                width: "100%", padding: "11px", background: loading ? `${red}88` : red, color: "#fff",
+                border: "none", borderRadius: 2, fontSize: 13, fontFamily: sans, cursor: loading ? "default" : "pointer",
+                letterSpacing: ".04em", transition: "background .15s",
+              }}>
+                {loading ? "Signing in..." : "Sign In"}
+              </button>
+              <div style={{ marginTop: 20, padding: "12px", border: `1px solid ${line}`, borderRadius: 2, background: bg }}>
+                <div style={{ fontSize: 10, color: t3, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 6 }}>Demo Credentials</div>
+                <div style={{ fontSize: 12, color: t2 }}>j.chen@pacificventures.ca</div>
+                <div style={{ fontSize: 12, color: t2 }}>northstar2025</div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <footer style={{ borderTop: `1px solid ${line}`, padding: "20px 48px", display: "flex", justifyContent: "space-between", fontSize: 11, color: t3 }}>
+        <span>© 2026 Northstar Pacific Development Group</span>
+        <span>710 – 1199 W Pender, Vancouver BC V6E 2R1</span>
+      </footer>
+    </div>
+  );
+}
+
 // ─── APP ─────────────────────────────────────────────────
 export default function App() {
+  const [authed, setAuthed] = useState(() => sessionStorage.getItem("northstar_auth") === "true");
+  const [themeMode, setThemeMode] = useState(() => localStorage.getItem("northstar_theme") || "dark");
   const [view, setView] = useState("overview");
   const [msgs, setMsgs] = useState(messages.map(m => ({ ...m })));
   const toast = useToast();
+  const th = themes[themeMode];
+
+  function toggleTheme() {
+    const next = themeMode === "dark" ? "light" : "dark";
+    setThemeMode(next);
+    localStorage.setItem("northstar_theme", next);
+  }
+
+  function handleLogout() {
+    sessionStorage.removeItem("northstar_auth");
+    setAuthed(false);
+    setView("overview");
+  }
+
+  if (!authed) return (
+    <ThemeContext.Provider value={th}>
+      <LoginPage onLogin={() => setAuthed(true)} />
+    </ThemeContext.Provider>
+  );
 
   const pages = {
     overview: <Overview onNavigate={setView} />,
@@ -714,31 +861,33 @@ export default function App() {
   ];
 
   return (
-    <div style={{ background: bg, color: t1, fontFamily: sans, minHeight: "100vh" }}>
+    <ThemeContext.Provider value={th}>
+    <div style={{ background: th.bg, color: th.t1, fontFamily: sans, minHeight: "100vh", transition: "background .3s, color .3s" }}>
       <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
       {/* Header */}
       <header style={{
-        borderBottom: `1px solid ${line}`, display: "flex", alignItems: "center",
+        borderBottom: `1px solid ${th.line}`, display: "flex", alignItems: "center",
         justifyContent: "space-between", padding: "0 48px", height: 60,
         position: "sticky", top: 0, zIndex: 10,
-        background: `${bg}F0`, backdropFilter: "blur(16px)",
+        background: th.headerBg, backdropFilter: "blur(16px)",
+        transition: "background .3s, border-color .3s",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-            <span style={{ fontFamily: serif, fontSize: 19, fontWeight: 400, letterSpacing: ".06em", color: t1 }}>NORTHSTAR</span>
-            <span style={{ fontSize: 10, letterSpacing: ".14em", color: t3, textTransform: "uppercase" }}>Investor Portal</span>
+            <span style={{ fontFamily: serif, fontSize: 19, fontWeight: 400, letterSpacing: ".06em", color: th.t1 }}>NORTHSTAR</span>
+            <span style={{ fontSize: 10, letterSpacing: ".14em", color: th.t3, textTransform: "uppercase" }}>Investor Portal</span>
           </div>
-          <div style={{ width: 1, height: 20, background: line }} />
+          <div style={{ width: 1, height: 20, background: th.line }} />
           <nav style={{ display: "flex", gap: 24 }}>
             {navItems.map(n => (
               <span key={n.id} onClick={() => setView(n.id)} style={{
                 fontSize: 12.5, fontWeight: 400, cursor: "pointer", userSelect: "none",
-                color: view === n.id ? t1 : t3,
+                color: view === n.id ? th.t1 : th.t3,
                 borderBottom: view === n.id ? `1px solid ${red}` : "1px solid transparent",
                 paddingBottom: 2, transition: "color .15s, border-color .15s",
               }}
-                onMouseEnter={e => { if (view !== n.id) e.currentTarget.style.color = t2 }}
-                onMouseLeave={e => { if (view !== n.id) e.currentTarget.style.color = t3 }}>
+                onMouseEnter={e => { if (view !== n.id) e.currentTarget.style.color = th.t2 }}
+                onMouseLeave={e => { if (view !== n.id) e.currentTarget.style.color = th.t3 }}>
                 {n.label}
                 {n.id === "messages" && msgs.some(m => m.unread) && (
                   <span style={{ display: "inline-block", width: 5, height: 5, borderRadius: "50%", background: red, marginLeft: 4, verticalAlign: "middle" }} />
@@ -748,13 +897,22 @@ export default function App() {
           </nav>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <span style={{ fontSize: 12, color: t3 }}>{investor.name}</span>
+          <span onClick={toggleTheme} style={{ fontSize: 14, cursor: "pointer", padding: "4px 8px", borderRadius: 2, border: `1px solid ${th.line}`, transition: "border-color .15s" }}
+            title={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}>
+            {themeMode === "dark" ? "\u2600" : "\u263D"}
+          </span>
+          <span style={{ fontSize: 12, color: th.t3 }}>{investor.name}</span>
           <div style={{
             width: 28, height: 28, borderRadius: "50%",
-            background: `linear-gradient(135deg, #222, #181818)`,
-            border: `1px solid ${line}`, display: "flex", alignItems: "center",
-            justifyContent: "center", fontSize: 10, fontWeight: 500, color: t2,
+            background: th.avatarGrad,
+            border: `1px solid ${th.line}`, display: "flex", alignItems: "center",
+            justifyContent: "center", fontSize: 10, fontWeight: 500, color: th.t2,
           }}>{investor.initials}</div>
+          <span onClick={handleLogout} style={{ fontSize: 11, color: th.t3, cursor: "pointer", padding: "4px 10px", border: `1px solid ${th.line}`, borderRadius: 2, transition: "color .15s" }}
+            onMouseEnter={e => e.currentTarget.style.color = red}
+            onMouseLeave={e => e.currentTarget.style.color = th.t3}>
+            Sign Out
+          </span>
         </div>
       </header>
 
@@ -764,7 +922,7 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer style={{ borderTop: `1px solid ${line}`, padding: "20px 48px", display: "flex", justifyContent: "space-between", fontSize: 11, color: t3 }}>
+      <footer style={{ borderTop: `1px solid ${th.line}`, padding: "20px 48px", display: "flex", justifyContent: "space-between", fontSize: 11, color: th.t3 }}>
         <span>© 2026 Northstar Pacific Development Group</span>
         <span>710 – 1199 W Pender, Vancouver BC V6E 2R1</span>
       </footer>
@@ -772,5 +930,5 @@ export default function App() {
       {/* Toasts */}
       <ToastContainer toasts={toast.toasts} onDismiss={toast.dismiss} />
     </div>
-  );
+    </ThemeContext.Provider>);
 }
