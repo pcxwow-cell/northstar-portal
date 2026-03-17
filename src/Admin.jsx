@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchDashboard, fetchAdminProjects, updateProject, postUpdate, fetchAdminInvestors, sendMessage, uploadDocument, inviteInvestor, updateInvestor, approveInvestor, deactivateInvestor, resetInvestorPassword, assignInvestorProject, updateInvestorKPI, fetchThreads, fetchThread, createThread, replyToThread, fmt, fmtCurrency } from "./api.js";
+import { fetchDashboard, fetchAdminProjects, updateProject, postUpdate, fetchAdminInvestors, sendMessage, uploadDocument, inviteInvestor, updateInvestor, approveInvestor, deactivateInvestor, resetInvestorPassword, assignInvestorProject, updateInvestorKPI, fetchThreads, fetchThread, createThread, replyToThread, fetchInvestorProfile, fetchGroups, createGroup, updateGroup, deleteGroup, fetchGroupDetail, addGroupMembers, removeGroupMember, fetchStaff, createStaff, updateStaff, fmt, fmtCurrency } from "./api.js";
 
 const sans = "'DM Sans', -apple-system, sans-serif";
 const red = "#EA2028";
@@ -19,13 +19,23 @@ export default function AdminPanel({ user, onLogout }) {
     { id: "projects", label: "Projects" },
     { id: "investors", label: "Investors" },
     { id: "documents", label: "Upload Docs" },
+    { id: "groups", label: "Groups" },
+    { id: "staff", label: "Staff" },
     { id: "inbox", label: "Inbox" },
   ];
+
+  // Investor profile sub-view
+  const [profileId, setProfileId] = useState(null);
+
   const pages = {
     dashboard: <Dashboard />,
     projects: <ProjectManager toast={showToast} />,
-    investors: <InvestorManager toast={showToast} />,
+    investors: profileId
+      ? <InvestorProfile investorId={profileId} onBack={() => setProfileId(null)} toast={showToast} />
+      : <InvestorManager toast={showToast} onViewProfile={(id) => setProfileId(id)} />,
     documents: <DocumentUploader toast={showToast} />,
+    groups: <GroupManager toast={showToast} />,
+    staff: <StaffManager toast={showToast} />,
     inbox: <AdminInbox user={user} toast={showToast} />,
   };
 
@@ -149,7 +159,7 @@ function ProjectManager({ toast }) {
 }
 
 // ─── INVESTOR MANAGER (search, filter, sort, invite, edit, KPI editing) ───
-function InvestorManager({ toast }) {
+function InvestorManager({ toast, onViewProfile }) {
   const [investors, setInvestors] = useState([]);
   const [projects, setProjects] = useState([]);
   const [search, setSearch] = useState("");
@@ -258,6 +268,7 @@ function InvestorManager({ toast }) {
               <span>${fmt(inv.totalCommitted)}</span>
               <span>${fmt(inv.totalValue)}</span>
               <div style={{ display: "flex", gap: 6 }}>
+                <button onClick={() => onViewProfile?.(inv.id)} style={{ ...btnStyle, padding: "4px 10px", fontSize: 11 }}>View</button>
                 <button onClick={() => setEditing(editing === inv.id ? null : inv.id)} style={{ ...btnOutline, padding: "4px 10px", fontSize: 11 }}>Edit</button>
                 {inv.status === "PENDING" && <button onClick={() => handleApprove(inv.id)} style={{ ...btnStyle, padding: "4px 10px", fontSize: 11, background: green }}>Approve</button>}
                 {inv.status === "ACTIVE" && <button onClick={() => handleDeactivate(inv.id)} style={{ ...btnOutline, padding: "4px 10px", fontSize: 11, color: red, borderColor: red }}>Deactivate</button>}
@@ -410,6 +421,291 @@ function DocumentUploader({ toast }) {
 }
 
 // ─── TARGETED MESSAGE COMPOSER ───
+// ─── INVESTOR PROFILE PAGE ───
+function InvestorProfile({ investorId, onBack, toast }) {
+  const [profile, setProfile] = useState(null);
+  useEffect(() => { fetchInvestorProfile(investorId).then(setProfile); }, [investorId]);
+  if (!profile) return <p style={{ color: "#999" }}>Loading...</p>;
+
+  const section = { background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: "20px 24px", marginBottom: 16 };
+  const sectionTitle = { fontSize: 13, fontWeight: 600, color: "#666", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 14 };
+
+  return (
+    <>
+      <p style={{ fontSize: 12, color: red, cursor: "pointer", marginBottom: 24 }} onClick={onBack}>← Back to investors</p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#F0EDE8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 600, color: "#666" }}>
+            {profile.initials || profile.name.split(" ").map(n => n[0]).join("")}
+          </div>
+          <div>
+            <h1 style={{ fontSize: 24, fontWeight: 400 }}>{profile.name}</h1>
+            <div style={{ fontSize: 13, color: "#999" }}>{profile.email} · {profile.role === "INVESTOR" ? "Limited Partner" : profile.role} · Joined {profile.joined}</div>
+          </div>
+        </div>
+        <span style={{ padding: "4px 12px", borderRadius: 4, fontSize: 12, fontWeight: 500, background: profile.status === "ACTIVE" ? "#EFE" : profile.status === "PENDING" ? "#FFF8E1" : "#FEE", color: profile.status === "ACTIVE" ? green : profile.status === "PENDING" ? "#B8860B" : red }}>{profile.status}</span>
+      </div>
+
+      {/* Groups */}
+      <div style={section}>
+        <div style={sectionTitle}>Groups</div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {profile.groups.length > 0 ? profile.groups.map(g => (
+            <span key={g.id} style={{ padding: "4px 12px", borderRadius: 16, fontSize: 12, background: g.color ? `${g.color}20` : "#F0EDE8", color: g.color || "#666", border: `1px solid ${g.color ? `${g.color}40` : "#E0DDD8"}` }}>{g.name}</span>
+          )) : <span style={{ fontSize: 12, color: "#BBB", fontStyle: "italic" }}>No groups assigned</span>}
+        </div>
+      </div>
+
+      {/* Projects + KPIs */}
+      <div style={section}>
+        <div style={sectionTitle}>Project Investments</div>
+        {profile.projects.length > 0 ? profile.projects.map(p => (
+          <div key={p.projectId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid #F0EDE8" }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 500 }}>{p.projectName}</div>
+              <div style={{ fontSize: 11, color: "#999" }}>{p.projectStatus}</div>
+            </div>
+            <div style={{ display: "flex", gap: 24, fontSize: 13, color: "#666" }}>
+              <span>${fmt(p.committed)} committed</span>
+              <span>${fmt(p.currentValue)} value</span>
+              <span>{p.irr}% IRR</span>
+              <span>{p.moic}x MOIC</span>
+            </div>
+          </div>
+        )) : <span style={{ fontSize: 12, color: "#BBB", fontStyle: "italic" }}>No project assignments</span>}
+      </div>
+
+      {/* Documents Access */}
+      <div style={section}>
+        <div style={sectionTitle}>Document Access ({(profile.documents.assigned.length + profile.documents.projectDocs.length + profile.documents.generalDocs.length)} documents)</div>
+        {[...profile.documents.assigned, ...profile.documents.projectDocs, ...profile.documents.generalDocs].slice(0, 10).map((d, i) => (
+          <div key={`${d.id}-${i}`} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #F5F3F0", fontSize: 13 }}>
+            <span>{d.name}</span>
+            <span style={{ color: "#999", fontSize: 12 }}>{d.category} · {d.date}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Recent Messages */}
+      <div style={section}>
+        <div style={sectionTitle}>Recent Messages</div>
+        {profile.recentThreads.length > 0 ? profile.recentThreads.map(t => (
+          <div key={t.id} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #F5F3F0", fontSize: 13 }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              {t.unread && <span style={{ width: 6, height: 6, borderRadius: "50%", background: red }} />}
+              <span>{t.subject}</span>
+            </div>
+            <span style={{ color: "#999", fontSize: 11 }}>{new Date(t.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })} · {t.targetType}</span>
+          </div>
+        )) : <span style={{ fontSize: 12, color: "#BBB", fontStyle: "italic" }}>No messages</span>}
+      </div>
+    </>
+  );
+}
+
+// ─── GROUP MANAGER ───
+function GroupManager({ toast }) {
+  const [groups, setGroups] = useState([]);
+  const [newName, setNewName] = useState("");
+  const [newColor, setNewColor] = useState("#EA2028");
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [groupDetail, setGroupDetail] = useState(null);
+  const [investors, setInvestors] = useState([]);
+  const [addSearch, setAddSearch] = useState("");
+
+  useEffect(() => { loadGroups(); fetchAdminInvestors().then(setInvestors); }, []);
+  function loadGroups() { fetchGroups().then(setGroups); }
+
+  async function handleCreate(e) {
+    e.preventDefault();
+    if (!newName.trim()) return;
+    try { await createGroup({ name: newName, color: newColor }); toast("Group created"); setNewName(""); loadGroups(); } catch (e) { toast(e.message, "error"); }
+  }
+
+  async function handleDelete(id) {
+    try { await deleteGroup(id); toast("Group deleted"); if (selectedGroup === id) { setSelectedGroup(null); setGroupDetail(null); } loadGroups(); } catch (e) { toast(e.message, "error"); }
+  }
+
+  async function openGroup(id) {
+    setSelectedGroup(id);
+    const detail = await fetchGroupDetail(id);
+    setGroupDetail(detail);
+  }
+
+  async function handleAddMember(userId) {
+    try { await addGroupMembers(selectedGroup, [userId]); toast("Member added"); openGroup(selectedGroup); } catch (e) { toast(e.message, "error"); }
+  }
+
+  async function handleRemoveMember(userId) {
+    try { await removeGroupMember(selectedGroup, userId); toast("Member removed"); openGroup(selectedGroup); } catch (e) { toast(e.message, "error"); }
+  }
+
+  const addResults = addSearch.length >= 1 && groupDetail
+    ? investors.filter(inv => !groupDetail.members.some(m => m.id === inv.id) && (inv.name.toLowerCase().includes(addSearch.toLowerCase()) || inv.email.toLowerCase().includes(addSearch.toLowerCase())))
+    : [];
+
+  return (
+    <>
+      <h1 style={{ fontSize: 28, fontWeight: 300, marginBottom: 24 }}>Investor Groups</h1>
+
+      {/* Create group */}
+      <form onSubmit={handleCreate} style={{ display: "flex", gap: 10, marginBottom: 24, alignItems: "flex-end" }}>
+        <div style={{ flex: 1 }}>
+          <label style={{ fontSize: 11, color: "#888" }}>Group Name</label>
+          <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Class A LPs" style={inputStyle} required />
+        </div>
+        <div>
+          <label style={{ fontSize: 11, color: "#888" }}>Color</label>
+          <input type="color" value={newColor} onChange={e => setNewColor(e.target.value)} style={{ width: 42, height: 38, border: "1px solid #DDD", borderRadius: 4, cursor: "pointer" }} />
+        </div>
+        <button type="submit" style={btnStyle}>Create Group</button>
+      </form>
+
+      <div style={{ display: "flex", gap: 20 }}>
+        {/* Group list */}
+        <div style={{ width: 280, flexShrink: 0 }}>
+          <div style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, overflow: "hidden" }}>
+            {groups.length === 0 ? <div style={{ padding: 20, color: "#999", textAlign: "center", fontSize: 13 }}>No groups yet</div> : groups.map((g, i) => (
+              <div key={g.id} onClick={() => openGroup(g.id)} style={{
+                padding: "14px 16px", borderBottom: i < groups.length - 1 ? "1px solid #F0EDE8" : "none",
+                cursor: "pointer", background: selectedGroup === g.id ? "#F8F7F4" : "#fff",
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: g.color || "#CCC" }} />
+                  <span style={{ fontSize: 14, fontWeight: selectedGroup === g.id ? 500 : 400 }}>{g.name}</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 11, color: "#999" }}>{g.memberCount}</span>
+                  <span onClick={(e) => { e.stopPropagation(); handleDelete(g.id); }} style={{ fontSize: 14, color: "#CCC", cursor: "pointer" }}>&times;</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Group detail */}
+        <div style={{ flex: 1 }}>
+          {groupDetail ? (
+            <div style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: "20px 24px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+                <div style={{ width: 14, height: 14, borderRadius: "50%", background: groupDetail.color || "#CCC" }} />
+                <h2 style={{ fontSize: 18, fontWeight: 500 }}>{groupDetail.name}</h2>
+                <span style={{ fontSize: 12, color: "#999" }}>{groupDetail.members.length} members</span>
+              </div>
+
+              {/* Add member search */}
+              <div style={{ position: "relative", marginBottom: 16 }}>
+                <input value={addSearch} onChange={e => setAddSearch(e.target.value)} placeholder="Search investors to add..." style={inputStyle} />
+                {addResults.length > 0 && (
+                  <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1px solid #E8E5DE", borderTop: "none", borderRadius: "0 0 4px 4px", zIndex: 10, maxHeight: 180, overflow: "auto", boxShadow: "0 4px 12px rgba(0,0,0,.08)" }}>
+                    {addResults.slice(0, 6).map(inv => (
+                      <div key={inv.id} onClick={() => { handleAddMember(inv.id); setAddSearch(""); }} style={{ padding: "10px 14px", cursor: "pointer", fontSize: 13, borderBottom: "1px solid #F0EDE8" }}
+                        onMouseEnter={e => e.currentTarget.style.background = "#F8F7F4"}
+                        onMouseLeave={e => e.currentTarget.style.background = "#fff"}>
+                        <span style={{ fontWeight: 500 }}>{inv.name}</span>
+                        <span style={{ color: "#999", marginLeft: 8, fontSize: 12 }}>{inv.email}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Member list */}
+              {groupDetail.members.map((m, i) => (
+                <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: i < groupDetail.members.length - 1 ? "1px solid #F5F3F0" : "none" }}>
+                  <div>
+                    <span style={{ fontSize: 14, fontWeight: 500 }}>{m.name}</span>
+                    <span style={{ fontSize: 12, color: "#999", marginLeft: 10 }}>{m.email}</span>
+                  </div>
+                  <span onClick={() => handleRemoveMember(m.id)} style={{ fontSize: 12, color: red, cursor: "pointer" }}>Remove</span>
+                </div>
+              ))}
+              {groupDetail.members.length === 0 && <div style={{ color: "#BBB", fontSize: 13, fontStyle: "italic" }}>No members — search above to add investors</div>}
+            </div>
+          ) : (
+            <div style={{ padding: 40, textAlign: "center", color: "#999" }}>Select a group to manage members</div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─── STAFF MANAGER ───
+function StaffManager({ toast }) {
+  const [staff, setStaff] = useState([]);
+  const [showAdd, setShowAdd] = useState(false);
+  const [name, setName] = useState(""); const [email, setEmail] = useState(""); const [role, setRole] = useState("ADMIN");
+
+  useEffect(() => { loadStaff(); }, []);
+  function loadStaff() { fetchStaff().then(setStaff); }
+
+  async function handleAdd(e) {
+    e.preventDefault();
+    try {
+      const result = await createStaff({ name, email, role });
+      toast(`${result.name} added. Temp password: ${result.tempPassword}`);
+      setShowAdd(false); setName(""); setEmail(""); loadStaff();
+    } catch (err) { toast(err.message, "error"); }
+  }
+
+  async function handleUpdate(id, data) {
+    try { await updateStaff(id, data); toast("Updated"); loadStaff(); } catch (e) { toast(e.message, "error"); }
+  }
+
+  return (
+    <>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <h1 style={{ fontSize: 28, fontWeight: 300 }}>Company Staff</h1>
+        <button onClick={() => setShowAdd(!showAdd)} style={btnStyle}>{showAdd ? "Cancel" : "Add Staff"}</button>
+      </div>
+
+      {showAdd && (
+        <form onSubmit={handleAdd} style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: "20px 24px", marginBottom: 24, display: "flex", gap: 12, alignItems: "flex-end" }}>
+          <div style={{ flex: 1 }}>
+            <label style={{ fontSize: 11, color: "#888" }}>Full Name</label>
+            <input value={name} onChange={e => setName(e.target.value)} required style={inputStyle} placeholder="Jane Smith" />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={{ fontSize: 11, color: "#888" }}>Email</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required style={inputStyle} placeholder="jane@northstardevelopment.ca" />
+          </div>
+          <div>
+            <label style={{ fontSize: 11, color: "#888" }}>Role</label>
+            <select value={role} onChange={e => setRole(e.target.value)} style={inputStyle}>
+              <option value="ADMIN">Admin</option>
+              <option value="GP">General Partner</option>
+            </select>
+          </div>
+          <button type="submit" style={btnStyle}>Add</button>
+        </form>
+      )}
+
+      <div style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, overflow: "hidden" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 120px 100px 120px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: "#999", textTransform: "uppercase", letterSpacing: ".06em" }}>
+          <span>Name</span><span>Email</span><span>Role</span><span>Status</span><span>Actions</span>
+        </div>
+        {staff.map(s => (
+          <div key={s.id} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 120px 100px 120px", padding: "14px 20px", borderBottom: "1px solid #F0EDE8", alignItems: "center", fontSize: 13 }}>
+            <span style={{ fontWeight: 500 }}>{s.name}</span>
+            <span style={{ color: "#666" }}>{s.email}</span>
+            <select value={s.role} onChange={e => handleUpdate(s.id, { role: e.target.value })} style={{ ...inputStyle, padding: "4px 8px", fontSize: 12 }}>
+              <option value="ADMIN">Admin</option>
+              <option value="GP">GP</option>
+            </select>
+            <span style={{ padding: "2px 8px", borderRadius: 3, fontSize: 11, background: s.status === "ACTIVE" ? "#EFE" : "#FEE", color: s.status === "ACTIVE" ? green : red }}>{s.status}</span>
+            <button onClick={() => handleUpdate(s.id, { status: s.status === "ACTIVE" ? "INACTIVE" : "ACTIVE" })} style={{ ...btnOutline, padding: "4px 10px", fontSize: 11 }}>
+              {s.status === "ACTIVE" ? "Deactivate" : "Activate"}
+            </button>
+          </div>
+        ))}
+        {staff.length === 0 && <div style={{ padding: 24, color: "#999", textAlign: "center" }}>No staff members</div>}
+      </div>
+    </>
+  );
+}
+
 // ─── ADMIN INBOX (threads + compose with searchable recipient picker) ───
 function AdminInbox({ user, toast }) {
   const [threads, setThreads] = useState([]);

@@ -303,4 +303,168 @@ router.post("/investors/:id/assign-project", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// ─── INVESTOR PROFILE (single investor detail) ───
+router.get("/investors/:id/profile", async (req, res, next) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: parseInt(req.params.id) },
+      include: {
+        investorProjects: { include: { project: { select: { id: true, name: true, status: true } } } },
+        documentAssignments: { include: { document: { select: { id: true, name: true, category: true, date: true, status: true } } } },
+        groupMemberships: { include: { group: { select: { id: true, name: true, color: true } } } },
+        threadRecipients: {
+          include: { thread: { select: { id: true, subject: true, updatedAt: true, targetType: true } } },
+          orderBy: { thread: { updatedAt: "desc" } },
+          take: 10,
+        },
+      },
+    });
+    if (!user) return res.status(404).json({ error: "Investor not found" });
+
+    // Also get project-scoped docs this investor can see
+    const projectIds = user.investorProjects.map(ip => ip.projectId);
+    const projectDocs = await prisma.document.findMany({
+      where: { projectId: { in: projectIds } },
+      select: { id: true, name: true, category: true, date: true, status: true, projectId: true },
+    });
+    const generalDocs = await prisma.document.findMany({
+      where: { projectId: null },
+      select: { id: true, name: true, category: true, date: true, status: true },
+    });
+
+    res.json({
+      id: user.id, name: user.name, email: user.email, initials: user.initials,
+      role: user.role, status: user.status, joined: user.joined,
+      projects: user.investorProjects.map(ip => ({
+        projectId: ip.projectId, projectName: ip.project.name, projectStatus: ip.project.status,
+        committed: ip.committed, called: ip.called, currentValue: ip.currentValue, irr: ip.irr, moic: ip.moic,
+      })),
+      groups: user.groupMemberships.map(gm => ({ id: gm.group.id, name: gm.group.name, color: gm.group.color })),
+      documents: {
+        assigned: user.documentAssignments.map(da => da.document),
+        projectDocs,
+        generalDocs,
+      },
+      recentThreads: user.threadRecipients.map(tr => ({
+        id: tr.thread.id, subject: tr.thread.subject, updatedAt: tr.thread.updatedAt, targetType: tr.thread.targetType, unread: tr.unread,
+      })),
+    });
+  } catch (err) { next(err); }
+});
+
+// ─── INVESTOR GROUPS CRUD ───
+router.get("/groups", async (req, res, next) => {
+  try {
+    const groups = await prisma.investorGroup.findMany({
+      include: { _count: { select: { members: true } } },
+      orderBy: { name: "asc" },
+    });
+    res.json(groups.map(g => ({ id: g.id, name: g.name, description: g.description, color: g.color, memberCount: g._count.members })));
+  } catch (err) { next(err); }
+});
+
+router.post("/groups", async (req, res, next) => {
+  try {
+    const { name, description, color } = req.body;
+    if (!name) return res.status(400).json({ error: "Group name is required" });
+    const group = await prisma.investorGroup.create({ data: { name, description, color } });
+    res.status(201).json({ id: group.id, name: group.name, description: group.description, color: group.color, memberCount: 0 });
+  } catch (err) { next(err); }
+});
+
+router.put("/groups/:id", async (req, res, next) => {
+  try {
+    const { name, description, color } = req.body;
+    const group = await prisma.investorGroup.update({
+      where: { id: parseInt(req.params.id) },
+      data: { ...(name !== undefined && { name }), ...(description !== undefined && { description }), ...(color !== undefined && { color }) },
+    });
+    res.json(group);
+  } catch (err) { next(err); }
+});
+
+router.delete("/groups/:id", async (req, res, next) => {
+  try {
+    await prisma.investorGroup.delete({ where: { id: parseInt(req.params.id) } });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// Add/remove members from a group
+router.post("/groups/:id/members", async (req, res, next) => {
+  try {
+    const { userIds } = req.body;
+    if (!userIds?.length) return res.status(400).json({ error: "userIds required" });
+    const groupId = parseInt(req.params.id);
+    await prisma.groupMember.createMany({
+      data: userIds.map(uid => ({ groupId, userId: parseInt(uid) })),
+      skipDuplicates: true,
+    });
+    res.json({ ok: true, added: userIds.length });
+  } catch (err) { next(err); }
+});
+
+router.delete("/groups/:id/members/:userId", async (req, res, next) => {
+  try {
+    await prisma.groupMember.deleteMany({
+      where: { groupId: parseInt(req.params.id), userId: parseInt(req.params.userId) },
+    });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// Get group with full member list
+router.get("/groups/:id", async (req, res, next) => {
+  try {
+    const group = await prisma.investorGroup.findUnique({
+      where: { id: parseInt(req.params.id) },
+      include: { members: { include: { user: { select: { id: true, name: true, email: true, status: true } } } } },
+    });
+    if (!group) return res.status(404).json({ error: "Group not found" });
+    res.json({
+      id: group.id, name: group.name, description: group.description, color: group.color,
+      members: group.members.map(m => ({ id: m.user.id, name: m.user.name, email: m.user.email, status: m.user.status })),
+    });
+  } catch (err) { next(err); }
+});
+
+// ─── STAFF MANAGEMENT ───
+router.get("/staff", async (req, res, next) => {
+  try {
+    const staff = await prisma.user.findMany({
+      where: { role: { in: ["ADMIN", "GP"] } },
+      orderBy: { name: "asc" },
+    });
+    res.json(staff.map(u => ({ id: u.id, name: u.name, email: u.email, role: u.role, status: u.status, joined: u.joined })));
+  } catch (err) { next(err); }
+});
+
+router.post("/staff", async (req, res, next) => {
+  try {
+    const { name, email, role } = req.body;
+    if (!name || !email || !role) return res.status(400).json({ error: "Name, email, and role required" });
+    if (!["ADMIN", "GP"].includes(role)) return res.status(400).json({ error: "Role must be ADMIN or GP" });
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) return res.status(409).json({ error: "Email already registered" });
+    const tempPassword = crypto.randomBytes(6).toString("hex");
+    const passwordHash = await bcrypt.hash(tempPassword, 10);
+    const joined = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    const user = await prisma.user.create({
+      data: { email, name, initials: name.split(" ").map(n => n[0]).join("").toUpperCase(), passwordHash, role, status: "ACTIVE", joined },
+    });
+    res.status(201).json({ id: user.id, name: user.name, email: user.email, role: user.role, tempPassword });
+  } catch (err) { next(err); }
+});
+
+router.put("/staff/:id", async (req, res, next) => {
+  try {
+    const { name, email, role, status } = req.body;
+    const user = await prisma.user.update({
+      where: { id: parseInt(req.params.id) },
+      data: { ...(name !== undefined && { name }), ...(email !== undefined && { email }), ...(role !== undefined && { role }), ...(status !== undefined && { status }) },
+    });
+    res.json({ id: user.id, name: user.name, email: user.email, role: user.role, status: user.status });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;

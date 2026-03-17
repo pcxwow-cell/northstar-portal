@@ -180,6 +180,52 @@ export async function updateInvestorKPI(userId, projectId, data) {
   return apiFetch(`/admin/investors/${userId}/projects/${projectId}`, { method: "PUT", body: JSON.stringify(data) });
 }
 
+export async function fetchInvestorProfile(id) {
+  return apiFetch(`/admin/investors/${id}/profile`);
+}
+
+// Groups
+export async function fetchGroups() {
+  return apiFetch("/admin/groups");
+}
+
+export async function createGroup(data) {
+  return apiFetch("/admin/groups", { method: "POST", body: JSON.stringify(data) });
+}
+
+export async function updateGroup(id, data) {
+  return apiFetch(`/admin/groups/${id}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export async function deleteGroup(id) {
+  return apiFetch(`/admin/groups/${id}`, { method: "DELETE" });
+}
+
+export async function fetchGroupDetail(id) {
+  return apiFetch(`/admin/groups/${id}`);
+}
+
+export async function addGroupMembers(groupId, userIds) {
+  return apiFetch(`/admin/groups/${groupId}/members`, { method: "POST", body: JSON.stringify({ userIds }) });
+}
+
+export async function removeGroupMember(groupId, userId) {
+  return apiFetch(`/admin/groups/${groupId}/members/${userId}`, { method: "DELETE" });
+}
+
+// Staff
+export async function fetchStaff() {
+  return apiFetch("/admin/staff");
+}
+
+export async function createStaff(data) {
+  return apiFetch("/admin/staff", { method: "POST", body: JSON.stringify(data) });
+}
+
+export async function updateStaff(id, data) {
+  return apiFetch(`/admin/staff/${id}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
 export async function sendMessage(data) {
   return apiFetch("/admin/messages", { method: "POST", body: JSON.stringify(data) });
 }

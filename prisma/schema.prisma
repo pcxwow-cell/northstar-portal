@@ -26,6 +26,7 @@ model User {
   createdThreads      MessageThread[] @relation("threadCreator")
   threadMessages      ThreadMessage[] @relation("threadMessageSender")
   threadRecipients    ThreadRecipient[] @relation("threadRecipient")
+  groupMemberships    GroupMember[]
 
   @@map("users")
 }
@@ -256,4 +257,31 @@ model DocumentAssignment {
 
   @@unique([documentId, userId])
   @@map("document_assignments")
+}
+
+// ─── INVESTOR GROUPS / SEGMENTS ──────────────────────────
+
+model InvestorGroup {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  color       String?  // hex color for UI badges
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  members GroupMember[]
+
+  @@map("investor_groups")
+}
+
+model GroupMember {
+  id      Int @id @default(autoincrement())
+  groupId Int @map("group_id")
+  userId  Int @map("user_id")
+
+  group InvestorGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User          @relation(fields: [userId], references: [id])
+
+  @@unique([groupId, userId])
+  @@map("group_members")
 }
