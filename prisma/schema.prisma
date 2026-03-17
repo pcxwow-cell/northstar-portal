@@ -23,6 +23,9 @@ model User {
   sentMessages        Message[] @relation("sender")
   messageRecipients   MessageRecipient[]
   documentAssignments DocumentAssignment[]
+  createdThreads      MessageThread[] @relation("threadCreator")
+  threadMessages      ThreadMessage[] @relation("threadMessageSender")
+  threadRecipients    ThreadRecipient[] @relation("threadRecipient")
 
   @@map("users")
 }
@@ -52,6 +55,7 @@ model Project {
   updates            ProjectUpdate[]
   performanceHistory PerformanceHistory[]
   targetedMessages   Message[] @relation("messageTarget")
+  targetedThreads    MessageThread[] @relation("threadTarget")
 
   @@map("projects")
 }
@@ -195,6 +199,51 @@ model MessageRecipient {
 
   @@unique([messageId, userId])
   @@map("message_recipients")
+}
+
+// ─── THREADED MESSAGING ──────────────────────────────────
+
+model MessageThread {
+  id              Int      @id @default(autoincrement())
+  subject         String
+  creatorId       Int      @map("creator_id")
+  targetType      String   @default("ALL") @map("target_type") // ALL | PROJECT | INDIVIDUAL | STAFF
+  targetProjectId Int?     @map("target_project_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  creator        User              @relation("threadCreator", fields: [creatorId], references: [id])
+  targetProject  Project?          @relation("threadTarget", fields: [targetProjectId], references: [id])
+  messages       ThreadMessage[]
+  recipients     ThreadRecipient[]
+
+  @@map("message_threads")
+}
+
+model ThreadMessage {
+  id        Int      @id @default(autoincrement())
+  threadId  Int      @map("thread_id")
+  senderId  Int      @map("sender_id")
+  body      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  thread MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender User          @relation("threadMessageSender", fields: [senderId], references: [id])
+
+  @@map("thread_messages")
+}
+
+model ThreadRecipient {
+  id       Int     @id @default(autoincrement())
+  threadId Int     @map("thread_id")
+  userId   Int     @map("user_id")
+  unread   Boolean @default(true)
+
+  thread MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  user   User          @relation("threadRecipient", fields: [userId], references: [id])
+
+  @@unique([threadId, userId])
+  @@map("thread_recipients")
 }
 
 model DocumentAssignment {
