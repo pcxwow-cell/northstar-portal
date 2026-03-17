@@ -1,8 +1,14 @@
 // ─── API CLIENT ──────────────────────────────────────────
 // Wraps fetch with JWT auth header and error handling.
-// The Vite proxy forwards /api → http://localhost:3003
+// DEMO MODE: If API is unreachable (Vercel deploy without backend),
+// falls back to static data from data.js for demo purposes.
+
+import { investor as demoInvestor, projects as demoProjects, myProjects as demoMyProjects, allDocuments as demoAllDocuments, allDistributions as demoAllDistributions, generalDocuments as demoGeneralDocuments, messages as demoMessages } from "./data.js";
 
 const API_BASE = "/api/v1";
+let _demoMode = false;
+
+export function isDemoMode() { return _demoMode; }
 
 function getToken() {
   return localStorage.getItem("northstar_token");
@@ -14,7 +20,7 @@ export function setToken(token) {
 }
 
 export function isAuthed() {
-  return !!getToken();
+  return _demoMode ? !!localStorage.getItem("northstar_demo_role") : !!getToken();
 }
 
 async function apiFetch(path, options = {}) {
@@ -22,66 +28,117 @@ async function apiFetch(path, options = {}) {
   const headers = { "Content-Type": "application/json", ...options.headers };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  try {
+    const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
 
-  if (res.status === 401) {
-    // Token expired or invalid — clear auth
-    setToken(null);
-    throw new Error("Session expired. Please log in again.");
+    if (res.status === 401) {
+      setToken(null);
+      throw new Error("Session expired. Please log in again.");
+    }
+
+    // Vite proxy returns 500 when backend is unreachable
+    if (res.status === 500) {
+      const body = await res.text();
+      if (body.includes("ECONNREFUSED") || body.includes("proxy error") || body === "") {
+        _demoMode = true;
+        throw new TypeError("API unreachable");
+      }
+      const json = JSON.parse(body).error || `API error 500`;
+      throw new Error(json);
+    }
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || `API error ${res.status}`);
+    }
+
+    return res.json();
+  } catch (err) {
+    // Network error — API unreachable. Switch to demo mode.
+    if (err.message === "Failed to fetch" || err.name === "TypeError" || err.message === "API unreachable") {
+      _demoMode = true;
+      throw err;
+    }
+    throw err;
   }
-
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `API error ${res.status}`);
-  }
-
-  return res.json();
 }
 
 // ─── Auth ───
 export async function login(email, password) {
-  const data = await apiFetch("/auth/login", {
-    method: "POST",
-    body: JSON.stringify({ email, password }),
-  });
-  setToken(data.token);
-  return data.user;
+  try {
+    const data = await apiFetch("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
+    setToken(data.token);
+    return data.user;
+  } catch (err) {
+    // Demo mode fallback — accept hardcoded credentials
+    if (_demoMode || err.message === "Failed to fetch") {
+      _demoMode = true;
+      if (email === "j.chen@pacificventures.ca" && password === "northstar2025") {
+        localStorage.setItem("northstar_demo_role", "INVESTOR");
+        return { id: 1, name: "James Chen", initials: "JC", email, role: "Limited Partner" };
+      }
+      if (email === "admin@northstardevelopment.ca" && password === "admin2025") {
+        localStorage.setItem("northstar_demo_role", "ADMIN");
+        return { id: 2, name: "Northstar Admin", initials: "NA", email, role: "ADMIN" };
+      }
+      throw new Error("Invalid email or password");
+    }
+    throw err;
+  }
 }
 
 export async function getMe() {
+  if (_demoMode) {
+    const role = localStorage.getItem("northstar_demo_role");
+    if (role === "INVESTOR") return { id: 1, name: "James Chen", initials: "JC", email: "j.chen@pacificventures.ca", role: "Limited Partner", joined: "March 2023", projectIds: [1, 2] };
+    if (role === "ADMIN") return { id: 2, name: "Northstar Admin", initials: "NA", email: "admin@northstardevelopment.ca", role: "ADMIN", joined: "January 2019", projectIds: [] };
+    throw new Error("Not authenticated");
+  }
   return apiFetch("/auth/me");
 }
 
 export function logout() {
   setToken(null);
+  localStorage.removeItem("northstar_demo_role");
+  _demoMode = false;
 }
 
-// ─── Data fetching ───
+// ─── Data fetching (with demo fallback) ───
 export async function fetchProjects() {
+  if (_demoMode) return demoProjects.map(p => ({ id: p.id, name: p.name, location: p.location, type: p.type, status: p.status, sqft: p.sqft, units: p.units, completion: p.completion, totalRaise: p.totalRaise, description: p.description }));
   return apiFetch("/projects");
 }
 
 export async function fetchProject(id) {
+  if (_demoMode) return demoProjects.find(p => p.id === id) || null;
   return apiFetch(`/projects/${id}`);
 }
 
 export async function fetchInvestor(id) {
+  if (_demoMode) return { ...demoInvestor, id: 1 };
   return apiFetch(`/investors/${id}`);
 }
 
 export async function fetchInvestorProjects(investorId) {
+  if (_demoMode) return demoMyProjects;
   return apiFetch(`/investors/${investorId}/projects`);
 }
 
 export async function fetchDocuments(investorId) {
+  if (_demoMode) return demoAllDocuments;
   return apiFetch(`/documents?investorId=${investorId}`);
 }
 
 export async function fetchDistributions(investorId) {
+  if (_demoMode) return demoAllDistributions;
   return apiFetch(`/distributions?investorId=${investorId}`);
 }
 
 export async function fetchMessages() {
+  if (_demoMode) return demoMessages;
   return apiFetch("/messages");
 }
 
@@ -110,32 +167,50 @@ export async function downloadDocument(docId) {
 }
 
 // ─── Threads (messaging) ───
+const _demoThreads = demoMessages.map((m, i) => ({
+  id: i + 1, subject: m.subject, targetType: "ALL", project: null,
+  creator: { id: 2, name: m.from, initials: m.from.split(" ").map(n => n[0]).join(""), role: "ADMIN" },
+  lastMessage: { body: m.preview, sender: { id: 2, name: m.from, role: "ADMIN" }, date: new Date().toISOString() },
+  messageCount: 1, unread: m.unread, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+}));
+
 export async function fetchThreads() {
+  if (_demoMode) return _demoThreads;
   return apiFetch("/threads");
 }
 
 export async function fetchThread(id) {
+  if (_demoMode) {
+    const t = _demoThreads.find(t => t.id === id);
+    const msg = demoMessages[id - 1];
+    return { ...t, messages: [{ id: 1, body: msg?.preview || "", sender: t.creator, createdAt: new Date().toISOString() }] };
+  }
   return apiFetch(`/threads/${id}`);
 }
 
 export async function createThread(data) {
+  if (_demoMode) { _demoThreads.unshift({ id: Date.now(), subject: data.subject, targetType: "STAFF", project: null, creator: { id: 1, name: "James Chen", initials: "JC", role: "INVESTOR" }, lastMessage: { body: data.body, sender: { id: 1, name: "James Chen", role: "INVESTOR" }, date: new Date().toISOString() }, messageCount: 1, unread: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }); return _demoThreads[0]; }
   return apiFetch("/threads", { method: "POST", body: JSON.stringify(data) });
 }
 
 export async function replyToThread(id, body) {
+  if (_demoMode) { const reply = { id: Date.now(), body, sender: { id: 1, name: "James Chen", initials: "JC", role: "INVESTOR" }, createdAt: new Date().toISOString() }; return reply; }
   return apiFetch(`/threads/${id}/reply`, { method: "POST", body: JSON.stringify({ body }) });
 }
 
 export async function markThreadRead(id) {
+  if (_demoMode) return { ok: true };
   return apiFetch(`/threads/${id}/read`, { method: "POST" });
 }
 
 // ─── Admin endpoints ───
 export async function fetchDashboard() {
+  if (_demoMode) return { projectCount: demoProjects.length, investorCount: 1, docCount: demoAllDocuments.length, unreadMessages: demoMessages.filter(m => m.unread).length, recentDocs: demoAllDocuments.slice(0, 5).map(d => ({ id: d.id, name: d.name, date: d.date, project: { name: d.project } })) };
   return apiFetch("/admin/dashboard");
 }
 
 export async function fetchAdminProjects() {
+  if (_demoMode) return demoProjects.map(p => ({ id: p.id, name: p.name, location: p.location, status: p.status, completion: p.completion, totalRaise: p.totalRaise, units: p.units, investorCount: p.capTable.length, docCount: p.documents.length }));
   return apiFetch("/admin/projects");
 }
 
@@ -148,6 +223,7 @@ export async function postUpdate(projectId, text) {
 }
 
 export async function fetchAdminInvestors(params = {}) {
+  if (_demoMode) return [{ id: 1, name: "James Chen", email: "j.chen@pacificventures.ca", initials: "JC", status: "ACTIVE", joined: "March 2023", totalCommitted: 850000, totalValue: 672500, projects: demoMyProjects.map(p => ({ projectId: p.id, projectName: p.name, committed: p.investorCommitted, called: p.investorCalled, currentValue: p.currentValue, irr: p.irr, moic: p.moic })) }];
   const qs = new URLSearchParams(params).toString();
   return apiFetch(`/admin/investors${qs ? "?" + qs : ""}`);
 }
@@ -181,11 +257,13 @@ export async function updateInvestorKPI(userId, projectId, data) {
 }
 
 export async function fetchInvestorProfile(id) {
+  if (_demoMode) return { id: 1, name: "James Chen", email: "j.chen@pacificventures.ca", initials: "JC", role: "INVESTOR", status: "ACTIVE", joined: "March 2023", groups: [], projects: demoMyProjects.map(p => ({ projectId: p.id, projectName: p.name, projectStatus: p.status, committed: p.investorCommitted, called: p.investorCalled, currentValue: p.currentValue, irr: p.irr, moic: p.moic })), documents: { assigned: [], projectDocs: demoAllDocuments.filter(d => d.project !== "General"), generalDocs: demoAllDocuments.filter(d => d.project === "General") }, recentThreads: demoMessages.map((m, i) => ({ id: i + 1, subject: m.subject, updatedAt: new Date().toISOString(), targetType: "ALL", unread: m.unread })) };
   return apiFetch(`/admin/investors/${id}/profile`);
 }
 
 // Groups
 export async function fetchGroups() {
+  if (_demoMode) return [];
   return apiFetch("/admin/groups");
 }
 
@@ -215,6 +293,7 @@ export async function removeGroupMember(groupId, userId) {
 
 // Staff
 export async function fetchStaff() {
+  if (_demoMode) return [{ id: 2, name: "Northstar Admin", email: "admin@northstardevelopment.ca", role: "ADMIN", status: "ACTIVE", joined: "January 2019" }];
   return apiFetch("/admin/staff");
 }
 
@@ -228,6 +307,7 @@ export async function updateStaff(id, data) {
 
 // Admin documents
 export async function fetchAdminProjectDetail(id) {
+  if (_demoMode) { const p = demoProjects.find(x => x.id === id); if (!p) return null; return { ...p, completion: p.completion, prefReturn: p.waterfall.prefReturn, catchUp: p.waterfall.catchUp, carry: p.waterfall.carry, investors: p.id <= 2 ? [{ userId: 1, name: "James Chen", email: "j.chen@pacificventures.ca", committed: p.investorCommitted, called: p.investorCalled, currentValue: p.currentValue, irr: p.irr, moic: p.moic }] : [], documents: p.documents.map(d => ({ ...d, viewedBy: 0 })), updates: p.updates.map((u, i) => ({ id: i + 1, ...u })) }; }
   return apiFetch(`/admin/projects/${id}`);
 }
 
@@ -236,11 +316,13 @@ export async function updateWaterfall(projectId, data) {
 }
 
 export async function fetchAdminDocuments(params = {}) {
+  if (_demoMode) return demoAllDocuments.map(d => ({ id: d.id, name: d.name, category: d.category, date: d.date, size: d.size, status: d.status, project: d.project, totalInvestors: d.project === "General" ? 1 : 1, viewed: 0, downloaded: 0 }));
   const qs = new URLSearchParams(params).toString();
   return apiFetch(`/admin/documents${qs ? "?" + qs : ""}`);
 }
 
 export async function fetchAdminDocumentDetail(id) {
+  if (_demoMode) { const d = demoAllDocuments.find(x => x.id === id); return d ? { ...d, project: d.project !== "General" ? { id: 1, name: d.project } : null, accessList: [{ id: 1, name: "James Chen", email: "j.chen@pacificventures.ca", hasAccess: true, viewedAt: null, downloadedAt: null, acknowledgedAt: null }] } : null; }
   return apiFetch(`/admin/documents/${id}`);
 }
 
