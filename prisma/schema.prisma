@@ -19,8 +19,10 @@ model User {
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
-  investorProjects InvestorProject[]
-  sentMessages     Message[] @relation("sender")
+  investorProjects    InvestorProject[]
+  sentMessages        Message[] @relation("sender")
+  messageRecipients   MessageRecipient[]
+  documentAssignments DocumentAssignment[]
 
   @@map("users")
 }
@@ -49,6 +51,7 @@ model Project {
   documents          Document[]
   updates            ProjectUpdate[]
   performanceHistory PerformanceHistory[]
+  targetedMessages   Message[] @relation("messageTarget")
 
   @@map("projects")
 }
@@ -130,7 +133,8 @@ model Document {
   storageKey String? @map("storage_key") // key in storage adapter (local path or S3 key)
   createdAt  DateTime @default(now()) @map("created_at")
 
-  project Project? @relation(fields: [projectId], references: [id])
+  project     Project?             @relation(fields: [projectId], references: [id])
+  assignments DocumentAssignment[]
 
   @@map("documents")
 }
@@ -161,17 +165,46 @@ model PerformanceHistory {
 }
 
 model Message {
-  id       Int     @id @default(autoincrement())
-  senderId Int     @map("sender_id")
-  fromName String  @map("from_name")
-  role     String
-  date     String  // "Jul 18, 2025"
-  subject  String
-  preview  String
-  unread   Boolean @default(true)
-  createdAt DateTime @default(now()) @map("created_at")
+  id         Int     @id @default(autoincrement())
+  senderId   Int     @map("sender_id")
+  fromName   String  @map("from_name")
+  role       String
+  date       String  // "Jul 18, 2025"
+  subject    String
+  preview    String
+  unread     Boolean @default(true)
+  // Targeting: ALL = everyone, PROJECT = investors in a project, INDIVIDUAL = specific users
+  targetType String  @default("ALL") @map("target_type") // ALL | PROJECT | INDIVIDUAL
+  targetProjectId Int? @map("target_project_id") // if targetType = PROJECT
+  createdAt  DateTime @default(now()) @map("created_at")
 
-  sender User @relation("sender", fields: [senderId], references: [id])
+  sender         User              @relation("sender", fields: [senderId], references: [id])
+  targetProject  Project?          @relation("messageTarget", fields: [targetProjectId], references: [id])
+  recipients     MessageRecipient[]
 
   @@map("messages")
+}
+
+model MessageRecipient {
+  id        Int @id @default(autoincrement())
+  messageId Int @map("message_id")
+  userId    Int @map("user_id")
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@unique([messageId, userId])
+  @@map("message_recipients")
+}
+
+model DocumentAssignment {
+  id         Int @id @default(autoincrement())
+  documentId Int @map("document_id")
+  userId     Int @map("user_id")
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@unique([documentId, userId])
+  @@map("document_assignments")
 }

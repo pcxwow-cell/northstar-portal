@@ -15,16 +15,18 @@ router.get("/", async (req, res, next) => {
     const { investorId, category, projectId } = req.query;
     const where = {};
 
-    // If investorId provided, scope to investor's projects + general docs
+    // If investorId provided, scope to investor's projects + general docs + directly assigned docs
     if (investorId) {
+      const uid = parseInt(investorId);
       const investorProjects = await prisma.investorProject.findMany({
-        where: { userId: parseInt(investorId) },
+        where: { userId: uid },
         select: { projectId: true },
       });
       const projectIds = investorProjects.map((ip) => ip.projectId);
       where.OR = [
         { projectId: { in: projectIds } },
         { projectId: null }, // general docs
+        { assignments: { some: { userId: uid } } }, // directly assigned docs
       ];
     }
 

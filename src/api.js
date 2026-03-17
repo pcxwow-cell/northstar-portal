@@ -126,8 +126,37 @@ export async function postUpdate(projectId, text) {
   return apiFetch(`/admin/projects/${projectId}/updates`, { method: "POST", body: JSON.stringify({ text }) });
 }
 
-export async function fetchAdminInvestors() {
-  return apiFetch("/admin/investors");
+export async function fetchAdminInvestors(params = {}) {
+  const qs = new URLSearchParams(params).toString();
+  return apiFetch(`/admin/investors${qs ? "?" + qs : ""}`);
+}
+
+export async function inviteInvestor(data) {
+  return apiFetch("/admin/investors/invite", { method: "POST", body: JSON.stringify(data) });
+}
+
+export async function updateInvestor(id, data) {
+  return apiFetch(`/admin/investors/${id}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export async function approveInvestor(id) {
+  return apiFetch(`/admin/investors/${id}/approve`, { method: "POST" });
+}
+
+export async function deactivateInvestor(id) {
+  return apiFetch(`/admin/investors/${id}/deactivate`, { method: "POST" });
+}
+
+export async function resetInvestorPassword(id) {
+  return apiFetch(`/admin/investors/${id}/reset-password`, { method: "POST" });
+}
+
+export async function assignInvestorProject(investorId, data) {
+  return apiFetch(`/admin/investors/${investorId}/assign-project`, { method: "POST", body: JSON.stringify(data) });
+}
+
+export async function updateInvestorKPI(userId, projectId, data) {
+  return apiFetch(`/admin/investors/${userId}/projects/${projectId}`, { method: "PUT", body: JSON.stringify(data) });
 }
 
 export async function sendMessage(data) {
