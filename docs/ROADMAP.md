@@ -2,36 +2,45 @@
 
 > Last updated: 2026-03-17
 
-## Current State
+## Current State (as of March 17, 2026)
 
-The portal is a **frontend prototype** built with React 18 + Vite 5. It demonstrates 6 investor-facing pages (Overview, Portfolio, Cap Table, Documents, Distributions, Messages) with dark/light theme support, Recharts visualizations, and a branded login page matching northstardevelopment.ca. All data is static mock data — no backend, no database, no APIs.
+**Architecture**: React 18 + Vite 5 frontend → Express API + Prisma ORM + SQLite (dev)
 
-### What Works Today
-- Login with hardcoded demo credentials (sessionStorage)
-- Project-level data model: each project has its own cap table, waterfall, distributions, docs
-- Investor scoped to their projects only (Porthaven + Livy)
-- Document signing (client-side state only)
-- Message inbox with reply (client-side state only)
-- Dark/light theme toggle (localStorage)
-- Per-project value tracking charts and distribution bar charts
-- Branded splash/login page with real Northstar logo, colors (#EA2028), and project images
-- Responsive layout: two-row desktop header + mobile scroll nav
+### What's Built (Sprints 1-5 + targeting)
+- JWT authentication with bcrypt, role-based access (INVESTOR/ADMIN/GP)
+- Express API with 7+ endpoints serving data from SQLite database
+- Prisma schema with 13 models (users, projects, cap tables, waterfalls, distributions, documents, messages, threads)
+- All 6 investor pages fetch from API (no more static data.js)
+- File storage abstraction (local disk + S3 adapter ready)
+- Document upload/download with per-investor access control
+- Admin panel: dashboard, project management, investor management, doc upload, messaging
+- Targeted messaging (ALL/PROJECT/INDIVIDUAL), investor invite/approve/deactivate
+- KPI editing (committed, called, currentValue, IRR, MOIC per investor per project)
+- Threaded messaging models + API routes (backend complete, frontend WIP)
+- Branded UI matching northstardevelopment.ca (logo, colors, responsive)
 
-### What's Missing for MVP
-- Real authentication & authorization (JWT)
-- Backend API / database (Express + Prisma + PostgreSQL)
-- Admin panel for GP/staff (project management, document upload, messaging)
-- Real document storage (S3/R2 with signed URLs)
-- Production deployment (Docker, HTTPS)
+### What's Missing (based on Juniper Square / Agora / InvestNext research)
+**Investor side:**
+- Threaded messaging with Northstar staff (backend done, frontend WIP)
+- Portfolio summary dashboard (total contributions/distributions chart)
+- Capital account statement per project
+- Self-service profile editing
+- Investment detail page with photos, map, transaction history
+- Notification center
 
-### What's Post-MVP
-- Prospective investor portal / public deal pages
-- E-signature integration (DocuSign/HelloSign)
-- Financial engine (IRR, MOIC, waterfall calculations)
-- Email notifications
-- Payment processing
-- KYC/AML, accreditation verification
-- Multi-entity support, 2FA, audit logging
+**Admin side:**
+- Investor profile pages (full CRM view per investor)
+- Admin inbox for receiving/replying to messages
+- Searchable recipient picker (Gmail-style To field + investor table)
+- Project KPI dashboard with inline editing
+- Document access audit trail (who can see what, who viewed it)
+- Company staff management (add/edit ADMIN/GP users)
+- Investor segments/tags for bulk operations
+
+**Infrastructure:**
+- Email notifications (new docs, messages, distributions)
+- Docker deployment + HTTPS
+- E-signatures, KYC/AML, payment processing
 
 ---
 
