@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchDashboard, fetchAdminProjects, updateProject, postUpdate, fetchAdminInvestors, sendMessage, uploadDocument, inviteInvestor, updateInvestor, approveInvestor, deactivateInvestor, resetInvestorPassword, assignInvestorProject, updateInvestorKPI, fmt, fmtCurrency } from "./api.js";
+import { fetchDashboard, fetchAdminProjects, updateProject, postUpdate, fetchAdminInvestors, sendMessage, uploadDocument, inviteInvestor, updateInvestor, approveInvestor, deactivateInvestor, resetInvestorPassword, assignInvestorProject, updateInvestorKPI, fetchThreads, fetchThread, createThread, replyToThread, fmt, fmtCurrency } from "./api.js";
 
 const sans = "'DM Sans', -apple-system, sans-serif";
 const red = "#EA2028";
@@ -19,14 +19,14 @@ export default function AdminPanel({ user, onLogout }) {
     { id: "projects", label: "Projects" },
     { id: "investors", label: "Investors" },
     { id: "documents", label: "Upload Docs" },
-    { id: "messages", label: "Send Message" },
+    { id: "inbox", label: "Inbox" },
   ];
   const pages = {
     dashboard: <Dashboard />,
     projects: <ProjectManager toast={showToast} />,
     investors: <InvestorManager toast={showToast} />,
     documents: <DocumentUploader toast={showToast} />,
-    messages: <MessageComposer user={user} toast={showToast} />,
+    inbox: <AdminInbox user={user} toast={showToast} />,
   };
 
   return (
@@ -410,107 +410,303 @@ function DocumentUploader({ toast }) {
 }
 
 // ─── TARGETED MESSAGE COMPOSER ───
-function MessageComposer({ user, toast }) {
-  const [projects, setProjects] = useState([]);
-  const [investors, setInvestors] = useState([]);
-  const [fromName, setFromName] = useState(user.name || "");
-  const [role, setRole] = useState("Northstar Admin");
-  const [subject, setSubject] = useState(""); const [preview, setPreview] = useState("");
-  const [targetType, setTargetType] = useState("ALL");
-  const [targetProjectId, setTargetProjectId] = useState("");
-  const [recipientIds, setRecipientIds] = useState([]);
+// ─── ADMIN INBOX (threads + compose with searchable recipient picker) ───
+function AdminInbox({ user, toast }) {
+  const [threads, setThreads] = useState([]);
+  const [selectedThread, setSelectedThread] = useState(null);
+  const [threadDetail, setThreadDetail] = useState(null);
+  const [reply, setReply] = useState("");
+  const [composing, setComposing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("all"); // all | unread | from-investors
   const [sending, setSending] = useState(false);
 
-  useEffect(() => { fetchAdminProjects().then(setProjects); fetchAdminInvestors().then(setInvestors); }, []);
+  // Compose state
+  const [projects, setProjects] = useState([]);
+  const [investors, setInvestors] = useState([]);
+  const [targetType, setTargetType] = useState("ALL");
+  const [targetProjectId, setTargetProjectId] = useState("");
+  const [recipients, setRecipients] = useState([]); // { id, name, email }
+  const [recipientSearch, setRecipientSearch] = useState("");
+  const [showBrowse, setShowBrowse] = useState(false);
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
 
-  async function handleSend(e) {
-    e.preventDefault();
-    if (!subject || !preview) return toast("Subject and message required", "error");
-    if (targetType === "INDIVIDUAL" && recipientIds.length === 0) return toast("Select at least one recipient", "error");
+  useEffect(() => { loadThreads(); fetchAdminProjects().then(setProjects); fetchAdminInvestors().then(setInvestors); }, []);
+
+  async function loadThreads() {
+    try { const t = await fetchThreads(); setThreads(t); } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  }
+
+  async function openThread(thread) {
+    setSelectedThread(thread);
+    try {
+      const detail = await fetchThread(thread.id);
+      setThreadDetail(detail);
+      setThreads(prev => prev.map(t => t.id === thread.id ? { ...t, unread: false } : t));
+    } catch (e) { toast("Failed to load thread", "error"); }
+  }
+
+  async function handleReply() {
+    if (!reply.trim()) return;
     setSending(true);
     try {
-      await sendMessage({ fromName, role, subject, preview, targetType, targetProjectId: targetType === "PROJECT" ? targetProjectId : undefined, recipientIds: targetType === "INDIVIDUAL" ? recipientIds : undefined });
-      const targetLabel = targetType === "ALL" ? "all investors" : targetType === "PROJECT" ? "project investors" : `${recipientIds.length} investor(s)`;
-      toast(`Message sent to ${targetLabel}`);
-      setSubject(""); setPreview(""); setRecipientIds([]);
-    } catch (err) { toast(err.message, "error"); }
+      const msg = await replyToThread(threadDetail.id, reply);
+      setThreadDetail(prev => ({ ...prev, messages: [...prev.messages, msg] }));
+      setReply("");
+      toast("Reply sent");
+    } catch (e) { toast(e.message, "error"); }
     finally { setSending(false); }
   }
 
-  function toggleRecipient(id) {
-    setRecipientIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  async function handleCompose(e) {
+    e.preventDefault();
+    if (!subject.trim() || !body.trim()) return toast("Subject and message required", "error");
+    if (targetType === "INDIVIDUAL" && recipients.length === 0) return toast("Add at least one recipient", "error");
+    setSending(true);
+    try {
+      await createThread({
+        subject, body, targetType,
+        targetProjectId: targetType === "PROJECT" ? parseInt(targetProjectId) : undefined,
+        recipientIds: targetType === "INDIVIDUAL" ? recipients.map(r => r.id) : undefined,
+      });
+      const label = targetType === "ALL" ? "all investors" : targetType === "PROJECT" ? "project investors" : `${recipients.length} investor(s)`;
+      toast(`Message sent to ${label}`);
+      setComposing(false); setSubject(""); setBody(""); setRecipients([]); setTargetType("ALL");
+      loadThreads();
+    } catch (e) { toast(e.message, "error"); }
+    finally { setSending(false); }
   }
 
-  return (
-    <>
-      <h1 style={{ fontSize: 28, fontWeight: 300, marginBottom: 32 }}>Send Message</h1>
-      <form onSubmit={handleSend} style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: "32px 28px", maxWidth: 600 }}>
-        <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
-          <div style={{ flex: 1 }}>
-            <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>From Name</label>
-            <input value={fromName} onChange={e => setFromName(e.target.value)} style={inputStyle} />
-          </div>
-          <div style={{ flex: 1 }}>
-            <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Role / Title</label>
-            <input value={role} onChange={e => setRole(e.target.value)} placeholder="President" style={inputStyle} />
+  // Recipient picker helpers
+  const searchResults = recipientSearch.length >= 1
+    ? investors.filter(inv => !recipients.some(r => r.id === inv.id) && (inv.name.toLowerCase().includes(recipientSearch.toLowerCase()) || inv.email.toLowerCase().includes(recipientSearch.toLowerCase())))
+    : [];
+
+  function addRecipient(inv) { setRecipients(prev => [...prev, { id: inv.id, name: inv.name, email: inv.email }]); setRecipientSearch(""); }
+  function removeRecipient(id) { setRecipients(prev => prev.filter(r => r.id !== id)); }
+
+  // Filter threads
+  const filtered = threads.filter(t => {
+    if (filter === "unread") return t.unread;
+    if (filter === "from-investors") return t.creator.role === "INVESTOR";
+    return true;
+  });
+
+  // Thread detail view
+  if (threadDetail) {
+    return (
+      <>
+        <p style={{ fontSize: 12, color: red, cursor: "pointer", marginBottom: 24 }} onClick={() => { setSelectedThread(null); setThreadDetail(null); setReply(""); }}>← Back to inbox</p>
+        <div style={{ marginBottom: 24 }}>
+          <h2 style={{ fontSize: 22, fontWeight: 400, marginBottom: 6 }}>{threadDetail.subject}</h2>
+          <div style={{ fontSize: 12, color: "#999" }}>
+            {threadDetail.messages.length} messages · Started by {threadDetail.creator.name}
+            {threadDetail.project && <span> · {threadDetail.project}</span>}
+            <span style={{ marginLeft: 8, padding: "2px 8px", background: "#F0EDE8", borderRadius: 3, fontSize: 10 }}>{threadDetail.targetType}</span>
           </div>
         </div>
-
-        {/* Target type */}
-        <div style={{ marginBottom: 20 }}>
-          <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Send To</label>
-          <div style={{ display: "flex", gap: 8 }}>
-            {[
-              { val: "ALL", label: "All Investors" },
-              { val: "PROJECT", label: "Project Investors" },
-              { val: "INDIVIDUAL", label: "Specific Investors" },
-            ].map(t => (
-              <button key={t.val} type="button" onClick={() => setTargetType(t.val)} style={{
-                ...btnOutline, fontSize: 12, padding: "6px 14px",
-                background: targetType === t.val ? red : "#fff",
-                color: targetType === t.val ? "#fff" : darkText,
-                borderColor: targetType === t.val ? red : "#DDD",
-              }}>{t.label}</button>
-            ))}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+          {threadDetail.messages.map((m) => {
+            const isInvestor = m.sender.role === "INVESTOR";
+            return (
+              <div key={m.id} style={{ background: "#fff", border: `1px solid ${isInvestor ? "#E8E5DE" : "#DDE8DD"}`, borderRadius: 6, padding: "16px 20px", marginLeft: isInvestor ? 0 : 40, marginRight: isInvestor ? 40 : 0 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ width: 26, height: 26, borderRadius: "50%", background: isInvestor ? "#F0EDE8" : `${green}22`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 600, color: isInvestor ? "#666" : green }}>
+                      {m.sender.initials || m.sender.name.split(" ").map(n => n[0]).join("")}
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 500 }}>{m.sender.name}</span>
+                    <span style={{ fontSize: 11, color: "#999" }}>{isInvestor ? "Investor" : "Staff"}</span>
+                  </div>
+                  <span style={{ fontSize: 11, color: "#BBB" }}>{new Date(m.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
+                </div>
+                <div style={{ fontSize: 13, color: "#444", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{m.body}</div>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: "16px 20px" }}>
+          <textarea value={reply} onChange={e => setReply(e.target.value)} placeholder="Write a reply..." rows={3}
+            style={{ ...inputStyle, border: "none", padding: 0, resize: "vertical" }} />
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+            <button onClick={handleReply} disabled={sending || !reply.trim()} style={{ ...btnStyle, opacity: sending || !reply.trim() ? 0.5 : 1 }}>
+              {sending ? "Sending..." : "Reply"}
+            </button>
           </div>
         </div>
+      </>
+    );
+  }
 
-        {targetType === "PROJECT" && (
+  // Compose view
+  if (composing) {
+    return (
+      <>
+        <p style={{ fontSize: 12, color: red, cursor: "pointer", marginBottom: 24 }} onClick={() => setComposing(false)}>← Back to inbox</p>
+        <h2 style={{ fontSize: 22, fontWeight: 400, marginBottom: 24 }}>New Message</h2>
+        <form onSubmit={handleCompose} style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: "28px 24px" }}>
+          {/* Target type */}
           <div style={{ marginBottom: 20 }}>
-            <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Select Project</label>
-            <select value={targetProjectId} onChange={e => setTargetProjectId(e.target.value)} style={inputStyle} required>
-              <option value="">Choose a project...</option>
-              {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-          </div>
-        )}
-
-        {targetType === "INDIVIDUAL" && (
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Select Recipients</label>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {investors.map(inv => (
-                <label key={inv.id} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, cursor: "pointer", padding: "6px 12px", background: recipientIds.includes(inv.id) ? "#FEE" : "#F8F7F4", border: `1px solid ${recipientIds.includes(inv.id) ? red : "#E8E5DE"}`, borderRadius: 4 }}>
-                  <input type="checkbox" checked={recipientIds.includes(inv.id)} onChange={() => toggleRecipient(inv.id)} style={{ accentColor: red }} />
-                  {inv.name}
-                </label>
+            <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Send To</label>
+            <div style={{ display: "flex", gap: 8 }}>
+              {[{ val: "ALL", label: "All Investors" }, { val: "PROJECT", label: "Project" }, { val: "INDIVIDUAL", label: "Specific Investors" }].map(t => (
+                <button key={t.val} type="button" onClick={() => { setTargetType(t.val); setRecipients([]); }} style={{
+                  ...btnOutline, fontSize: 12, padding: "6px 14px",
+                  background: targetType === t.val ? red : "#fff", color: targetType === t.val ? "#fff" : darkText, borderColor: targetType === t.val ? red : "#DDD",
+                }}>{t.label}</button>
               ))}
             </div>
           </div>
-        )}
 
-        <div style={{ marginBottom: 20 }}>
-          <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Subject</label>
-          <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Q3 2025 Project Update" style={inputStyle} required />
+          {targetType === "PROJECT" && (
+            <div style={{ marginBottom: 20 }}>
+              <select value={targetProjectId} onChange={e => setTargetProjectId(e.target.value)} style={inputStyle} required>
+                <option value="">Choose a project...</option>
+                {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+          )}
+
+          {/* Searchable recipient picker */}
+          {targetType === "INDIVIDUAL" && (
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Recipients</label>
+              {/* Chips for selected recipients */}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: recipients.length ? 10 : 0 }}>
+                {recipients.map(r => (
+                  <span key={r.id} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", background: `${red}10`, border: `1px solid ${red}30`, borderRadius: 16, fontSize: 12 }}>
+                    {r.name}
+                    <span onClick={() => removeRecipient(r.id)} style={{ cursor: "pointer", color: red, fontWeight: 700, fontSize: 14, lineHeight: 1 }}>&times;</span>
+                  </span>
+                ))}
+              </div>
+              {/* Search input */}
+              <div style={{ position: "relative" }}>
+                <input value={recipientSearch} onChange={e => setRecipientSearch(e.target.value)} placeholder="Search investors by name or email..."
+                  style={inputStyle} />
+                {/* Dropdown results */}
+                {searchResults.length > 0 && (
+                  <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1px solid #E8E5DE", borderTop: "none", borderRadius: "0 0 4px 4px", zIndex: 10, maxHeight: 200, overflow: "auto", boxShadow: "0 4px 12px rgba(0,0,0,.08)" }}>
+                    {searchResults.slice(0, 8).map(inv => (
+                      <div key={inv.id} onClick={() => addRecipient(inv)} style={{ padding: "10px 14px", cursor: "pointer", borderBottom: "1px solid #F0EDE8", fontSize: 13 }}
+                        onMouseEnter={e => e.currentTarget.style.background = "#F8F7F4"}
+                        onMouseLeave={e => e.currentTarget.style.background = "#fff"}>
+                        <div style={{ fontWeight: 500 }}>{inv.name}</div>
+                        <div style={{ fontSize: 11, color: "#999" }}>
+                          {inv.email}
+                          {inv.projects?.length > 0 && <span> · {inv.projects.map(p => p.projectName).join(", ")}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {/* Browse button */}
+              <div style={{ marginTop: 8 }}>
+                <span onClick={() => setShowBrowse(!showBrowse)} style={{ fontSize: 12, color: red, cursor: "pointer" }}>
+                  {showBrowse ? "Hide investor list" : "Browse all investors →"}
+                </span>
+              </div>
+              {/* Investor table browser */}
+              {showBrowse && (
+                <div style={{ marginTop: 12, border: "1px solid #E8E5DE", borderRadius: 4, maxHeight: 250, overflow: "auto" }}>
+                  {investors.filter(inv => !recipients.some(r => r.id === inv.id)).map((inv, i) => (
+                    <div key={inv.id} onClick={() => addRecipient(inv)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", borderBottom: "1px solid #F0EDE8", cursor: "pointer", fontSize: 13 }}
+                      onMouseEnter={e => e.currentTarget.style.background = "#F8F7F4"}
+                      onMouseLeave={e => e.currentTarget.style.background = "#fff"}>
+                      <div>
+                        <span style={{ fontWeight: 500 }}>{inv.name}</span>
+                        <span style={{ color: "#999", marginLeft: 8, fontSize: 12 }}>{inv.email}</span>
+                      </div>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        {inv.projects?.map(p => (
+                          <span key={p.projectId} style={{ fontSize: 10, padding: "2px 6px", background: "#F0EDE8", borderRadius: 3 }}>{p.projectName}</span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div style={{ marginBottom: 16 }}>
+            <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="Subject" style={inputStyle} required />
+          </div>
+          <div style={{ marginBottom: 20 }}>
+            <textarea value={body} onChange={e => setBody(e.target.value)} placeholder="Write your message..." rows={6} style={{ ...inputStyle, resize: "vertical" }} required />
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+            <button type="button" onClick={() => setComposing(false)} style={btnOutline}>Cancel</button>
+            <button type="submit" disabled={sending} style={{ ...btnStyle, padding: "10px 24px", opacity: sending ? 0.5 : 1 }}>
+              {sending ? "Sending..." : "Send Message"}
+            </button>
+          </div>
+        </form>
+      </>
+    );
+  }
+
+  // Inbox list
+  const unreadCount = threads.filter(t => t.unread).length;
+  return (
+    <>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <div>
+          <h1 style={{ fontSize: 28, fontWeight: 300 }}>Inbox</h1>
+          <p style={{ fontSize: 13, color: "#999", marginTop: 4 }}>{unreadCount} unread · {threads.length} conversations</p>
         </div>
-        <div style={{ marginBottom: 24 }}>
-          <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Message</label>
-          <textarea value={preview} onChange={e => setPreview(e.target.value)} placeholder="Write your message..." rows={5} style={{ ...inputStyle, resize: "vertical" }} required />
+        <button onClick={() => setComposing(true)} style={btnStyle}>New Message</button>
+      </div>
+
+      {/* Filters */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+        {[{ val: "all", label: "All" }, { val: "unread", label: "Unread" }, { val: "from-investors", label: "From Investors" }].map(f => (
+          <button key={f.val} onClick={() => setFilter(f.val)} style={{
+            ...btnOutline, fontSize: 12, padding: "5px 14px",
+            background: filter === f.val ? "#F0EDE8" : "#fff", fontWeight: filter === f.val ? 500 : 400,
+          }}>{f.label}{f.val === "unread" && unreadCount > 0 ? ` (${unreadCount})` : ""}</button>
+        ))}
+      </div>
+
+      {loading ? <p style={{ color: "#999" }}>Loading...</p> : (
+        <div style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, overflow: "hidden" }}>
+          {filtered.length === 0 ? (
+            <div style={{ padding: 40, textAlign: "center", color: "#999" }}>No messages</div>
+          ) : filtered.map((t, i) => (
+            <div key={t.id} onClick={() => openThread(t)} style={{
+              padding: "16px 20px", borderBottom: i < filtered.length - 1 ? "1px solid #F0EDE8" : "none",
+              cursor: "pointer", display: "flex", gap: 12, background: t.unread ? `${red}04` : "transparent",
+            }}
+              onMouseEnter={e => e.currentTarget.style.background = "#FAFAF8"}
+              onMouseLeave={e => e.currentTarget.style.background = t.unread ? `${red}04` : "transparent"}>
+              <div style={{ width: 7, height: 7, borderRadius: "50%", background: t.unread ? red : "transparent", marginTop: 7, flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                  <span style={{ fontSize: 14, fontWeight: t.unread ? 600 : 400 }}>{t.subject}</span>
+                  <span style={{ fontSize: 11, color: "#BBB", flexShrink: 0 }}>
+                    {t.lastMessage ? new Date(t.lastMessage.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}
+                  </span>
+                </div>
+                <div style={{ fontSize: 12, color: "#999" }}>
+                  {t.creator.name}
+                  {t.creator.role === "INVESTOR" && <span style={{ marginLeft: 6, padding: "1px 6px", background: "#F0EDE8", borderRadius: 3, fontSize: 10 }}>Investor</span>}
+                  {t.messageCount > 1 && <span> · {t.messageCount} msgs</span>}
+                  {t.project && <span> · {t.project}</span>}
+                  <span style={{ marginLeft: 6, fontSize: 10, color: "#CCC" }}>{t.targetType}</span>
+                </div>
+                {t.lastMessage && (
+                  <div style={{ fontSize: 12, color: "#AAA", marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {t.lastMessage.body.substring(0, 100)}...
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
-        <button type="submit" disabled={sending} style={{ ...btnStyle, padding: "12px 24px", fontSize: 14, opacity: sending ? 0.6 : 1 }}>
-          {sending ? "Sending..." : `Send ${targetType === "ALL" ? "to All" : targetType === "PROJECT" ? "to Project" : `to ${recipientIds.length} Selected`}`}
-        </button>
-      </form>
+      )}
     </>
   );
 }

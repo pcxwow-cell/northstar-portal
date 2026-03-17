@@ -6,6 +6,11 @@ async function main() {
   console.log("Seeding database...");
 
   // Clear all tables (reverse dependency order)
+  await prisma.threadRecipient.deleteMany();
+  await prisma.threadMessage.deleteMany();
+  await prisma.messageThread.deleteMany();
+  await prisma.documentAssignment.deleteMany();
+  await prisma.messageRecipient.deleteMany();
   await prisma.message.deleteMany();
   await prisma.performanceHistory.deleteMany();
   await prisma.projectUpdate.deleteMany();

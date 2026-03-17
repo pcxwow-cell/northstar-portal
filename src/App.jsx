@@ -1018,8 +1018,12 @@ function LoginPage({ onLogin }) {
               </button>
               <div style={{ marginTop: 24, padding: "14px 16px", border: "1px solid #ECEAE5", borderRadius: 4, background: cream }}>
                 <div style={{ fontSize: 9, color: "#AAA", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Demo Credentials</div>
+                <div style={{ fontSize: 11, color: "#999", marginBottom: 4 }}>Investor:</div>
                 <div style={{ fontSize: 12, color: "#666", fontFamily: "monospace" }}>j.chen@pacificventures.ca</div>
-                <div style={{ fontSize: 12, color: "#666", fontFamily: "monospace" }}>northstar2025</div>
+                <div style={{ fontSize: 12, color: "#666", fontFamily: "monospace", marginBottom: 10 }}>northstar2025</div>
+                <div style={{ fontSize: 11, color: "#999", marginBottom: 4 }}>Admin:</div>
+                <div style={{ fontSize: 12, color: "#666", fontFamily: "monospace" }}>admin@northstardevelopment.ca</div>
+                <div style={{ fontSize: 12, color: "#666", fontFamily: "monospace" }}>admin2025</div>
               </div>
             </form>
             <p style={{ fontSize: 12, color: "#999", textAlign: "center", marginTop: 20 }}>
