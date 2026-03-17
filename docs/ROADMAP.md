@@ -4,7 +4,7 @@
 
 ## Current State
 
-The portal is a **frontend prototype** built with React 18 + Vite 5. It demonstrates 6 investor-facing pages (Overview, Portfolio, Cap Table, Documents, Distributions, Messages) with dark/light theme support, Recharts visualizations, and a branded login page. All data is static mock data — no backend, no database, no APIs.
+The portal is a **frontend prototype** built with React 18 + Vite 5. It demonstrates 6 investor-facing pages (Overview, Portfolio, Cap Table, Documents, Distributions, Messages) with dark/light theme support, Recharts visualizations, and a branded login page matching northstardevelopment.ca. All data is static mock data — no backend, no database, no APIs.
 
 ### What Works Today
 - Login with hardcoded demo credentials (sessionStorage)
@@ -14,16 +14,24 @@ The portal is a **frontend prototype** built with React 18 + Vite 5. It demonstr
 - Message inbox with reply (client-side state only)
 - Dark/light theme toggle (localStorage)
 - Per-project value tracking charts and distribution bar charts
+- Branded splash/login page with real Northstar logo, colors (#EA2028), and project images
+- Responsive layout: two-row desktop header + mobile scroll nav
 
-### What's Missing
-- Real authentication & authorization
-- Backend API / database
-- Admin panel for GP/staff
-- Prospective investor portal
-- Real document storage & e-signature
-- Real messaging system
-- Responsive / mobile layout
-- Accessibility
+### What's Missing for MVP
+- Real authentication & authorization (JWT)
+- Backend API / database (Express + Prisma + PostgreSQL)
+- Admin panel for GP/staff (project management, document upload, messaging)
+- Real document storage (S3/R2 with signed URLs)
+- Production deployment (Docker, HTTPS)
+
+### What's Post-MVP
+- Prospective investor portal / public deal pages
+- E-signature integration (DocuSign/HelloSign)
+- Financial engine (IRR, MOIC, waterfall calculations)
+- Email notifications
+- Payment processing
+- KYC/AML, accreditation verification
+- Multi-entity support, 2FA, audit logging
 
 ---
 
