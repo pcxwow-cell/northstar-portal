@@ -78,39 +78,58 @@
 | M8.5 | **Message history**: show all threads with this investor on their profile page | P1 | ○ |
 | M8.6 | **User management**: invite, approve, deactivate, reset password, edit role (INVESTOR/ADMIN/GP) | P0 | ○ |
 | M8.7 | **Company staff management**: add/edit ADMIN and GP users, not just investors | P0 | ○ |
-| M8.8 | **Investor segments/tags**: create custom groups ("Class A LPs", "2024 investors"), use for messaging + doc distribution | P1 | ○ |
+| M8.8 | **Investor segments/groups**: create custom groups ("Class A LPs", "Porthaven Investors", "2024 Cohort"), assign investors to groups | P0 | ○ |
+| M8.9 | **Group CRUD API**: create/edit/delete groups, add/remove members, list groups with member counts | P0 | ○ |
+| M8.10 | **Use groups everywhere**: messaging targets groups, doc distribution targets groups, filter investor list by group | P0 | ○ |
 
 ---
 
-## MVP Sprint 9 — Project KPI Dashboard (Admin)
+## MVP Sprint 9 — Document Management (Admin + Investor)
+
+**Goal**: Full document lifecycle — admin uploads, targets, tracks access. Investor downloads with audit trail. Based on DOCUMENT-FLOW.md.
+
+| ID | Description | Priority | Status |
+|----|-------------|----------|--------|
+| M9.1 | **Admin document dashboard**: table with name, project, category, investor count, view/download stats | P0 | ○ |
+| M9.2 | **Document detail view (admin)**: metadata, file preview thumbnail, access list with view/download timestamps | P0 | ○ |
+| M9.3 | **Upload with targeting**: upload → assign to project, investor group, specific investors, or general (all) | P0 | ○ |
+| M9.4 | **Enhance DocumentAssignment**: add viewedAt, downloadedAt, acknowledgedAt columns | P0 | ○ |
+| M9.5 | **Track downloads**: when investor clicks download, record timestamp in DocumentAssignment | P0 | ○ |
+| M9.6 | **Investor document center**: two tabs (General / Signature docs), filter by project + category | P1 | ○ |
+| M9.7 | **Documents within investment detail page**: project-specific docs appear inline on project detail | P1 | ○ |
+| M9.8 | **Action required workflow**: investor acknowledges "Action Required" docs, admin sees who acknowledged | P1 | ○ |
+| M9.9 | **Bulk upload**: upload multiple files at once with batch assignment | P2 | ○ |
+
+---
+
+## MVP Sprint 10 — Project KPI Dashboard (Admin)
 
 **Goal**: Admin can manage project financials and investor returns from a proper project detail view.
 
 | ID | Description | Priority | Status |
 |----|-------------|----------|--------|
-| M9.1 | **Project detail page (admin)**: click project → full dashboard | P0 | ○ |
-| M9.2 | Project KPI section: edit totalRaise, status, completion%, description | P0 | ○ |
-| M9.3 | **Investor table within project**: all LPs in this project with their KPIs, editable inline | P0 | ○ |
-| M9.4 | **Waterfall config editor**: edit prefReturn, catchUp, carry; manage tiers | P1 | ○ |
-| M9.5 | **Documents tab within project**: all docs assigned to this project, upload new | P0 | ○ |
-| M9.6 | **Construction updates tab**: post updates, view history | P0 | ○ |
-| M9.7 | **Cap table view within project**: same as investor view but editable | P1 | ○ |
+| M10.1 | **Project detail page (admin)**: click project → full dashboard | P0 | ○ |
+| M10.2 | Project KPI section: edit totalRaise, status, completion%, description | P0 | ○ |
+| M10.3 | **Investor table within project**: all LPs in this project with their KPIs, editable inline | P0 | ○ |
+| M10.4 | **Waterfall config editor**: edit prefReturn, catchUp, carry; manage tiers | P1 | ○ |
+| M10.5 | **Documents tab within project**: all docs assigned to this project, upload new | P0 | ○ |
+| M10.6 | **Construction updates tab**: post updates, view history | P0 | ○ |
+| M10.7 | **Cap table view within project**: same as investor view but editable | P1 | ○ |
 
 ---
 
-## MVP Sprint 10 — Investor Portal Enhancements
+## MVP Sprint 11 — Investor Portal Enhancements
 
 **Goal**: Bring investor-side experience up to industry standard.
 
 | ID | Description | Priority | Status |
 |----|-------------|----------|--------|
-| M10.1 | **Portfolio summary dashboard**: total contributions, total distributions, total value chart | P0 | ○ |
-| M10.2 | **Capital account statement**: per project — contributions, distributions, ending balance | P0 | ○ |
-| M10.3 | **Investment detail page**: click project → full detail with photos, map placeholder, description, docs, updates, transaction history | P1 | ○ |
-| M10.4 | **Self-service profile**: investor can update name, email, phone, entity info | P1 | ○ |
-| M10.5 | **Documents within project detail**: show project-specific docs inline | P1 | ○ |
-| M10.6 | **Notification center**: in-app notifications for new docs, messages, distributions | P1 | ○ |
-| M10.7 | **Recent activity feed** on dashboard: "New document uploaded", "Distribution received", "Message from GP" | P2 | ○ |
+| M11.1 | **Portfolio summary dashboard**: total contributions, total distributions, total value chart | P0 | ○ |
+| M11.2 | **Capital account statement**: per project — contributions, distributions, ending balance | P0 | ○ |
+| M11.3 | **Investment detail page**: click project → full detail with photos, map placeholder, description, docs, updates, transaction history | P1 | ○ |
+| M11.4 | **Self-service profile**: investor can update name, email, phone, entity info | P1 | ○ |
+| M11.5 | **Notification center**: in-app notifications for new docs, messages, distributions | P1 | ○ |
+| M11.6 | **Recent activity feed** on dashboard: "New document uploaded", "Distribution received", "Message from GP" | P2 | ○ |
 
 ---
 
