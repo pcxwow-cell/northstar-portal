@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 80" fill="none">
+  <!-- Star mark -->
+  <g transform="translate(0, 8)">
+    <!-- North star / compass rose -->
+    <polygon points="32,0 36,24 60,32 36,40 32,64 28,40 4,32 28,24" fill="#B33A3A" opacity="0.9"/>
+    <polygon points="32,8 34,26 52,32 34,38 32,56 30,38 12,32 30,26" fill="#D4A574" opacity="0.5"/>
+    <circle cx="32" cy="32" r="3" fill="#B33A3A"/>
+  </g>
+  <!-- NORTHSTAR text -->
+  <text x="76" y="38" font-family="'Cormorant Garamond', Georgia, serif" font-size="36" font-weight="400" letter-spacing="6" fill="currentColor">NORTHSTAR</text>
+  <!-- Subtitle -->
+  <text x="76" y="58" font-family="'DM Sans', sans-serif" font-size="10" letter-spacing="4" fill="currentColor" opacity="0.5">PACIFIC DEVELOPMENT GROUP</text>
+</svg>

@@ -755,77 +755,165 @@ function LoginPage({ onLogin }) {
     }, 600);
   }
 
+  const heroImg = "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1920&q=80";
+  const projectImg1 = "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=600&q=80";
+  const projectImg2 = "https://images.unsplash.com/photo-1574362848149-11496d93a7c7?w=600&q=80";
+
   return (
-    <div style={{ background: bg, minHeight: "100vh", fontFamily: sans, color: t1, display: "flex", flexDirection: "column" }}>
-      <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "48px 24px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: 80, maxWidth: 900, width: "100%", alignItems: "center", animation: "fadeIn .5s ease" }}>
-          <div>
-            <div style={{ marginBottom: 40 }}>
-              <div style={{ fontFamily: serif, fontSize: 42, fontWeight: 400, letterSpacing: ".08em", lineHeight: 1.1 }}>NORTHSTAR</div>
-              <div style={{ fontSize: 12, letterSpacing: ".18em", color: t3, textTransform: "uppercase", marginTop: 8 }}>Pacific Development Group</div>
+    <div style={{ fontFamily: sans, color: "#E8E4DE", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeInSlow { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
+
+      {/* ── Full-bleed hero with background image ── */}
+      <div style={{
+        position: "relative", minHeight: "100vh", display: "flex", flexDirection: "column",
+        backgroundImage: `url(${heroImg})`, backgroundSize: "cover", backgroundPosition: "center bottom",
+      }}>
+        {/* Dark overlay */}
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(6,6,6,.88) 0%, rgba(6,6,6,.75) 40%, rgba(6,6,6,.92) 100%)" }} />
+
+        {/* Top bar */}
+        <div style={{ position: "relative", zIndex: 2, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "28px 48px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            {/* Star icon */}
+            <svg width="28" height="28" viewBox="0 0 64 64" fill="none">
+              <polygon points="32,0 36,24 60,32 36,40 32,64 28,40 4,32 28,24" fill="#B33A3A" opacity="0.9"/>
+              <polygon points="32,8 34,26 52,32 34,38 32,56 30,38 12,32 30,26" fill="#D4A574" opacity="0.5"/>
+              <circle cx="32" cy="32" r="3" fill="#B33A3A"/>
+            </svg>
+            <div>
+              <div style={{ fontFamily: serif, fontSize: 18, fontWeight: 400, letterSpacing: ".08em", color: "#E8E4DE" }}>NORTHSTAR</div>
+              <div style={{ fontSize: 8, letterSpacing: ".16em", color: "#8C887F", textTransform: "uppercase" }}>Pacific Development Group</div>
             </div>
-            <h2 style={{ fontFamily: serif, fontSize: 26, fontWeight: 300, lineHeight: 1.4, color: t2, marginBottom: 32 }}>
-              Institutional-grade real estate<br />investment, made transparent.
-            </h2>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1, background: line, borderRadius: 2, overflow: "hidden", marginBottom: 32 }}>
-              {[
-                { label: "Active Projects", value: projects.length },
-                { label: "Under Development", value: projects.filter(p => p.status !== "Completed").length },
-                { label: "Western Canada", value: "Focus" },
-              ].map((m, i) => (
-                <div key={i} style={{ background: surface, padding: "20px 16px" }}>
-                  <div style={{ fontSize: 9, letterSpacing: ".12em", textTransform: "uppercase", color: t3, marginBottom: 8 }}>{m.label}</div>
-                  <div style={{ fontSize: 22, fontFamily: serif, fontWeight: 400, color: t1 }}>{m.value}</div>
-                </div>
-              ))}
-            </div>
-            <p style={{ fontSize: 13, color: t3, lineHeight: 1.7 }}>
-              Value-add multifamily & mixed-use investments across Western Canada.
-              Track your projects, review documents, and monitor construction progress — all in one place.
-            </p>
           </div>
-          <div>
-            <form onSubmit={handleSubmit} style={{ border: `1px solid ${line}`, borderRadius: 4, padding: 32, background: surface }}>
-              <h2 style={{ fontFamily: serif, fontSize: 20, fontWeight: 400, marginBottom: 4 }}>Investor Portal</h2>
-              <p style={{ fontSize: 12, color: t3, marginBottom: 24 }}>Sign in to access your account</p>
-              {error && (
-                <div style={{ fontSize: 12, color: red, padding: "8px 12px", border: `1px solid ${red}33`, borderRadius: 2, marginBottom: 16, background: `${red}0A` }}>{error}</div>
-              )}
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: "block", fontSize: 11, color: t3, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 6 }}>Email</label>
-                <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="investor@example.com"
-                  style={{ width: "100%", padding: "10px 12px", background: bg, border: `1px solid ${line}`, borderRadius: 2, color: t1, fontSize: 13, fontFamily: sans, outline: "none", boxSizing: "border-box" }}
-                  onFocus={e => e.target.style.borderColor = `${red}66`}
-                  onBlur={e => e.target.style.borderColor = line} />
-              </div>
-              <div style={{ marginBottom: 24 }}>
-                <label style={{ display: "block", fontSize: 11, color: t3, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 6 }}>Password</label>
-                <input type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••"
-                  style={{ width: "100%", padding: "10px 12px", background: bg, border: `1px solid ${line}`, borderRadius: 2, color: t1, fontSize: 13, fontFamily: sans, outline: "none", boxSizing: "border-box" }}
-                  onFocus={e => e.target.style.borderColor = `${red}66`}
-                  onBlur={e => e.target.style.borderColor = line} />
-              </div>
-              <button type="submit" disabled={loading} style={{
-                width: "100%", padding: "11px", background: loading ? `${red}88` : red, color: "#fff",
-                border: "none", borderRadius: 2, fontSize: 13, fontFamily: sans, cursor: loading ? "default" : "pointer",
-                letterSpacing: ".04em", transition: "background .15s",
-              }}>
-                {loading ? "Signing in..." : "Sign In"}
-              </button>
-              <div style={{ marginTop: 20, padding: "12px", border: `1px solid ${line}`, borderRadius: 2, background: bg }}>
-                <div style={{ fontSize: 10, color: t3, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 6 }}>Demo Credentials</div>
-                <div style={{ fontSize: 12, color: t2 }}>j.chen@pacificventures.ca</div>
-                <div style={{ fontSize: 12, color: t2 }}>northstar2025</div>
-              </div>
-            </form>
+          <div style={{ display: "flex", gap: 24, fontSize: 11, letterSpacing: ".06em" }}>
+            <span style={{ color: "#8C887F" }}>Vancouver, BC</span>
+            <span style={{ color: "#4A4843" }}>|</span>
+            <span style={{ color: "#8C887F" }}>Est. 2019</span>
           </div>
         </div>
+
+        {/* Main content area */}
+        <div style={{ position: "relative", zIndex: 2, flex: 1, display: "flex", alignItems: "center", padding: "0 48px 48px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 400px", gap: 80, maxWidth: 1100, width: "100%", margin: "0 auto", alignItems: "center" }}>
+
+            {/* Left: Hero copy + project previews */}
+            <div style={{ animation: "slideUp .8s ease" }}>
+              <div style={{ marginBottom: 40 }}>
+                <h1 style={{ fontFamily: serif, fontSize: 48, fontWeight: 300, lineHeight: 1.15, letterSpacing: "-.01em", color: "#E8E4DE", marginBottom: 20 }}>
+                  Building Western<br />Canada's Future
+                </h1>
+                <p style={{ fontSize: 15, color: "#8C887F", lineHeight: 1.7, maxWidth: 440 }}>
+                  Institutional-grade real estate development, made transparent. Track your projects, review documents, and monitor construction progress.
+                </p>
+              </div>
+
+              {/* Stats row */}
+              <div style={{ display: "flex", gap: 40, marginBottom: 48, paddingBottom: 40, borderBottom: "1px solid rgba(255,255,255,.08)" }}>
+                {[
+                  { value: `$${fmtCurrency(projects.reduce((s, p) => s + p.totalRaise, 0)).slice(1)}`, label: "Total Development Value" },
+                  { value: projects.length, label: "Active Projects" },
+                  { value: `${projects.reduce((s, p) => s + (p.units || 0), 0)}+`, label: "Residential Units" },
+                ].map((s, i) => (
+                  <div key={i} style={{ animation: `slideUp ${.8 + i * .15}s ease` }}>
+                    <div style={{ fontFamily: serif, fontSize: 32, fontWeight: 300, color: "#E8E4DE", marginBottom: 4 }}>{s.value}</div>
+                    <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: "#4A4843" }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Project previews */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                {[
+                  { img: projectImg1, name: "Porthaven", loc: "Port Coquitlam", status: "Under Construction", units: "108 Units" },
+                  { img: projectImg2, name: "Livy", loc: "Port Coquitlam", status: "Pre-Development", units: "64 Units" },
+                ].map((p, i) => (
+                  <div key={i} style={{
+                    position: "relative", borderRadius: 3, overflow: "hidden", height: 160,
+                    backgroundImage: `url(${p.img})`, backgroundSize: "cover", backgroundPosition: "center",
+                    animation: `fadeIn ${1 + i * .2}s ease`,
+                  }}>
+                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(0deg, rgba(0,0,0,.8) 0%, rgba(0,0,0,.2) 60%, rgba(0,0,0,.1) 100%)" }} />
+                    <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "16px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                        <div>
+                          <div style={{ fontFamily: serif, fontSize: 18, fontWeight: 500, letterSpacing: ".02em" }}>{p.name}</div>
+                          <div style={{ fontSize: 11, color: "#8C887F", marginTop: 2 }}>{p.loc} · {p.units}</div>
+                        </div>
+                        <span style={{ fontSize: 9, padding: "3px 8px", borderRadius: 2, border: "1px solid rgba(255,255,255,.15)", color: "#8C887F", letterSpacing: ".04em" }}>
+                          {p.status}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right: Login form */}
+            <div style={{ animation: "fadeIn .6s ease .2s both" }}>
+              <form onSubmit={handleSubmit} style={{
+                background: "rgba(12,12,12,.85)", backdropFilter: "blur(24px)",
+                border: "1px solid rgba(255,255,255,.08)", borderRadius: 6, padding: "36px 32px",
+                boxShadow: "0 24px 80px rgba(0,0,0,.5)",
+              }}>
+                <div style={{ textAlign: "center", marginBottom: 28 }}>
+                  {/* Logo mark */}
+                  <svg width="36" height="36" viewBox="0 0 64 64" fill="none" style={{ marginBottom: 16 }}>
+                    <polygon points="32,0 36,24 60,32 36,40 32,64 28,40 4,32 28,24" fill="#B33A3A" opacity="0.9"/>
+                    <polygon points="32,8 34,26 52,32 34,38 32,56 30,38 12,32 30,26" fill="#D4A574" opacity="0.5"/>
+                    <circle cx="32" cy="32" r="3" fill="#B33A3A"/>
+                  </svg>
+                  <h2 style={{ fontFamily: serif, fontSize: 22, fontWeight: 400, marginBottom: 4, color: "#E8E4DE" }}>Investor Portal</h2>
+                  <p style={{ fontSize: 12, color: "#4A4843" }}>Sign in to access your account</p>
+                </div>
+                {error && (
+                  <div style={{ fontSize: 12, color: red, padding: "8px 12px", border: `1px solid ${red}33`, borderRadius: 2, marginBottom: 16, background: `${red}0A` }}>{error}</div>
+                )}
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: "block", fontSize: 10, color: "#4A4843", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 6 }}>Email</label>
+                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="investor@example.com"
+                    style={{ width: "100%", padding: "11px 14px", background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.08)", borderRadius: 3, color: "#E8E4DE", fontSize: 13, fontFamily: sans, outline: "none", boxSizing: "border-box", transition: "border-color .15s" }}
+                    onFocus={e => e.target.style.borderColor = `${red}66`}
+                    onBlur={e => e.target.style.borderColor = "rgba(255,255,255,.08)"} />
+                </div>
+                <div style={{ marginBottom: 28 }}>
+                  <label style={{ display: "block", fontSize: 10, color: "#4A4843", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 6 }}>Password</label>
+                  <input type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••"
+                    style={{ width: "100%", padding: "11px 14px", background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.08)", borderRadius: 3, color: "#E8E4DE", fontSize: 13, fontFamily: sans, outline: "none", boxSizing: "border-box", transition: "border-color .15s" }}
+                    onFocus={e => e.target.style.borderColor = `${red}66`}
+                    onBlur={e => e.target.style.borderColor = "rgba(255,255,255,.08)"} />
+                </div>
+                <button type="submit" disabled={loading} style={{
+                  width: "100%", padding: "12px", background: loading ? `${red}88` : red, color: "#fff",
+                  border: "none", borderRadius: 3, fontSize: 13, fontFamily: sans, cursor: loading ? "default" : "pointer",
+                  letterSpacing: ".04em", transition: "background .15s, transform .1s",
+                  boxShadow: `0 4px 20px ${red}44`,
+                }}>
+                  {loading ? "Signing in..." : "Sign In"}
+                </button>
+                <div style={{ marginTop: 24, padding: "14px 16px", border: "1px solid rgba(255,255,255,.06)", borderRadius: 3, background: "rgba(255,255,255,.02)" }}>
+                  <div style={{ fontSize: 9, color: "#4A4843", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Demo Credentials</div>
+                  <div style={{ fontSize: 12, color: "#8C887F", fontFamily: "monospace" }}>j.chen@pacificventures.ca</div>
+                  <div style={{ fontSize: 12, color: "#8C887F", fontFamily: "monospace" }}>northstar2025</div>
+                </div>
+              </form>
+              <p style={{ fontSize: 11, color: "#4A4843", textAlign: "center", marginTop: 20 }}>
+                Interested in investing? <span style={{ color: red, cursor: "pointer" }}>Contact us →</span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom bar */}
+        <div style={{ position: "relative", zIndex: 2, padding: "20px 48px", display: "flex", justifyContent: "space-between", fontSize: 10, color: "#4A4843", borderTop: "1px solid rgba(255,255,255,.05)" }}>
+          <span>© 2026 Northstar Pacific Development Group</span>
+          <span>710 – 1199 W Pender St, Vancouver BC V6E 2R1</span>
+        </div>
       </div>
-      <footer style={{ borderTop: `1px solid ${line}`, padding: "20px 48px", display: "flex", justifyContent: "space-between", fontSize: 11, color: t3 }}>
-        <span>© 2026 Northstar Pacific Development Group</span>
-        <span>710 – 1199 W Pender, Vancouver BC V6E 2R1</span>
-      </footer>
     </div>
   );
 }
