@@ -5,8 +5,33 @@ import { investor, projects, myProjects, allDocuments, allDistributions, general
 // ─── THEME ───────────────────────────────────────────────
 const serif = "'Cormorant Garamond', Georgia, serif";
 const sans = "'DM Sans', -apple-system, sans-serif";
-const red = "#B33A3A";
+const red = "#EA2028";
+const darkText = "#231F20";
+const cream = "#FDFAF2";
 const green = "#3D7A54";
+
+// Northstar "N" icon — two parallelogram shapes from brand
+const NorthstarIcon = ({ size = 32, color = red }) => (
+  <svg width={size} height={size} viewBox="0 0 163 162" fill="none">
+    <polygon points="7.2,10 7.2,135.7 68.9,135.7 68.9,63.9" fill={color}/>
+    <polygon points="152.2,152.2 152.2,26.5 90.6,26.5 90.6,98.3" fill={color}/>
+  </svg>
+);
+
+// Northstar wordmark — geometric letter paths from brand SVG
+const NorthstarWordmark = ({ height = 20, color = darkText }) => (
+  <svg height={height} viewBox="0 0 499.5 72" fill="none">
+    <path d="M17,8v7l22.7,22.7V8h8.4V66h-8.4V48.8L17,26.1V66H8.6V8L17,8L17,8z" fill={color}/>
+    <path d="M66.4,26c0-12.3,7-18.9,20-18.9s20,6.6,20,18.9v22c0,12.4-7,19-20,19s-20-6.6-20-19V26z M74.8,47.9c0,7.5,4.1,11.6,11.6,11.6C94,59.6,98,55.5,98,47.9V26c0-7.5-4-11.6-11.6-11.6c-7.5,0-11.6,4.1-11.6,11.6V47.9z" fill={color}/>
+    <path d="M124.5,8h21.6c11.9,0,18.3,6.1,18.3,17.3c0,9.8-4.9,15.7-14.2,17l13.9,13.9V66h-8.4v-7l-16.5-16.5h-6.5V66h-8.4V8L124.5,8z M132.9,35.3h13.3c6.5,0,10-3.6,10-10c0-6.5-3.5-10-10-10h-13.3V35.3L132.9,35.3z" fill={color}/>
+    <path d="M175.3,15.1V8h43.5v7.1h-17.6V66h-8.5V15.1H175.3z" fill={color}/>
+    <path d="M243.7,8v25h22.7V8h8.4V66h-8.4V40h-22.7v26h-8.4V8H243.7z" fill={color}/>
+    <path d="M301,47.7c0,7.7,4.5,11.9,12.9,11.9c7.2,0,11.1-3.1,11.1-8.9c0-16-31.2-4-31.2-27.4c0-10.5,6.3-16.3,18.2-16.3c12.8,0,19.7,6.7,19.7,19.2h-7.9c0-7.7-4.1-11.9-11.9-11.9c-6.5,0-10,3-10,8.5c0,15.8,31.2,3.8,31.2,27.2c0,10.9-6.7,16.8-19.3,16.8c-13.4,0-20.6-6.7-20.6-19.2L301,47.7L301,47.7z" fill={color}/>
+    <path d="M342.1,15.1V8h43.5v7.1H368V66h-8.5V15.1H342.1L342.1,15.1z" fill={color}/>
+    <path d="M454.4,8h21.6c11.9,0,18.3,6.1,18.3,17.3c0,9.8-4.9,15.7-14.2,17l13.9,13.9V66h-8.4v-7l-16.5-16.5h-6.5V66h-8.4L454.4,8L454.4,8z M462.8,35.3h13.3c6.5,0,10-3.6,10-10c0-6.5-3.5-10-10-10h-13.3V35.3L462.8,35.3z" fill={color}/>
+    <polygon points="418.7,7.6 414,7.6 397,24.6 397,66 405.4,66 405.4,27.4 416.3,16.4 427.3,27.4 427.3,66 435.7,66 435.7,24.6" fill={color}/>
+  </svg>
+);
 
 const themes = {
   dark: { bg: "#060606", surface: "#0C0C0C", line: "#1A1A1A", t1: "#E8E4DE", t2: "#8C887F", t3: "#4A4843", hover: "#0F0F0F", headerBg: "#060606F0", avatarGrad: "linear-gradient(135deg, #222, #181818)" },
@@ -755,164 +780,156 @@ function LoginPage({ onLogin }) {
     }, 600);
   }
 
-  const heroImg = "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1920&q=80";
-  const projectImg1 = "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=600&q=80";
-  const projectImg2 = "https://images.unsplash.com/photo-1574362848149-11496d93a7c7?w=600&q=80";
+  // Northstar's actual project images
+  const projectImages = {
+    porthaven: "https://northstardevelopment.ca/public/images/porthaven-1.jpg",
+    livy: "https://northstardevelopment.ca/public/images/livy-2.jpeg",
+    estrella: "https://northstardevelopment.ca/public/images/estrella-1.jpg",
+    panorama: "https://northstardevelopment.ca/public/images/panorama-1.jpg",
+  };
 
   return (
-    <div style={{ fontFamily: sans, color: "#E8E4DE", minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+    <div style={{ fontFamily: sans, color: darkText, minHeight: "100vh", display: "flex", flexDirection: "column", background: "#fff" }}>
       <style>{`
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes fadeInSlow { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @media (max-width: 900px) {
+          .login-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
+          .login-hero { display: none !important; }
+          .login-form-wrap { max-width: 440px; margin: 0 auto; }
+        }
+        @media (max-width: 600px) {
+          .login-container { padding: 24px 20px !important; }
+          .login-header { padding: 20px 20px !important; }
+          .login-footer { padding: 16px 20px !important; flex-direction: column; gap: 4px; text-align: center; }
+        }
       `}</style>
 
-      {/* ── Full-bleed hero with background image ── */}
-      <div style={{
-        position: "relative", minHeight: "100vh", display: "flex", flexDirection: "column",
-        backgroundImage: `url(${heroImg})`, backgroundSize: "cover", backgroundPosition: "center bottom",
-      }}>
-        {/* Dark overlay */}
-        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(6,6,6,.88) 0%, rgba(6,6,6,.75) 40%, rgba(6,6,6,.92) 100%)" }} />
-
-        {/* Top bar */}
-        <div style={{ position: "relative", zIndex: 2, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "28px 48px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            {/* Star icon */}
-            <svg width="28" height="28" viewBox="0 0 64 64" fill="none">
-              <polygon points="32,0 36,24 60,32 36,40 32,64 28,40 4,32 28,24" fill="#B33A3A" opacity="0.9"/>
-              <polygon points="32,8 34,26 52,32 34,38 32,56 30,38 12,32 30,26" fill="#D4A574" opacity="0.5"/>
-              <circle cx="32" cy="32" r="3" fill="#B33A3A"/>
-            </svg>
-            <div>
-              <div style={{ fontFamily: serif, fontSize: 18, fontWeight: 400, letterSpacing: ".08em", color: "#E8E4DE" }}>NORTHSTAR</div>
-              <div style={{ fontSize: 8, letterSpacing: ".16em", color: "#8C887F", textTransform: "uppercase" }}>Pacific Development Group</div>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 24, fontSize: 11, letterSpacing: ".06em" }}>
-            <span style={{ color: "#8C887F" }}>Vancouver, BC</span>
-            <span style={{ color: "#4A4843" }}>|</span>
-            <span style={{ color: "#8C887F" }}>Est. 2019</span>
-          </div>
+      {/* ── Header ── */}
+      <div className="login-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "28px 48px", borderBottom: "1px solid #ECEAE5" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <NorthstarIcon size={28} color={red} />
+          <NorthstarWordmark height={16} color={darkText} />
         </div>
+        <div style={{ display: "flex", gap: 20, fontSize: 12, color: "#888" }}>
+          <span>Vancouver, BC</span>
+          <span style={{ color: "#DDD" }}>|</span>
+          <span>Est. 2019</span>
+        </div>
+      </div>
 
-        {/* Main content area */}
-        <div style={{ position: "relative", zIndex: 2, flex: 1, display: "flex", alignItems: "center", padding: "0 48px 48px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 400px", gap: 80, maxWidth: 1100, width: "100%", margin: "0 auto", alignItems: "center" }}>
+      {/* ── Main content ── */}
+      <div className="login-container" style={{ flex: 1, display: "flex", alignItems: "center", padding: "48px 48px" }}>
+        <div className="login-grid" style={{ display: "grid", gridTemplateColumns: "1fr 420px", gap: 80, maxWidth: 1100, width: "100%", margin: "0 auto", alignItems: "center" }}>
 
-            {/* Left: Hero copy + project previews */}
-            <div style={{ animation: "slideUp .8s ease" }}>
-              <div style={{ marginBottom: 40 }}>
-                <h1 style={{ fontFamily: serif, fontSize: 48, fontWeight: 300, lineHeight: 1.15, letterSpacing: "-.01em", color: "#E8E4DE", marginBottom: 20 }}>
-                  Building Western<br />Canada's Future
-                </h1>
-                <p style={{ fontSize: 15, color: "#8C887F", lineHeight: 1.7, maxWidth: 440 }}>
-                  Institutional-grade real estate development, made transparent. Track your projects, review documents, and monitor construction progress.
-                </p>
-              </div>
-
-              {/* Stats row */}
-              <div style={{ display: "flex", gap: 40, marginBottom: 48, paddingBottom: 40, borderBottom: "1px solid rgba(255,255,255,.08)" }}>
-                {[
-                  { value: `$${fmtCurrency(projects.reduce((s, p) => s + p.totalRaise, 0)).slice(1)}`, label: "Total Development Value" },
-                  { value: projects.length, label: "Active Projects" },
-                  { value: `${projects.reduce((s, p) => s + (p.units || 0), 0)}+`, label: "Residential Units" },
-                ].map((s, i) => (
-                  <div key={i} style={{ animation: `slideUp ${.8 + i * .15}s ease` }}>
-                    <div style={{ fontFamily: serif, fontSize: 32, fontWeight: 300, color: "#E8E4DE", marginBottom: 4 }}>{s.value}</div>
-                    <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: "#4A4843" }}>{s.label}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Project previews */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                {[
-                  { img: projectImg1, name: "Porthaven", loc: "Port Coquitlam", status: "Under Construction", units: "108 Units" },
-                  { img: projectImg2, name: "Livy", loc: "Port Coquitlam", status: "Pre-Development", units: "64 Units" },
-                ].map((p, i) => (
-                  <div key={i} style={{
-                    position: "relative", borderRadius: 3, overflow: "hidden", height: 160,
-                    backgroundImage: `url(${p.img})`, backgroundSize: "cover", backgroundPosition: "center",
-                    animation: `fadeIn ${1 + i * .2}s ease`,
-                  }}>
-                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(0deg, rgba(0,0,0,.8) 0%, rgba(0,0,0,.2) 60%, rgba(0,0,0,.1) 100%)" }} />
-                    <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "16px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-                        <div>
-                          <div style={{ fontFamily: serif, fontSize: 18, fontWeight: 500, letterSpacing: ".02em" }}>{p.name}</div>
-                          <div style={{ fontSize: 11, color: "#8C887F", marginTop: 2 }}>{p.loc} · {p.units}</div>
-                        </div>
-                        <span style={{ fontSize: 9, padding: "3px 8px", borderRadius: 2, border: "1px solid rgba(255,255,255,.15)", color: "#8C887F", letterSpacing: ".04em" }}>
-                          {p.status}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Right: Login form */}
-            <div style={{ animation: "fadeIn .6s ease .2s both" }}>
-              <form onSubmit={handleSubmit} style={{
-                background: "rgba(12,12,12,.85)", backdropFilter: "blur(24px)",
-                border: "1px solid rgba(255,255,255,.08)", borderRadius: 6, padding: "36px 32px",
-                boxShadow: "0 24px 80px rgba(0,0,0,.5)",
-              }}>
-                <div style={{ textAlign: "center", marginBottom: 28 }}>
-                  {/* Logo mark */}
-                  <svg width="36" height="36" viewBox="0 0 64 64" fill="none" style={{ marginBottom: 16 }}>
-                    <polygon points="32,0 36,24 60,32 36,40 32,64 28,40 4,32 28,24" fill="#B33A3A" opacity="0.9"/>
-                    <polygon points="32,8 34,26 52,32 34,38 32,56 30,38 12,32 30,26" fill="#D4A574" opacity="0.5"/>
-                    <circle cx="32" cy="32" r="3" fill="#B33A3A"/>
-                  </svg>
-                  <h2 style={{ fontFamily: serif, fontSize: 22, fontWeight: 400, marginBottom: 4, color: "#E8E4DE" }}>Investor Portal</h2>
-                  <p style={{ fontSize: 12, color: "#4A4843" }}>Sign in to access your account</p>
-                </div>
-                {error && (
-                  <div style={{ fontSize: 12, color: red, padding: "8px 12px", border: `1px solid ${red}33`, borderRadius: 2, marginBottom: 16, background: `${red}0A` }}>{error}</div>
-                )}
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: "block", fontSize: 10, color: "#4A4843", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 6 }}>Email</label>
-                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="investor@example.com"
-                    style={{ width: "100%", padding: "11px 14px", background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.08)", borderRadius: 3, color: "#E8E4DE", fontSize: 13, fontFamily: sans, outline: "none", boxSizing: "border-box", transition: "border-color .15s" }}
-                    onFocus={e => e.target.style.borderColor = `${red}66`}
-                    onBlur={e => e.target.style.borderColor = "rgba(255,255,255,.08)"} />
-                </div>
-                <div style={{ marginBottom: 28 }}>
-                  <label style={{ display: "block", fontSize: 10, color: "#4A4843", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 6 }}>Password</label>
-                  <input type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••"
-                    style={{ width: "100%", padding: "11px 14px", background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.08)", borderRadius: 3, color: "#E8E4DE", fontSize: 13, fontFamily: sans, outline: "none", boxSizing: "border-box", transition: "border-color .15s" }}
-                    onFocus={e => e.target.style.borderColor = `${red}66`}
-                    onBlur={e => e.target.style.borderColor = "rgba(255,255,255,.08)"} />
-                </div>
-                <button type="submit" disabled={loading} style={{
-                  width: "100%", padding: "12px", background: loading ? `${red}88` : red, color: "#fff",
-                  border: "none", borderRadius: 3, fontSize: 13, fontFamily: sans, cursor: loading ? "default" : "pointer",
-                  letterSpacing: ".04em", transition: "background .15s, transform .1s",
-                  boxShadow: `0 4px 20px ${red}44`,
-                }}>
-                  {loading ? "Signing in..." : "Sign In"}
-                </button>
-                <div style={{ marginTop: 24, padding: "14px 16px", border: "1px solid rgba(255,255,255,.06)", borderRadius: 3, background: "rgba(255,255,255,.02)" }}>
-                  <div style={{ fontSize: 9, color: "#4A4843", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Demo Credentials</div>
-                  <div style={{ fontSize: 12, color: "#8C887F", fontFamily: "monospace" }}>j.chen@pacificventures.ca</div>
-                  <div style={{ fontSize: 12, color: "#8C887F", fontFamily: "monospace" }}>northstar2025</div>
-                </div>
-              </form>
-              <p style={{ fontSize: 11, color: "#4A4843", textAlign: "center", marginTop: 20 }}>
-                Interested in investing? <span style={{ color: red, cursor: "pointer" }}>Contact us →</span>
+          {/* Left: Brand + projects */}
+          <div className="login-hero" style={{ animation: "slideUp .8s ease" }}>
+            <div style={{ marginBottom: 48 }}>
+              <p style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".14em", color: red, fontWeight: 500, marginBottom: 16 }}>Investor Portal</p>
+              <h1 style={{ fontSize: 42, fontWeight: 300, lineHeight: 1.2, color: darkText, marginBottom: 20, fontFamily: sans }}>
+                Enlivening Communities<br />Through Mindful Development
+              </h1>
+              <p style={{ fontSize: 15, color: "#777", lineHeight: 1.7, maxWidth: 480 }}>
+                Track your projects, review documents, and monitor construction progress — all in one place.
               </p>
             </div>
+
+            {/* Stats */}
+            <div style={{ display: "flex", gap: 48, marginBottom: 48, paddingBottom: 40, borderBottom: "1px solid #ECEAE5" }}>
+              {[
+                { value: `$${fmtCurrency(projects.reduce((s, p) => s + p.totalRaise, 0)).slice(1)}`, label: "Total Development" },
+                { value: projects.length, label: "Projects" },
+                { value: `${projects.reduce((s, p) => s + (p.units || 0), 0)}+`, label: "Units" },
+              ].map((s, i) => (
+                <div key={i} style={{ animation: `slideUp ${.8 + i * .15}s ease` }}>
+                  <div style={{ fontSize: 30, fontWeight: 300, color: darkText, marginBottom: 4 }}>{s.value}</div>
+                  <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: "#AAA" }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Project cards — using Northstar's actual images */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              {[
+                { img: projectImages.porthaven, name: "Porthaven", loc: "Port Coquitlam", status: "Under Construction" },
+                { img: projectImages.livy, name: "Livy", loc: "Port Coquitlam", status: "Pre-Development" },
+                { img: projectImages.estrella, name: "Estrella", loc: "British Columbia", status: "Under Construction" },
+                { img: projectImages.panorama, name: "Panorama B6", loc: "Surrey, BC", status: "Completed" },
+              ].map((p, i) => (
+                <div key={i} style={{
+                  position: "relative", borderRadius: 4, overflow: "hidden", height: 140,
+                  backgroundImage: `url(${p.img})`, backgroundSize: "cover", backgroundPosition: "center",
+                  animation: `fadeIn ${.8 + i * .15}s ease`,
+                }}>
+                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(0deg, rgba(0,0,0,.7) 0%, rgba(0,0,0,.1) 60%, transparent 100%)" }} />
+                  <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: 14 }}>
+                    <div style={{ fontSize: 15, fontWeight: 500, color: "#fff", marginBottom: 2 }}>{p.name}</div>
+                    <div style={{ fontSize: 10, color: "rgba(255,255,255,.6)" }}>{p.loc}</div>
+                  </div>
+                  <div style={{ position: "absolute", top: 10, right: 10 }}>
+                    <span style={{
+                      fontSize: 9, padding: "3px 8px", borderRadius: 2,
+                      background: p.status === "Completed" ? "rgba(61,122,84,.9)" : "rgba(0,0,0,.5)",
+                      color: "#fff", letterSpacing: ".03em", backdropFilter: "blur(4px)",
+                    }}>{p.status}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right: Login form */}
+          <div className="login-form-wrap" style={{ animation: "fadeIn .6s ease .2s both" }}>
+            <form onSubmit={handleSubmit} style={{
+              background: "#fff", border: "1px solid #ECEAE5", borderRadius: 8, padding: "40px 32px",
+              boxShadow: "0 8px 40px rgba(0,0,0,.06)",
+            }}>
+              <div style={{ textAlign: "center", marginBottom: 32 }}>
+                <NorthstarIcon size={40} color={red} />
+                <h2 style={{ fontSize: 20, fontWeight: 400, marginBottom: 4, marginTop: 16, color: darkText }}>Investor Portal</h2>
+                <p style={{ fontSize: 13, color: "#999" }}>Sign in to access your account</p>
+              </div>
+              {error && (
+                <div style={{ fontSize: 12, color: red, padding: "10px 14px", border: `1px solid ${red}22`, borderRadius: 4, marginBottom: 16, background: `${red}08` }}>{error}</div>
+              )}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: 11, color: "#888", fontWeight: 500, marginBottom: 6 }}>Email</label>
+                <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="investor@example.com"
+                  style={{ width: "100%", padding: "12px 14px", background: "#FAFAFA", border: "1px solid #E0DDD8", borderRadius: 4, color: darkText, fontSize: 14, fontFamily: sans, outline: "none", boxSizing: "border-box", transition: "border-color .15s" }}
+                  onFocus={e => e.target.style.borderColor = red}
+                  onBlur={e => e.target.style.borderColor = "#E0DDD8"} />
+              </div>
+              <div style={{ marginBottom: 28 }}>
+                <label style={{ display: "block", fontSize: 11, color: "#888", fontWeight: 500, marginBottom: 6 }}>Password</label>
+                <input type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••"
+                  style={{ width: "100%", padding: "12px 14px", background: "#FAFAFA", border: "1px solid #E0DDD8", borderRadius: 4, color: darkText, fontSize: 14, fontFamily: sans, outline: "none", boxSizing: "border-box", transition: "border-color .15s" }}
+                  onFocus={e => e.target.style.borderColor = red}
+                  onBlur={e => e.target.style.borderColor = "#E0DDD8"} />
+              </div>
+              <button type="submit" disabled={loading} style={{
+                width: "100%", padding: "13px", background: loading ? `${red}AA` : red, color: "#fff",
+                border: "none", borderRadius: 4, fontSize: 14, fontFamily: sans, fontWeight: 500, cursor: loading ? "default" : "pointer",
+                letterSpacing: ".02em", transition: "background .15s",
+              }}>
+                {loading ? "Signing in..." : "Sign In"}
+              </button>
+              <div style={{ marginTop: 24, padding: "14px 16px", border: "1px solid #ECEAE5", borderRadius: 4, background: cream }}>
+                <div style={{ fontSize: 9, color: "#AAA", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 8 }}>Demo Credentials</div>
+                <div style={{ fontSize: 12, color: "#666", fontFamily: "monospace" }}>j.chen@pacificventures.ca</div>
+                <div style={{ fontSize: 12, color: "#666", fontFamily: "monospace" }}>northstar2025</div>
+              </div>
+            </form>
+            <p style={{ fontSize: 12, color: "#999", textAlign: "center", marginTop: 20 }}>
+              Interested in investing? <span style={{ color: red, cursor: "pointer", fontWeight: 500 }}>Contact us →</span>
+            </p>
           </div>
         </div>
+      </div>
 
-        {/* Bottom bar */}
-        <div style={{ position: "relative", zIndex: 2, padding: "20px 48px", display: "flex", justifyContent: "space-between", fontSize: 10, color: "#4A4843", borderTop: "1px solid rgba(255,255,255,.05)" }}>
-          <span>© 2026 Northstar Pacific Development Group</span>
-          <span>710 – 1199 W Pender St, Vancouver BC V6E 2R1</span>
-        </div>
+      {/* ── Footer ── */}
+      <div className="login-footer" style={{ padding: "20px 48px", display: "flex", justifyContent: "space-between", fontSize: 11, color: "#AAA", borderTop: "1px solid #ECEAE5" }}>
+        <span>© 2026 Northstar Pacific Development Group</span>
+        <span>710 – 1199 W Pender St, Vancouver BC V6E 2R1</span>
       </div>
     </div>
   );
@@ -966,63 +983,119 @@ export default function App() {
   return (
     <ThemeContext.Provider value={th}>
     <div style={{ background: th.bg, color: th.t1, fontFamily: sans, minHeight: "100vh", transition: "background .3s, color .3s" }}>
-      <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
-      <header style={{
-        borderBottom: `1px solid ${th.line}`, display: "flex", alignItems: "center",
-        justifyContent: "space-between", padding: "0 48px", height: 60,
-        position: "sticky", top: 0, zIndex: 10,
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .app-topbar { padding: 0 48px; }
+        .app-topbar .user-name { display: inline; }
+        .app-subnav { padding: 0 48px; }
+        .app-subnav-inner { display: flex; gap: 32px; }
+        .app-nav-mobile { display: none; }
+        .app-main { padding: 48px 48px 96px; }
+        .app-footer { padding: 20px 48px; flex-direction: row; }
+        @media (max-width: 900px) {
+          .app-topbar { padding: 0 16px; }
+          .app-topbar .user-name { display: none; }
+          .app-topbar .brand-wordmark { display: none; }
+          .app-topbar .brand-label { display: none; }
+          .app-topbar .brand-sep { display: none; }
+          .app-topbar .theme-toggle { display: none; }
+          .app-subnav { display: none; }
+          .app-nav-mobile { display: flex; overflow-x: auto; gap: 0; border-bottom: 1px solid var(--line-color); padding: 0 16px; }
+          .app-main { padding: 24px 20px 80px; }
+          .app-footer { padding: 16px 20px; flex-direction: column; gap: 4px; text-align: center; }
+        }
+      `}</style>
+
+      {/* Top bar: logo + user actions */}
+      <header className="app-topbar" style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        height: 56, position: "sticky", top: 0, zIndex: 10,
         background: th.headerBg, backdropFilter: "blur(16px)",
+        borderBottom: `1px solid ${th.line}`,
         transition: "background .3s, border-color .3s",
+        "--line-color": th.line,
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-            <span style={{ fontFamily: serif, fontSize: 19, fontWeight: 400, letterSpacing: ".06em", color: th.t1 }}>NORTHSTAR</span>
-            <span style={{ fontSize: 10, letterSpacing: ".14em", color: th.t3, textTransform: "uppercase" }}>Investor Portal</span>
-          </div>
-          <div style={{ width: 1, height: 20, background: th.line }} />
-          <nav style={{ display: "flex", gap: 24 }}>
-            {navItems.map(n => (
-              <span key={n.id} onClick={() => setView(n.id)} style={{
-                fontSize: 12.5, fontWeight: 400, cursor: "pointer", userSelect: "none",
-                color: view === n.id ? th.t1 : th.t3,
-                borderBottom: view === n.id ? `1px solid ${red}` : "1px solid transparent",
-                paddingBottom: 2, transition: "color .15s, border-color .15s",
-              }}
-                onMouseEnter={e => { if (view !== n.id) e.currentTarget.style.color = th.t2 }}
-                onMouseLeave={e => { if (view !== n.id) e.currentTarget.style.color = th.t3 }}>
-                {n.label}
-                {n.id === "messages" && msgs.some(m => m.unread) && (
-                  <span style={{ display: "inline-block", width: 5, height: 5, borderRadius: "50%", background: red, marginLeft: 4, verticalAlign: "middle" }} />
-                )}
-              </span>
-            ))}
-          </nav>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <NorthstarIcon size={24} color={red} />
+          <span className="brand-wordmark"><NorthstarWordmark height={14} color={th.t1} /></span>
+          <span className="brand-label brand-sep" style={{ fontSize: 10, letterSpacing: ".12em", color: th.t3, textTransform: "uppercase", marginLeft: 6, paddingLeft: 14, borderLeft: `1px solid ${th.line}` }}>Investor Portal</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <span onClick={toggleTheme} style={{ fontSize: 14, cursor: "pointer", padding: "4px 8px", borderRadius: 2, border: `1px solid ${th.line}`, transition: "border-color .15s" }}
+          <span className="theme-toggle" onClick={toggleTheme} style={{ fontSize: 14, cursor: "pointer", padding: "4px 8px", borderRadius: 4, border: `1px solid ${th.line}`, transition: "border-color .15s", lineHeight: 1 }}
             title={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}>
             {themeMode === "dark" ? "\u2600" : "\u263D"}
           </span>
-          <span style={{ fontSize: 12, color: th.t3 }}>{investor.name}</span>
-          <div style={{
-            width: 28, height: 28, borderRadius: "50%",
-            background: th.avatarGrad,
-            border: `1px solid ${th.line}`, display: "flex", alignItems: "center",
-            justifyContent: "center", fontSize: 10, fontWeight: 500, color: th.t2,
-          }}>{investor.initials}</div>
-          <span onClick={handleLogout} style={{ fontSize: 11, color: th.t3, cursor: "pointer", padding: "4px 10px", border: `1px solid ${th.line}`, borderRadius: 2, transition: "color .15s" }}
-            onMouseEnter={e => e.currentTarget.style.color = red}
-            onMouseLeave={e => e.currentTarget.style.color = th.t3}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{
+              width: 30, height: 30, borderRadius: "50%",
+              background: th.avatarGrad,
+              border: `1px solid ${th.line}`, display: "flex", alignItems: "center",
+              justifyContent: "center", fontSize: 11, fontWeight: 500, color: th.t2,
+            }}>{investor.initials}</div>
+            <span className="user-name" style={{ fontSize: 13, color: th.t1, fontWeight: 400 }}>{investor.name}</span>
+          </div>
+          <span onClick={handleLogout} style={{ fontSize: 12, color: th.t3, cursor: "pointer", padding: "5px 14px", border: `1px solid ${th.line}`, borderRadius: 4, transition: "color .15s, border-color .15s" }}
+            onMouseEnter={e => { e.currentTarget.style.color = red; e.currentTarget.style.borderColor = red; }}
+            onMouseLeave={e => { e.currentTarget.style.color = th.t3; e.currentTarget.style.borderColor = th.line; }}>
             Sign Out
           </span>
         </div>
       </header>
 
-      <main style={{ maxWidth: 1080, margin: "0 auto", padding: "48px 48px 96px" }}>
+      {/* Navigation bar */}
+      <nav className="app-subnav" style={{
+        position: "sticky", top: 56, zIndex: 9,
+        background: th.headerBg, backdropFilter: "blur(16px)",
+        borderBottom: `1px solid ${th.line}`,
+        transition: "background .3s, border-color .3s",
+      }}>
+        <div className="app-subnav-inner" style={{ maxWidth: 1080, margin: "0 auto" }}>
+          {navItems.map(n => (
+            <span key={n.id} onClick={() => setView(n.id)} style={{
+              fontSize: 13, fontWeight: view === n.id ? 500 : 400, cursor: "pointer", userSelect: "none",
+              color: view === n.id ? th.t1 : th.t3,
+              padding: "12px 0",
+              borderBottom: view === n.id ? `2px solid ${red}` : "2px solid transparent",
+              marginBottom: -1,
+              transition: "color .15s, border-color .15s",
+            }}
+              onMouseEnter={e => { if (view !== n.id) e.currentTarget.style.color = th.t2 }}
+              onMouseLeave={e => { if (view !== n.id) e.currentTarget.style.color = th.t3 }}>
+              {n.label}
+              {n.id === "messages" && msgs.some(m => m.unread) && (
+                <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: red, marginLeft: 6, verticalAlign: "middle" }} />
+              )}
+            </span>
+          ))}
+        </div>
+      </nav>
+
+      {/* Mobile nav */}
+      <nav className="app-nav-mobile" style={{
+        position: "sticky", top: 56, zIndex: 9,
+        background: th.headerBg, backdropFilter: "blur(16px)",
+        padding: "0 8px",
+      }}>
+        {navItems.map(n => (
+          <span key={n.id} onClick={() => setView(n.id)} style={{
+            fontSize: 12, padding: "10px 14px", cursor: "pointer", userSelect: "none",
+            color: view === n.id ? th.t1 : th.t3,
+            borderBottom: view === n.id ? `2px solid ${red}` : "2px solid transparent",
+            whiteSpace: "nowrap", transition: "color .15s",
+          }}>
+            {n.label}
+            {n.id === "messages" && msgs.some(m => m.unread) && (
+              <span style={{ display: "inline-block", width: 5, height: 5, borderRadius: "50%", background: red, marginLeft: 3, verticalAlign: "middle" }} />
+            )}
+          </span>
+        ))}
+      </nav>
+
+      <main className="app-main" style={{ maxWidth: 1080, margin: "0 auto" }}>
         {pages[view]}
       </main>
 
-      <footer style={{ borderTop: `1px solid ${th.line}`, padding: "20px 48px", display: "flex", justifyContent: "space-between", fontSize: 11, color: th.t3 }}>
+      <footer className="app-footer" style={{ borderTop: `1px solid ${th.line}`, display: "flex", justifyContent: "space-between", fontSize: 11, color: th.t3 }}>
         <span>© 2026 Northstar Pacific Development Group</span>
         <span>710 – 1199 W Pender, Vancouver BC V6E 2R1</span>
       </footer>
