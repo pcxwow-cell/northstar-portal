@@ -1,0 +1,176 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  email        String    @unique
+  passwordHash String    @default("") @map("password_hash")
+  name         String
+  initials     String?
+  role         String    @default("INVESTOR") // INVESTOR | ADMIN | GP
+  joined       String?   // "March 2023" display string
+  status       String    @default("ACTIVE")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  investorProjects InvestorProject[]
+  sentMessages     Message[] @relation("sender")
+
+  @@map("users")
+}
+
+model Project {
+  id            Int      @id @default(autoincrement())
+  name          String
+  location      String?
+  type          String?
+  status        String   // Under Construction | Pre-Development | Completed
+  description   String?
+  sqft          String?
+  units         Int?
+  completionPct Int      @default(0) @map("completion_pct")
+  totalRaise    Float    @default(0) @map("total_raise")
+  prefReturnPct Float    @default(8.0) @map("pref_return_pct")
+  gpCatchupPct  Float    @default(100) @map("gp_catchup_pct")
+  carryPct      Float    @default(20) @map("carry_pct")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  investorProjects   InvestorProject[]
+  capTableEntries    CapTableEntry[]
+  waterfallTiers     WaterfallTier[]
+  distributions      Distribution[]
+  documents          Document[]
+  updates            ProjectUpdate[]
+  performanceHistory PerformanceHistory[]
+
+  @@map("projects")
+}
+
+model InvestorProject {
+  id           Int   @id @default(autoincrement())
+  userId       Int   @map("user_id")
+  projectId    Int   @map("project_id")
+  committed    Float @default(0)
+  called       Float @default(0)
+  currentValue Float @default(0) @map("current_value")
+  irr          Float?
+  moic         Float?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id])
+  project Project @relation(fields: [projectId], references: [id])
+
+  @@unique([userId, projectId])
+  @@map("investor_projects")
+}
+
+model CapTableEntry {
+  id           Int    @id @default(autoincrement())
+  projectId    Int    @map("project_id")
+  holderName   String @map("holder_name")
+  holderType   String @map("holder_type") // GP Interest | LP — Class A | LP — Class B | LP — Class C
+  committed    Float  @default(0)
+  called       Float  @default(0)
+  ownershipPct Float  @map("ownership_pct")
+  unfunded     Float  @default(0)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id])
+
+  @@map("cap_table_entries")
+}
+
+model WaterfallTier {
+  id        Int    @id @default(autoincrement())
+  projectId Int    @map("project_id")
+  tierOrder Int    @map("tier_order")
+  tierName  String @map("tier_name")
+  lpShare   String @map("lp_share")  // "100%", "80%"
+  gpShare   String @map("gp_share")  // "0%", "20%"
+  threshold String?
+  status    String @default("pending") // pending | accruing | complete
+  createdAt DateTime @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id])
+
+  @@unique([projectId, tierOrder])
+  @@map("waterfall_tiers")
+}
+
+model Distribution {
+  id        Int    @id @default(autoincrement())
+  projectId Int    @map("project_id")
+  quarter   String // "Q3 2024"
+  date      String // "Oct 8, 2024"
+  amount    Float
+  type      String // Income | Capital Return
+  createdAt DateTime @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id])
+
+  @@map("distributions")
+}
+
+model Document {
+  id        Int    @id @default(autoincrement())
+  projectId Int?   @map("project_id") // null for general docs
+  name      String
+  category  String // Reporting | Property Update | Offering | Capital Call | Legal | Tax | Distribution
+  date      String // "Jul 15, 2025"
+  size      String // "2.4 MB"
+  status    String @default("published") // published | action_required | pending_signature
+  file      String // "/docs/filename.pdf"
+  createdAt DateTime @default(now()) @map("created_at")
+
+  project Project? @relation(fields: [projectId], references: [id])
+
+  @@map("documents")
+}
+
+model ProjectUpdate {
+  id        Int    @id @default(autoincrement())
+  projectId Int    @map("project_id")
+  date      String // "Jun 28, 2025"
+  text      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id])
+
+  @@map("project_updates")
+}
+
+model PerformanceHistory {
+  id        Int    @id @default(autoincrement())
+  projectId Int    @map("project_id")
+  month     String // "Jan", "Feb", etc.
+  value     Float
+  benchmark Float
+  createdAt DateTime @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id])
+
+  @@map("performance_history")
+}
+
+model Message {
+  id       Int     @id @default(autoincrement())
+  senderId Int     @map("sender_id")
+  fromName String  @map("from_name")
+  role     String
+  date     String  // "Jul 18, 2025"
+  subject  String
+  preview  String
+  unread   Boolean @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  sender User @relation("sender", fields: [senderId], references: [id])
+
+  @@map("messages")
+}
