@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef, createContext, useContext } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { login as apiLogin, logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, downloadDocument, fmt, fmtCurrency } from "./api.js";
+import AdminPanel from "./Admin.jsx";
 
 // ─── THEME ───────────────────────────────────────────────
 const serif = "'Cormorant Garamond', Georgia, serif";
@@ -974,7 +975,11 @@ export default function App() {
   // On mount, if token exists, fetch user + data
   useEffect(() => {
     if (authed) {
-      getMe().then(u => { setUser(u); return loadData(u); }).catch(() => { setAuthed(false); setLoading(false); });
+      getMe().then(u => {
+        setUser(u);
+        if (u.role === "ADMIN" || u.role === "GP") { setLoading(false); return; }
+        return loadData(u);
+      }).catch(() => { setAuthed(false); setLoading(false); });
     } else {
       setLoading(false);
     }
@@ -997,16 +1002,32 @@ export default function App() {
   async function handleLogin(u) {
     setUser(u);
     setAuthed(true);
+    // Admin users don't need investor data — admin panel handles its own fetching
+    if (u.role === "ADMIN" || u.role === "GP") {
+      setLoading(false);
+      return;
+    }
     await loadData(u);
   }
 
-  if (!authed || !appData) return (
+  if (!authed || (!appData && !user)) return (
     <ThemeContext.Provider value={th}>
       {loading ? (
         <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: th.bg, fontFamily: sans, color: th.t2 }}>Loading...</div>
       ) : (
         <LoginPage onLogin={handleLogin} />
       )}
+    </ThemeContext.Provider>
+  );
+
+  // Admin users get the admin panel
+  if (user && (user.role === "ADMIN" || user.role === "GP")) {
+    return <AdminPanel user={user} onLogout={handleLogout} />;
+  }
+
+  if (!appData) return (
+    <ThemeContext.Provider value={th}>
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: th.bg, fontFamily: sans, color: th.t2 }}>Loading...</div>
     </ThemeContext.Provider>
   );
 

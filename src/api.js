@@ -109,6 +109,45 @@ export async function downloadDocument(docId) {
   URL.revokeObjectURL(url);
 }
 
+// ─── Admin endpoints ───
+export async function fetchDashboard() {
+  return apiFetch("/admin/dashboard");
+}
+
+export async function fetchAdminProjects() {
+  return apiFetch("/admin/projects");
+}
+
+export async function updateProject(id, data) {
+  return apiFetch(`/admin/projects/${id}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export async function postUpdate(projectId, text) {
+  return apiFetch(`/admin/projects/${projectId}/updates`, { method: "POST", body: JSON.stringify({ text }) });
+}
+
+export async function fetchAdminInvestors() {
+  return apiFetch("/admin/investors");
+}
+
+export async function sendMessage(data) {
+  return apiFetch("/admin/messages", { method: "POST", body: JSON.stringify(data) });
+}
+
+export async function uploadDocument(formData) {
+  const token = getToken();
+  const res = await fetch(`${API_BASE}/documents/upload`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData, // multipart — no Content-Type header (browser sets boundary)
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || "Upload failed");
+  }
+  return res.json();
+}
+
 // ─── Utility (kept from data.js) ───
 export const fmt = (n) => {
   if (typeof n !== "number") return n;
