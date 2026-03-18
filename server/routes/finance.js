@@ -41,6 +41,11 @@ router.get("/capital-account/:userId/:projectId", async (req, res) => {
     const userId = parseInt(req.params.userId);
     const projectId = parseInt(req.params.projectId);
 
+    // IDOR protection: investors can only access their own capital account
+    if (req.user.role === "INVESTOR" && req.user.id !== userId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
     const ip = await prisma.investorProject.findUnique({
       where: { userId_projectId: { userId, projectId } },
     });
@@ -179,6 +184,11 @@ router.get("/cashflows/:userId/:projectId", async (req, res) => {
   try {
     const userId = parseInt(req.params.userId);
     const projectId = parseInt(req.params.projectId);
+
+    // IDOR protection: investors can only access their own cash flows
+    if (req.user.role === "INVESTOR" && req.user.id !== userId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
 
     const cashFlows = await prisma.cashFlow.findMany({
       where: { userId, projectId },

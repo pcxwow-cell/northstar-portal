@@ -11,7 +11,16 @@ const PORT = process.env.API_PORT || 3001;
 app.use(securityHeaders);
 
 // Middleware
-app.use(cors({ origin: ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://localhost:3003"] }));
+// CORS: use CORS_ORIGINS env var in production, localhost defaults for dev
+const corsOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(",").map(s => s.trim())
+  : ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://localhost:3003"];
+app.use(cors({
+  origin: process.env.NODE_ENV === "production" && !process.env.CORS_ORIGINS
+    ? true // single-origin Docker deploy — frontend served from same Express server
+    : corsOrigins,
+  credentials: true,
+}));
 app.use(express.json());
 
 // Dev request logger

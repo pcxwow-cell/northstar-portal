@@ -14,8 +14,13 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 
 // GET /api/v1/documents?investorId=1&category=Tax&projectId=1
 router.get("/", async (req, res, next) => {
   try {
-    const { investorId, category, projectId } = req.query;
+    let { investorId, category, projectId } = req.query;
     const where = {};
+
+    // IDOR protection: investors can only query their own documents
+    if (req.user.role === "INVESTOR") {
+      investorId = String(req.user.id); // force to own ID regardless of query param
+    }
 
     // If investorId provided, scope to investor's projects + general docs + directly assigned docs
     if (investorId) {
@@ -76,10 +81,14 @@ router.get("/:id/download", async (req, res, next) => {
 
     // Track download in DocumentAssignment
     if (req.user.role === "INVESTOR") {
+      // Check existing assignment to preserve viewedAt if already set
+      const existing = await prisma.documentAssignment.findUnique({
+        where: { documentId_userId: { documentId: doc.id, userId: req.user.id } },
+      });
       await prisma.documentAssignment.upsert({
         where: { documentId_userId: { documentId: doc.id, userId: req.user.id } },
         create: { documentId: doc.id, userId: req.user.id, downloadedAt: new Date(), viewedAt: new Date() },
-        update: { downloadedAt: new Date(), ...(!doc.viewedAt ? { viewedAt: new Date() } : {}) },
+        update: { downloadedAt: new Date(), ...(existing && !existing.viewedAt ? { viewedAt: new Date() } : {}) },
       });
     }
 

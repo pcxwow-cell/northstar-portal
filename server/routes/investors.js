@@ -5,8 +5,15 @@ const router = Router();
 // GET /api/v1/investors/:id — investor profile
 router.get("/:id", async (req, res, next) => {
   try {
+    const targetId = parseInt(req.params.id);
+
+    // IDOR protection: investors can only access their own profile
+    if (req.user.role === "INVESTOR" && req.user.id !== targetId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
     const user = await prisma.user.findUnique({
-      where: { id: parseInt(req.params.id) },
+      where: { id: targetId },
       include: { investorProjects: { select: { projectId: true } } },
     });
     if (!user) return res.status(404).json({ error: "Investor not found" });
@@ -25,8 +32,15 @@ router.get("/:id", async (req, res, next) => {
 // GET /api/v1/investors/:id/projects — investor's projects with financial data
 router.get("/:id/projects", async (req, res, next) => {
   try {
+    const targetId = parseInt(req.params.id);
+
+    // IDOR protection: investors can only access their own projects
+    if (req.user.role === "INVESTOR" && req.user.id !== targetId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
     const investorProjects = await prisma.investorProject.findMany({
-      where: { userId: parseInt(req.params.id) },
+      where: { userId: targetId },
       include: {
         project: {
           include: {

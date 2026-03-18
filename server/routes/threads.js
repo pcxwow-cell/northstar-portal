@@ -73,6 +73,28 @@ router.get("/", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// Check if user has access to a thread
+async function canAccessThread(thread, userId, userRole) {
+  // Admin/GP can access all threads
+  if (userRole === "ADMIN" || userRole === "GP") return true;
+  // Creator can always access
+  if (thread.creatorId === userId) return true;
+  // Check if user is a recipient
+  const recipient = await prisma.threadRecipient.findUnique({
+    where: { threadId_userId: { threadId: thread.id, userId } },
+  });
+  if (recipient) return true;
+  // Check targetType-based access
+  if (thread.targetType === "ALL") return true;
+  if (thread.targetType === "PROJECT" && thread.targetProjectId) {
+    const hasProject = await prisma.investorProject.findFirst({
+      where: { userId, projectId: thread.targetProjectId },
+    });
+    if (hasProject) return true;
+  }
+  return false;
+}
+
 // GET /api/v1/threads/:id — thread detail with all messages
 router.get("/:id", async (req, res, next) => {
   try {
@@ -81,6 +103,11 @@ router.get("/:id", async (req, res, next) => {
       include: threadIncludes,
     });
     if (!thread) return res.status(404).json({ error: "Thread not found" });
+
+    // Access control: verify user can see this thread
+    if (!(await canAccessThread(thread, req.user.id, req.user.role))) {
+      return res.status(403).json({ error: "Access denied" });
+    }
 
     // Mark as read for this user
     await prisma.threadRecipient.updateMany({
@@ -160,6 +187,11 @@ router.post("/:id/reply", async (req, res, next) => {
     const threadId = parseInt(req.params.id);
     const thread = await prisma.messageThread.findUnique({ where: { id: threadId } });
     if (!thread) return res.status(404).json({ error: "Thread not found" });
+
+    // Access control: verify user can reply to this thread
+    if (!(await canAccessThread(thread, req.user.id, req.user.role))) {
+      return res.status(403).json({ error: "Access denied" });
+    }
 
     // Add the reply
     const msg = await prisma.threadMessage.create({
