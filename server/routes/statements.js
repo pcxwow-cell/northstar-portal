@@ -207,4 +207,81 @@ router.post("/schedule/run", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// POST /generate-capital-call — generate a capital call notice PDF
+router.post("/generate-capital-call", async (req, res, next) => {
+  try {
+    const { generateCapitalCallPDF } = require("../services/pdfGenerator");
+    const prisma = require("../prisma");
+    const { investorId, projectId, callNumber, callAmount, dueDate, notes } = req.body;
+
+    if (!investorId || !projectId || !callAmount) {
+      return res.status(400).json({ error: "investorId, projectId, and callAmount are required" });
+    }
+
+    const [investor, project, ip] = await Promise.all([
+      prisma.user.findUnique({ where: { id: parseInt(investorId) }, select: { name: true, email: true } }),
+      prisma.project.findUnique({ where: { id: parseInt(projectId) }, select: { name: true, location: true } }),
+      prisma.investorProject.findUnique({ where: { userId_projectId: { userId: parseInt(investorId), projectId: parseInt(projectId) } } }),
+    ]);
+
+    if (!investor || !project) return res.status(404).json({ error: "Investor or project not found" });
+
+    const pdfBuffer = await generateCapitalCallPDF({
+      investorName: investor.name,
+      projectName: project.name,
+      projectLocation: project.location,
+      callNumber: callNumber || 1,
+      callAmount: parseFloat(callAmount),
+      dueDate: dueDate || new Date(Date.now() + 30 * 86400000).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
+      totalCommitted: ip?.committed || 0,
+      previouslyCalled: ip?.called || 0,
+      notes,
+    });
+
+    await audit.log(req, "capital_call_generated", `project:${projectId}`, { investorId, callAmount });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="Capital-Call-${project.name.replace(/\s+/g, "-")}-${investor.name.replace(/\s+/g, "-")}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (err) { next(err); }
+});
+
+// POST /generate-quarterly-report — generate a quarterly report PDF
+router.post("/generate-quarterly-report", async (req, res, next) => {
+  try {
+    const { generateQuarterlyReportPDF } = require("../services/pdfGenerator");
+    const prisma = require("../prisma");
+    const { projectId, quarter, summary } = req.body;
+
+    if (!projectId || !quarter) return res.status(400).json({ error: "projectId and quarter are required" });
+
+    const project = await prisma.project.findUnique({
+      where: { id: parseInt(projectId) },
+      include: { investors: { include: { user: { select: { name: true } } } } },
+    });
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    const pdfBuffer = await generateQuarterlyReportPDF({
+      projectName: project.name,
+      quarter,
+      status: project.status,
+      completion: project.completion,
+      summary: summary || project.description,
+      metrics: [
+        { label: "Total Raise", value: `$${(project.totalRaise || 0).toLocaleString()}` },
+        { label: "Units", value: String(project.units || 0) },
+        { label: "Investors", value: String(project.investors?.length || 0) },
+        { label: "Completion", value: `${project.completion || 0}%` },
+        { label: "Status", value: project.status },
+      ],
+    });
+
+    await audit.log(req, "quarterly_report_generated", `project:${projectId}`, { quarter });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="Quarterly-Report-${project.name.replace(/\s+/g, "-")}-${quarter.replace(/\s+/g, "-")}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
