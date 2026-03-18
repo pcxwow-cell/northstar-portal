@@ -110,8 +110,25 @@ app.use((err, req, res, next) => {
 });
 
 if (require.main === module) {
-  app.listen(PORT, "0.0.0.0", () => {
+  app.listen(PORT, "0.0.0.0", async () => {
     console.log(`Northstar API running on port ${PORT}`);
+    // Auto-seed if SEED_ON_START=true and database is empty
+    if (process.env.SEED_ON_START === "true") {
+      try {
+        const prisma = require("./prisma");
+        const count = await prisma.user.count();
+        if (count === 0) {
+          console.log("Empty database detected. Running seed...");
+          const { execSync } = require("child_process");
+          execSync("node seed.js", { cwd: __dirname, stdio: "inherit" });
+          console.log("✓ Database seeded successfully");
+        } else {
+          console.log(`Database has ${count} users, skipping seed`);
+        }
+      } catch (err) {
+        console.error("Seed failed:", err.message);
+      }
+    }
   });
 }
 
