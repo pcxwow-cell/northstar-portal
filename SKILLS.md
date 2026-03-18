@@ -49,7 +49,7 @@ This document captures everything a future AI agent needs to work effectively on
 | ORM | Prisma | 22 models, SQLite dev / PostgreSQL production |
 | Auth | JWT + bcrypt | Role-based: INVESTOR, ADMIN, GP |
 | MFA | TOTP | QR code setup, backup codes |
-| Email | SendGrid / Resend | Adapter pattern with demo fallback |
+| Email | Resend (recommended) / SendGrid | Adapter pattern with demo fallback. Resend has free tier (3K/mo). |
 | E-Sign | DocuSign / HelloSign | Adapter pattern with demo fallback |
 | Storage | Local disk / S3 | Adapter pattern in server/storage/ |
 | Testing | Jest + Supertest | 136 tests across 11 suites |
@@ -84,7 +84,7 @@ northstar-portal/
 
 ### Key Design Patterns
 1. **Demo mode fallback**: When API is unreachable (Vercel), the frontend falls back to static data from `data.js`. Detection handles 404, 405, 500, and network errors.
-2. **Provider adapters**: Email, e-sign, and storage use a factory pattern — set `EMAIL_PROVIDER=sendgrid` env var, get SendGrid. Default is `demo` which logs to console.
+2. **Provider adapters**: Email, e-sign, and storage use a factory pattern — set `EMAIL_PROVIDER=resend` env var, get Resend. Default is `demo` which logs to console.
 3. **Theme system**: `ThemeContext` provides `{ bg, surface, line, t1, t2, t3, hover, headerBg, avatarGrad }`. Default is light. User preference stored in `localStorage("northstar_theme")`.
 4. **Auth flow**: Login → JWT token stored in memory → `Authorization: Bearer` header on all API calls. Demo mode stores role in `localStorage("northstar_demo_role")`.
 5. **IDOR protection**: All investor-scoped routes verify `req.user.id` matches the requested resource. Tests confirm this.
@@ -208,7 +208,7 @@ REPLY_SECRET=<random-string>
 4. **`db push` is used in dev, not migrations.** Production should use `prisma migrate deploy`.
 5. **Bundle size warning.** Recharts vendor chunk is 517KB. Acceptable for now but should consider alternatives (Victory, lightweight charts) for production optimization.
 6. **SQLite for dev only.** Cannot handle concurrent users. Production must use PostgreSQL.
-7. **No real integration testing.** DocuSign, SendGrid, etc. have never been tested with real API keys.
+7. **No real integration testing.** DocuSign, Resend, SendGrid, etc. have never been tested with real API keys.
 8. **The good UI commit is `268152e`.** If the design looks wrong, diff against this commit.
 
 ---
