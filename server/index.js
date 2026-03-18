@@ -77,6 +77,25 @@ if (process.env.NODE_ENV === "production") {
   });
 }
 
+// One-time seed endpoint (delete after first use)
+app.post("/api/v1/admin/seed", async (req, res) => {
+  const secret = req.headers["x-seed-secret"];
+  if (secret !== (process.env.JWT_SECRET || "dev-secret")) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  try {
+    const prisma = require("./prisma");
+    const count = await prisma.user.count();
+    if (count > 0) return res.json({ message: `Database already has ${count} users. Skipping seed.` });
+    const { execSync } = require("child_process");
+    execSync("node seed.js", { cwd: __dirname, stdio: "inherit" });
+    const newCount = await prisma.user.count();
+    res.json({ message: `Seeded successfully. ${newCount} users created.` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // 404
 app.use((req, res) => res.status(404).json({ error: "Not found" }));
 
