@@ -26,12 +26,26 @@ router.post("/request", requireRole("ADMIN", "GP"), validate(signatureRequestSch
     });
     if (!signerUsers.length) return res.status(400).json({ error: "No valid signers found" });
 
+    // Fetch document file for e-sign provider (if stored locally or in S3)
+    let documentBuffer = null;
+    let documentName = doc.name || "document.pdf";
+    if (doc.storageKey) {
+      try {
+        const storage = require("../storage");
+        documentBuffer = await storage.download(doc.storageKey);
+      } catch (e) {
+        console.warn("Could not fetch document for e-sign:", e.message);
+      }
+    }
+
     // Create request with e-sign provider
     const providerResult = await esign.createSignatureRequest({
       documentId: doc.id,
       signers: signerUsers.map(u => ({ name: u.name, email: u.email })),
       subject: subject || `Please sign: ${doc.name}`,
       message: message || "",
+      documentBuffer,
+      documentName,
     });
 
     // Save to database
