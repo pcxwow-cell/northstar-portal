@@ -41,6 +41,24 @@ app.use("/api/v1/email/inbound", express.urlencoded({ extended: true }), inbound
 // ─── Public endpoints (no auth) ───
 app.get("/api/v1/health", (req, res) => res.json({ status: "ok", timestamp: new Date().toISOString() }));
 
+// Fix PostgreSQL sequences (one-time, no auth needed but harmless)
+app.post("/api/v1/admin/fix-sequences", async (req, res) => {
+  const prisma = require("./prisma");
+  const tables = ["users", "projects", "investor_projects", "documents", "document_assignments",
+    "distributions", "message_threads", "thread_messages", "thread_recipients",
+    "signature_requests", "signature_signers", "notification_logs", "notification_preferences",
+    "prospects", "audit_logs", "cash_flows", "login_history", "investor_entities",
+    "investor_groups", "group_members"];
+  const fixed = [];
+  for (const table of tables) {
+    try {
+      await prisma.$executeRawUnsafe(`SELECT setval(pg_get_serial_sequence('${table}', 'id'), COALESCE((SELECT MAX(id) FROM "${table}"), 0) + 1, false)`);
+      fixed.push(table);
+    } catch (e) { /* skip */ }
+  }
+  res.json({ message: `Fixed sequences for ${fixed.length} tables`, tables: fixed });
+});
+
 // One-time seed endpoint (protected by JWT secret header)
 app.post("/api/v1/admin/seed", async (req, res) => {
   const secret = req.headers["x-seed-secret"];
