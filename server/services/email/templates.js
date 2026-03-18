@@ -198,4 +198,25 @@ function capitalCall(investorName, amount, projectName, dueDate) {
   return { subject: `Capital Call: ${formattedAmount} - ${projectName} (Due ${dueDate})`, html, text };
 }
 
-module.exports = { newDocument, signatureRequired, signatureCompleted, distributionPaid, newMessage, capitalCall };
+function passwordReset(userName, resetUrl) {
+  const html = layout("Reset Your Password", `
+    <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 16px;">
+      Dear ${userName},
+    </p>
+    <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 16px;">
+      We received a request to reset your password for your Northstar investor portal account.
+    </p>
+    ${button("Reset Your Password", resetUrl)}
+    <p style="font-size:13px;color:#888;margin:0 0 8px;">
+      This link will expire in 1 hour. If you did not request a password reset, you can safely ignore this email.
+    </p>
+    <p style="font-size:12px;color:#AAA;margin:16px 0 0;">
+      If the button above doesn't work, copy and paste this URL into your browser:<br>
+      <a href="${resetUrl}" style="color:${BRAND_RED};word-break:break-all;">${resetUrl}</a>
+    </p>
+  `);
+  const text = `Dear ${userName},\n\nWe received a request to reset your password. Visit this link to set a new password (expires in 1 hour):\n\n${resetUrl}\n\nIf you did not request this, you can safely ignore this email.\n\nNorthstar Pacific Development Group`;
+  return { subject: "Reset Your Password — Northstar Portal", html, text };
+}
+
+module.exports = { newDocument, signatureRequired, signatureCompleted, distributionPaid, newMessage, capitalCall, passwordReset };

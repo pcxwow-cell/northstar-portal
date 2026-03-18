@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef, createContext, useContext } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-import { login as apiLogin, logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, downloadDocument, fetchThreads, fetchThread, createThread, replyToThread, updateProfile, fetchSignatureRequests, signDocument, fetchNotificationPreferences, updateNotificationPreferences, fetchCapitalAccount, fetchCashFlows, calculateWaterfallApi, fetchEntities, createEntity, updateEntity, deleteEntity, runFinancialModel, fmt, fmtCurrency } from "./api.js";
+import { login as apiLogin, logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, downloadDocument, fetchThreads, fetchThread, createThread, replyToThread, updateProfile, fetchSignatureRequests, signDocument, fetchNotificationPreferences, updateNotificationPreferences, fetchCapitalAccount, fetchCashFlows, calculateWaterfallApi, fetchEntities, createEntity, updateEntity, deleteEntity, runFinancialModel, changePassword, forgotPassword, resetPassword, fetchLoginHistory, fmt, fmtCurrency } from "./api.js";
 import AdminPanel from "./Admin.jsx";
 import ProspectPortal from "./ProspectPortal.jsx";
 
@@ -551,12 +551,40 @@ function Portfolio({ myProjects, investor }) {
           </div>
           <div>
             <SectionHeader title="Construction Updates" />
-            {project.updates.map((u, i) => (
-              <div key={i} style={{ padding: "16px 0", borderBottom: i < project.updates.length - 1 ? `1px solid ${line}` : "none" }}>
-                <div style={{ fontSize: 11, color: t3, marginBottom: 6 }}>{u.date}</div>
-                <div style={{ fontSize: 13, color: t2, lineHeight: 1.6 }}>{u.text}</div>
-              </div>
-            ))}
+            {project.updates.map((u, i) => {
+              const prev = i < project.updates.length - 1 ? project.updates[i + 1] : null;
+              const deltas = [];
+              if (u.completionPct != null && prev?.completionPct != null && u.completionPct !== prev.completionPct) {
+                const d = u.completionPct - prev.completionPct;
+                deltas.push({ label: "Completion", value: `${d > 0 ? "+" : ""}${d}%`, positive: d > 0 });
+              }
+              if (u.unitsSold != null && prev?.unitsSold != null && u.unitsSold !== prev.unitsSold) {
+                const d = u.unitsSold - prev.unitsSold;
+                deltas.push({ label: "Units Sold", value: `${d > 0 ? "+" : ""}${d}`, positive: d > 0 });
+              }
+              if (u.revenue != null && prev?.revenue != null && u.revenue !== prev.revenue) {
+                const d = u.revenue - prev.revenue;
+                deltas.push({ label: "Revenue", value: `${d > 0 ? "+" : ""}${fmtCurrency(d)}`, positive: d > 0 });
+              }
+              return (
+                <div key={u.id || i} style={{ padding: "16px 0", borderBottom: i < project.updates.length - 1 ? `1px solid ${line}` : "none" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <div style={{ fontSize: 11, color: t3 }}>{u.date}</div>
+                    {u.completionPct != null && <span style={{ fontSize: 10, color: t3, padding: "2px 6px", border: `1px solid ${line}`, borderRadius: 3 }}>{u.completionPct}% complete</span>}
+                  </div>
+                  <div style={{ fontSize: 13, color: t2, lineHeight: 1.6 }}>{u.text}</div>
+                  {deltas.length > 0 && (
+                    <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                      {deltas.map((d, j) => (
+                        <span key={j} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 3, background: d.positive ? `${green}15` : `${red}10`, color: d.positive ? green : red }}>
+                          {d.positive ? "\u2191" : "\u2193"} {d.label}: {d.value}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -1424,6 +1452,129 @@ function FinancialModelerPage({ myProjects, investor }) {
   );
 }
 
+// ─── PASSWORD STRENGTH INDICATOR ────────────────────────
+function PasswordStrengthBar({ password }) {
+  const { t2, t3 } = useTheme();
+  if (!password) return null;
+  const hasUpper = /[A-Z]/.test(password);
+  const hasLower = /[a-z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecial = /[^A-Za-z0-9]/.test(password);
+  let criteria = 0;
+  if (hasUpper) criteria++;
+  if (hasLower) criteria++;
+  if (hasNumber) criteria++;
+
+  let strength = "weak", color = red, width = "33%";
+  if (password.length >= 8 && criteria >= 3 && hasSpecial) { strength = "strong"; color = green; width = "100%"; }
+  else if (password.length >= 8 && criteria >= 2) { strength = "medium"; color = "#D4A017"; width = "66%"; }
+
+  return (
+    <div style={{ marginTop: 6 }}>
+      <div style={{ height: 4, background: `${t3}40`, borderRadius: 2, overflow: "hidden" }}>
+        <div style={{ height: "100%", width, background: color, borderRadius: 2, transition: "width .3s, background .3s" }} />
+      </div>
+      <div style={{ fontSize: 11, color, marginTop: 4, textTransform: "capitalize" }}>{strength}</div>
+    </div>
+  );
+}
+
+// ─── SECURITY SECTION (Password Change + Login History) ──
+function SecuritySection({ toast, inputStyle }) {
+  const { bg, surface, line, t1, t2, t3 } = useTheme();
+  const [currentPw, setCurrentPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [pwError, setPwError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [loginHistory, setLoginHistory] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
+
+  useEffect(() => {
+    fetchLoginHistory().then(setLoginHistory).catch(() => {});
+  }, []);
+
+  async function handleChangePassword(e) {
+    e.preventDefault();
+    setPwError("");
+    if (newPw !== confirmPw) { setPwError("Passwords do not match"); return; }
+    if (newPw.length < 8) { setPwError("Password must be at least 8 characters"); return; }
+    if (!/[A-Z]/.test(newPw)) { setPwError("Password must contain at least 1 uppercase letter"); return; }
+    if (!/[a-z]/.test(newPw)) { setPwError("Password must contain at least 1 lowercase letter"); return; }
+    if (!/[0-9]/.test(newPw)) { setPwError("Password must contain at least 1 number"); return; }
+    setSaving(true);
+    try {
+      await changePassword(currentPw, newPw);
+      toast.add("Password changed successfully", "success");
+      setCurrentPw(""); setNewPw(""); setConfirmPw("");
+    } catch (err) { setPwError(err.message || "Failed to change password"); }
+    setSaving(false);
+  }
+
+  const lastLogin = loginHistory.find(h => h.success);
+
+  return (
+    <>
+      <div style={{ border: `1px solid ${line}`, borderRadius: 4, padding: "28px 24px", background: surface, marginBottom: 16 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: t3, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 16 }}>Change Password</div>
+        <form onSubmit={handleChangePassword}>
+          {pwError && <div style={{ fontSize: 12, color: red, padding: "8px 12px", border: `1px solid ${red}22`, borderRadius: 4, marginBottom: 12, background: `${red}08` }}>{pwError}</div>}
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ display: "block", fontSize: 11, color: t3, fontWeight: 500, marginBottom: 4 }}>Current Password</label>
+            <input type="password" value={currentPw} onChange={e => setCurrentPw(e.target.value)} required style={inputStyle} />
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ display: "block", fontSize: 11, color: t3, fontWeight: 500, marginBottom: 4 }}>New Password</label>
+            <input type="password" value={newPw} onChange={e => setNewPw(e.target.value)} required style={inputStyle} />
+            <PasswordStrengthBar password={newPw} />
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: "block", fontSize: 11, color: t3, fontWeight: 500, marginBottom: 4 }}>Confirm New Password</label>
+            <input type="password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} required style={inputStyle} />
+            {confirmPw && newPw !== confirmPw && <div style={{ fontSize: 11, color: red, marginTop: 4 }}>Passwords do not match</div>}
+          </div>
+          <button type="submit" disabled={saving} style={{
+            padding: "8px 20px", background: saving ? `${red}88` : red, color: "#fff",
+            border: "none", borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: saving ? "default" : "pointer",
+          }}>{saving ? "Changing..." : "Change Password"}</button>
+        </form>
+      </div>
+
+      {/* Login History */}
+      <div style={{ border: `1px solid ${line}`, borderRadius: 4, padding: "28px 24px", background: surface }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: t3, textTransform: "uppercase", letterSpacing: ".08em" }}>Login History</div>
+          <span onClick={() => setShowHistory(!showHistory)} style={{ fontSize: 11, color: t3, cursor: "pointer", padding: "3px 10px", border: `1px solid ${line}`, borderRadius: 3 }}>
+            {showHistory ? "Hide" : "Show"}
+          </span>
+        </div>
+        {lastLogin && (
+          <div style={{ fontSize: 13, color: t2, marginBottom: showHistory ? 16 : 0 }}>
+            Last login: {new Date(lastLogin.createdAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} at {new Date(lastLogin.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} from {lastLogin.ip ? lastLogin.ip.replace(/^::ffff:/, "") : "unknown"}
+          </div>
+        )}
+        {showHistory && loginHistory.length > 0 && (
+          <div style={{ borderTop: `1px solid ${line}`, paddingTop: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 120px 80px", fontSize: 10, color: t3, textTransform: "uppercase", letterSpacing: ".06em", padding: "6px 0", borderBottom: `1px solid ${line}` }}>
+              <span>Date/Time</span><span>IP Address</span><span>Status</span>
+            </div>
+            {loginHistory.slice(0, 10).map(h => (
+              <div key={h.id} style={{ display: "grid", gridTemplateColumns: "1fr 120px 80px", padding: "8px 0", borderBottom: `1px solid ${line}30`, fontSize: 12 }}>
+                <span style={{ color: t2 }}>{new Date(h.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} {new Date(h.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>
+                <span style={{ color: t3 }}>{h.ip ? h.ip.replace(/^::ffff:/, "") : "—"}</span>
+                <span style={{ color: h.success ? green : red, fontWeight: 500 }}>{h.success ? "Success" : "Failed"}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {showHistory && loginHistory.length === 0 && (
+          <div style={{ fontSize: 13, color: t3, fontStyle: "italic" }}>No login history available</div>
+        )}
+      </div>
+    </>
+  );
+}
+
 function ProfilePage({ investor, toast, onUpdate }) {
   const { bg, surface, line, t1, t2, t3 } = useTheme();
   const [name, setName] = useState(investor.name);
@@ -1538,11 +1689,7 @@ function ProfilePage({ investor, toast, onUpdate }) {
               <div style={{ fontSize: 13, color: t3, fontStyle: "italic" }}>No active investments</div>
             )}
           </div>
-          <div style={{ border: `1px solid ${line}`, borderRadius: 4, padding: "28px 24px", background: surface }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: t3, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 16 }}>Security</div>
-            <div style={{ fontSize: 13, color: t2, marginBottom: 8 }}>Password: ••••••••</div>
-            <div style={{ fontSize: 12, color: t3 }}>Contact admin to change password</div>
-          </div>
+          <SecuritySection toast={toast} inputStyle={inputStyle} />
         </div>
       </div>
 
@@ -1651,6 +1798,10 @@ function LoginPage({ onLogin, onShowProspects }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotSent, setForgotSent] = useState(false);
+  const [forgotLoading, setForgotLoading] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -1663,6 +1814,19 @@ function LoginPage({ onLogin, onShowProspects }) {
       setError(err.message || "Invalid email or password");
       setLoading(false);
     }
+  }
+
+  async function handleForgotSubmit(e) {
+    e.preventDefault();
+    setForgotLoading(true);
+    try {
+      await forgotPassword(forgotEmail);
+      setForgotSent(true);
+    } catch (err) {
+      // Always show success (don't reveal if email exists)
+      setForgotSent(true);
+    }
+    setForgotLoading(false);
   }
 
   // Northstar's actual project images
@@ -1798,7 +1962,10 @@ function LoginPage({ onLogin, onShowProspects }) {
               }}>
                 {loading ? "Signing in..." : "Sign In"}
               </button>
-              <div style={{ marginTop: 24, padding: "14px 16px", border: "1px solid #ECEAE5", borderRadius: 4, background: cream }}>
+              <div style={{ textAlign: "right", marginTop: 10 }}>
+                <span onClick={() => setShowForgot(true)} style={{ fontSize: 12, color: red, cursor: "pointer" }}>Forgot password?</span>
+              </div>
+              <div style={{ marginTop: 14, padding: "14px 16px", border: "1px solid #ECEAE5", borderRadius: 4, background: cream }}>
                 <div style={{ fontSize: 9, color: "#AAA", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 10 }}>Quick Demo Login</div>
                 <div style={{ display: "flex", gap: 8 }}>
                   <button type="button" onClick={() => { setEmail("j.chen@pacificventures.ca"); setPassword("northstar2025"); setTimeout(() => document.querySelector("form")?.requestSubmit(), 100); }}
@@ -1818,6 +1985,55 @@ function LoginPage({ onLogin, onShowProspects }) {
           </div>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgot && (
+        <div onClick={() => { setShowForgot(false); setForgotSent(false); setForgotEmail(""); }} style={{
+          position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,.5)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          backdropFilter: "blur(4px)",
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: "#fff", borderRadius: 8, padding: "32px", maxWidth: 400, width: "90%",
+            boxShadow: "0 8px 32px rgba(0,0,0,.15)",
+          }}>
+            <h3 style={{ fontSize: 18, fontWeight: 400, marginBottom: 8, color: darkText }}>Reset Password</h3>
+            {forgotSent ? (
+              <>
+                <p style={{ fontSize: 13, color: "#666", lineHeight: 1.6, marginBottom: 20 }}>
+                  If an account exists with that email, we have sent a password reset link. Please check your inbox.
+                </p>
+                <p style={{ fontSize: 11, color: "#999", fontStyle: "italic" }}>
+                  (Demo mode — check the server console for the reset link)
+                </p>
+                <button onClick={() => { setShowForgot(false); setForgotSent(false); setForgotEmail(""); }}
+                  style={{ marginTop: 16, padding: "10px 24px", background: red, color: "#fff", border: "none", borderRadius: 4, fontSize: 13, cursor: "pointer", fontFamily: sans }}>
+                  Back to Login
+                </button>
+              </>
+            ) : (
+              <form onSubmit={handleForgotSubmit}>
+                <p style={{ fontSize: 13, color: "#888", marginBottom: 16 }}>Enter your email address and we will send you a link to reset your password.</p>
+                <div style={{ marginBottom: 20 }}>
+                  <label style={{ display: "block", fontSize: 11, color: "#888", fontWeight: 500, marginBottom: 6 }}>Email</label>
+                  <input type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} required placeholder="your@email.com"
+                    style={{ width: "100%", padding: "12px 14px", background: "#FAFAFA", border: "1px solid #E0DDD8", borderRadius: 4, color: darkText, fontSize: 14, fontFamily: sans, outline: "none", boxSizing: "border-box" }} />
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button type="button" onClick={() => { setShowForgot(false); setForgotEmail(""); }}
+                    style={{ flex: 1, padding: "10px", background: "#fff", border: "1px solid #DDD", borderRadius: 4, fontSize: 13, cursor: "pointer", fontFamily: sans, color: darkText }}>
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={forgotLoading}
+                    style={{ flex: 1, padding: "10px", background: forgotLoading ? `${red}AA` : red, color: "#fff", border: "none", borderRadius: 4, fontSize: 13, cursor: forgotLoading ? "default" : "pointer", fontFamily: sans }}>
+                    {forgotLoading ? "Sending..." : "Send Reset Link"}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Footer ── */}
       <div className="login-footer" style={{ padding: "20px 48px", display: "flex", justifyContent: "space-between", fontSize: 11, color: "#AAA", borderTop: "1px solid #ECEAE5" }}>

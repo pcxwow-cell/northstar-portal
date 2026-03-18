@@ -7,6 +7,7 @@ async function main() {
   console.log("Seeding database...");
 
   // Clear all tables (reverse dependency order)
+  await prisma.loginHistory.deleteMany();
   await prisma.cashFlow.deleteMany();
   await prisma.prospect.deleteMany();
   await prisma.investorEntity.deleteMany();
@@ -219,21 +220,21 @@ async function main() {
   }
   console.log("  Documents: " + documentsData.length);
 
-  // ─── Project Updates ───
+  // ─── Project Updates (with metric snapshots) ───
   const updatesData = [
     // Porthaven
-    { projectId: 1, date: "Jun 28, 2025", text: "Structural concrete complete on floors 1-4. Exterior cladding installation has begun on the south facade." },
-    { projectId: 1, date: "May 15, 2025", text: "Mechanical rough-in progressing on schedule. Underground parking substantially complete." },
-    { projectId: 1, date: "Apr 2, 2025", text: "Project reached 65% completion milestone. Retail pre-leasing conversations underway with three prospective tenants." },
+    { projectId: 1, date: "Jun 28, 2025", text: "Structural concrete complete on floors 1-4. Exterior cladding installation has begun on the south facade.", completionPct: 68, unitsSold: 42, revenue: 18500000, status: "Under Construction" },
+    { projectId: 1, date: "May 15, 2025", text: "Mechanical rough-in progressing on schedule. Underground parking substantially complete.", completionPct: 62, unitsSold: 35, revenue: 15200000, status: "Under Construction" },
+    { projectId: 1, date: "Apr 2, 2025", text: "Project reached 65% completion milestone. Retail pre-leasing conversations underway with three prospective tenants.", completionPct: 55, unitsSold: 28, revenue: 12100000, status: "Under Construction" },
     // Livy
-    { projectId: 2, date: "Jun 10, 2025", text: "Capital Call #4 issued. Development permit application submitted to City of Port Coquitlam." },
-    { projectId: 2, date: "Apr 22, 2025", text: "Architectural design finalized with RHA Architecture. Unit mix optimized based on market absorption study." },
+    { projectId: 2, date: "Jun 10, 2025", text: "Capital Call #4 issued. Development permit application submitted to City of Port Coquitlam.", completionPct: 15, unitsSold: 0, revenue: 0, status: "Pre-Development" },
+    { projectId: 2, date: "Apr 22, 2025", text: "Architectural design finalized with RHA Architecture. Unit mix optimized based on market absorption study.", completionPct: 10, unitsSold: 0, revenue: 0, status: "Pre-Development" },
     // Estrella
-    { projectId: 3, date: "Jun 5, 2025", text: "Wood-frame construction progressing. Second floor framing complete." },
-    { projectId: 3, date: "May 1, 2025", text: "CMHC MLI Select financing secured with favorable terms due to affordable housing component." },
+    { projectId: 3, date: "Jun 5, 2025", text: "Wood-frame construction progressing. Second floor framing complete.", completionPct: 45, unitsSold: 0, revenue: 840000, status: "Under Construction" },
+    { projectId: 3, date: "May 1, 2025", text: "CMHC MLI Select financing secured with favorable terms due to affordable housing component.", completionPct: 35, unitsSold: 0, revenue: 620000, status: "Under Construction" },
     // Panorama
-    { projectId: 4, date: "Oct 15, 2024", text: "Building completed and handed over to tenant. All deficiencies addressed." },
-    { projectId: 4, date: "Sep 1, 2024", text: "Certificate of occupancy received. Tenant fit-out substantially complete." },
+    { projectId: 4, date: "Oct 15, 2024", text: "Building completed and handed over to tenant. All deficiencies addressed.", completionPct: 100, unitsSold: 0, revenue: 2200000, status: "Completed" },
+    { projectId: 4, date: "Sep 1, 2024", text: "Certificate of occupancy received. Tenant fit-out substantially complete.", completionPct: 98, unitsSold: 0, revenue: 2000000, status: "Under Construction" },
   ];
   await prisma.projectUpdate.createMany({ data: updatesData });
   console.log("  ProjectUpdates: " + updatesData.length);
@@ -497,6 +498,17 @@ async function main() {
   ];
   await prisma.cashFlow.createMany({ data: cashFlowsData });
   console.log("  CashFlows: " + cashFlowsData.length);
+
+  // ─── Login History ───
+  const loginHistoryData = [
+    { userId: 1, ip: "192.168.1.42", userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/120.0", success: true, createdAt: new Date("2026-03-17T15:45:00Z") },
+    { userId: 1, ip: "192.168.1.42", userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/120.0", success: true, createdAt: new Date("2026-03-15T09:30:00Z") },
+    { userId: 1, ip: "10.0.0.15", userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) Safari/605.1", success: false, createdAt: new Date("2026-03-14T22:10:00Z") },
+    { userId: 1, ip: "192.168.1.42", userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/120.0", success: true, createdAt: new Date("2026-03-12T14:20:00Z") },
+    { userId: 1, ip: "192.168.1.42", userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/120.0", success: true, createdAt: new Date("2026-03-10T10:00:00Z") },
+  ];
+  await prisma.loginHistory.createMany({ data: loginHistoryData });
+  console.log("  LoginHistory: " + loginHistoryData.length);
 
   // ─── Recalculate IRR / MOIC from cash flows ───
   const investorProjects = await prisma.investorProject.findMany();

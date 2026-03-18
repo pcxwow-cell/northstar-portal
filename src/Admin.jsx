@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchDashboard, fetchAdminProjects, updateProject, postUpdate, fetchAdminInvestors, sendMessage, uploadDocument, inviteInvestor, updateInvestor, approveInvestor, deactivateInvestor, resetInvestorPassword, assignInvestorProject, updateInvestorKPI, fetchThreads, fetchThread, createThread, replyToThread, fetchInvestorProfile, fetchGroups, createGroup, updateGroup, deleteGroup, fetchGroupDetail, addGroupMembers, removeGroupMember, fetchStaff, createStaff, updateStaff, fetchAdminDocuments, fetchAdminDocumentDetail, fetchAdminProjectDetail, updateWaterfall, fetchSignatureRequests, createSignatureRequest, cancelSignatureRequest, fetchProspects, updateProspectStatus, fetchProspectStats, fetchCashFlows, recordCashFlow, recalculateProject, fetchAuditLog, createProject, fetchEntities, createEntity, updateEntity, deleteEntity, runFinancialModel, fmt, fmtCurrency } from "./api.js";
+import { fetchDashboard, fetchAdminProjects, updateProject, postUpdate, fetchAdminInvestors, sendMessage, uploadDocument, inviteInvestor, updateInvestor, approveInvestor, deactivateInvestor, resetInvestorPassword, assignInvestorProject, updateInvestorKPI, fetchThreads, fetchThread, createThread, replyToThread, fetchInvestorProfile, fetchGroups, createGroup, updateGroup, deleteGroup, fetchGroupDetail, addGroupMembers, removeGroupMember, fetchStaff, createStaff, updateStaff, fetchAdminDocuments, fetchAdminDocumentDetail, fetchAdminProjectDetail, updateWaterfall, fetchSignatureRequests, createSignatureRequest, cancelSignatureRequest, fetchProspects, updateProspectStatus, fetchProspectStats, fetchCashFlows, recordCashFlow, recalculateProject, fetchAuditLog, createProject, fetchEntities, createEntity, updateEntity, deleteEntity, runFinancialModel, updateCashFlow, deleteCashFlow, fetchProjectCashFlows, fmt, fmtCurrency } from "./api.js";
 
 const sans = "'DM Sans', -apple-system, sans-serif";
 const red = "#EA2028";
@@ -799,22 +799,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
       )}
 
       {/* Updates tab */}
-      {tab === "updates" && (
-        <>
-          <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-            <input value={updateText} onChange={e => setUpdateText(e.target.value)} placeholder="Post a construction update..." style={{ ...inputStyle, flex: 1 }} />
-            <button onClick={handlePostUpdate} style={btnStyle}>Post</button>
-          </div>
-          <div style={section}>
-            {project.updates.length > 0 ? project.updates.map((u, i) => (
-              <div key={u.id} style={{ padding: "12px 0", borderBottom: i < project.updates.length - 1 ? "1px solid #F5F3F0" : "none" }}>
-                <div style={{ fontSize: 11, color: "#999", marginBottom: 4 }}>{u.date}</div>
-                <div style={{ fontSize: 13, color: "#444", lineHeight: 1.6 }}>{u.text}</div>
-              </div>
-            )) : <p style={{ color: "#BBB", fontSize: 13, fontStyle: "italic" }}>No updates posted</p>}
-          </div>
-        </>
-      )}
+      {tab === "updates" && <ProjectUpdatesTab project={project} updateText={updateText} setUpdateText={setUpdateText} handlePostUpdate={handlePostUpdate} section={section} />}
 
       {/* Waterfall tab */}
       {tab === "waterfall" && (
@@ -854,82 +839,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
       )}
 
       {/* Cash Flows tab */}
-      {tab === "cashflows" && (
-        <div style={section}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "#666" }}>Cash Flow History ({cashFlowsList.length} records)</div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => setShowCfModal(true)} style={btnStyle}>Record Cash Flow</button>
-              <button onClick={handleRecalculate} disabled={recalculating} style={{ ...btnOutline, opacity: recalculating ? 0.5 : 1 }}>
-                {recalculating ? "Recalculating..." : "Recalculate All"}
-              </button>
-            </div>
-          </div>
-          {cashFlowsList.length > 0 ? (
-            <>
-              <div style={{ display: "grid", gridTemplateColumns: "100px 1fr 1fr 100px 100px", fontSize: 11, color: "#999", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
-                <span>Date</span><span>Investor</span><span>Description</span><span style={{ textAlign: "right" }}>Amount</span><span style={{ textAlign: "right" }}>Type</span>
-              </div>
-              {cashFlowsList.map((cf, i) => (
-                <div key={cf.id || i} style={{ display: "grid", gridTemplateColumns: "100px 1fr 1fr 100px 100px", padding: "10px 0", borderBottom: "1px solid #F5F3F0", fontSize: 13 }}>
-                  <span style={{ color: "#999", fontSize: 12 }}>{new Date(cf.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}</span>
-                  <span style={{ fontWeight: 500 }}>{cf.investorName || `User ${cf.userId}`}</span>
-                  <span style={{ color: "#666" }}>{cf.description || cf.type}</span>
-                  <span style={{ textAlign: "right", fontWeight: 500, color: cf.amount < 0 ? red : green }}>
-                    {cf.amount < 0 ? `-$${fmt(Math.abs(cf.amount))}` : `+$${fmt(cf.amount)}`}
-                  </span>
-                  <span style={{ textAlign: "right", fontSize: 11, color: "#999", textTransform: "capitalize" }}>{(cf.type || "").replace(/_/g, " ")}</span>
-                </div>
-              ))}
-            </>
-          ) : <p style={{ color: "#BBB", fontSize: 13, fontStyle: "italic" }}>No cash flows recorded</p>}
-
-          {/* Record Cash Flow Modal */}
-          {showCfModal && (
-            <div onClick={() => setShowCfModal(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 8, padding: 32, width: 420, boxShadow: "0 8px 32px rgba(0,0,0,.15)" }}>
-                <h3 style={{ fontSize: 18, fontWeight: 500, marginBottom: 20 }}>Record Cash Flow</h3>
-                <form onSubmit={handleRecordCashFlow}>
-                  <div style={{ marginBottom: 12 }}>
-                    <label style={{ fontSize: 11, color: "#888" }}>Investor</label>
-                    <select value={cfUserId} onChange={e => setCfUserId(e.target.value)} style={{ ...inputStyle, marginTop: 4 }} required>
-                      <option value="">Select investor...</option>
-                      {(cfInvestors || []).map(inv => <option key={inv.userId} value={inv.userId}>{inv.name}</option>)}
-                    </select>
-                  </div>
-                  <div style={{ marginBottom: 12 }}>
-                    <label style={{ fontSize: 11, color: "#888" }}>Date</label>
-                    <input type="date" value={cfDate} onChange={e => setCfDate(e.target.value)} style={{ ...inputStyle, marginTop: 4 }} required />
-                  </div>
-                  <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
-                    <div style={{ flex: 1 }}>
-                      <label style={{ fontSize: 11, color: "#888" }}>Amount ($)</label>
-                      <input type="number" step="0.01" value={cfAmount} onChange={e => setCfAmount(e.target.value)} placeholder="e.g. 50000" style={{ ...inputStyle, marginTop: 4 }} required />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <label style={{ fontSize: 11, color: "#888" }}>Type</label>
-                      <select value={cfType} onChange={e => setCfType(e.target.value)} style={{ ...inputStyle, marginTop: 4 }}>
-                        <option value="capital_call">Capital Call</option>
-                        <option value="distribution">Distribution</option>
-                        <option value="return_of_capital">Return of Capital</option>
-                        <option value="income">Income</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div style={{ marginBottom: 20 }}>
-                    <label style={{ fontSize: 11, color: "#888" }}>Description</label>
-                    <input value={cfDesc} onChange={e => setCfDesc(e.target.value)} placeholder="Optional description" style={{ ...inputStyle, marginTop: 4 }} />
-                  </div>
-                  <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                    <button type="button" onClick={() => setShowCfModal(false)} style={btnOutline}>Cancel</button>
-                    <button type="submit" style={btnStyle}>Record</button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+      {tab === "cashflows" && <ProjectCashFlowsTab project={project} projectId={projectId} cashFlowsList={cashFlowsList} cfInvestors={cfInvestors} showCfModal={showCfModal} setShowCfModal={setShowCfModal} cfDate={cfDate} setCfDate={setCfDate} cfAmount={cfAmount} setCfAmount={setCfAmount} cfType={cfType} setCfType={setCfType} cfUserId={cfUserId} setCfUserId={setCfUserId} cfDesc={cfDesc} setCfDesc={setCfDesc} handleRecordCashFlow={handleRecordCashFlow} handleRecalculate={handleRecalculate} recalculating={recalculating} loadCashFlows={loadCashFlows} toast={toast} section={section} />}
 
       {/* Financial Model tab */}
       {tab === "model" && (
@@ -1435,6 +1345,11 @@ function InvestorProfile({ investorId, onBack, toast }) {
         )) : <span style={{ fontSize: 12, color: "#BBB", fontStyle: "italic" }}>No project assignments</span>}
       </div>
 
+      {/* Cash Flows */}
+      {profile.projects.length > 0 && (
+        <InvestorCashFlowsSection investorId={investorId} investorName={profile.name} projects={profile.projects} toast={toast} />
+      )}
+
       {/* Documents Access */}
       <div style={section}>
         <div style={sectionTitle}>Document Access ({(profile.documents.assigned.length + profile.documents.projectDocs.length + profile.documents.generalDocs.length)} documents)</div>
@@ -1460,6 +1375,398 @@ function InvestorProfile({ investorId, onBack, toast }) {
         )) : <span style={{ fontSize: 12, color: "#BBB", fontStyle: "italic" }}>No messages</span>}
       </div>
     </>
+  );
+}
+
+// ─── PROJECT UPDATES TAB (with comparison view) ───
+function ProjectUpdatesTab({ project, updateText, setUpdateText, handlePostUpdate, section }) {
+  const [compareMode, setCompareMode] = useState(false);
+  const [leftIdx, setLeftIdx] = useState(1);
+  const [rightIdx, setRightIdx] = useState(0);
+
+  const updates = project.updates || [];
+
+  function DeltaBadge({ label, before, after, isCurrency }) {
+    if (before == null || after == null || before === after) return null;
+    const d = after - before;
+    const positive = d > 0;
+    const display = isCurrency ? `${positive ? "+" : ""}${fmtCurrency(d)}` : `${positive ? "+" : ""}${d}`;
+    return (
+      <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 3, marginRight: 6, background: positive ? "#EFE" : "#FEE", color: positive ? green : red }}>
+        {positive ? "\u2191" : "\u2193"} {label}: {display}
+      </span>
+    );
+  }
+
+  return (
+    <>
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        <input value={updateText} onChange={e => setUpdateText(e.target.value)} placeholder="Post a construction update..." style={{ ...inputStyle, flex: 1 }} />
+        <button onClick={handlePostUpdate} style={btnStyle}>Post</button>
+        {updates.length >= 2 && (
+          <button onClick={() => setCompareMode(!compareMode)} style={{ ...btnOutline, background: compareMode ? "#FEE" : "#fff", color: compareMode ? red : darkText }}>
+            {compareMode ? "Exit Compare" : "Compare"}
+          </button>
+        )}
+      </div>
+
+      {compareMode && updates.length >= 2 ? (
+        <div style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: "20px 24px", marginBottom: 16 }}>
+          <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 11, color: "#888" }}>Earlier Update</label>
+              <select value={leftIdx} onChange={e => setLeftIdx(parseInt(e.target.value))} style={{ ...inputStyle, marginTop: 4 }}>
+                {updates.map((u, i) => <option key={i} value={i}>{u.date}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 11, color: "#888" }}>Later Update</label>
+              <select value={rightIdx} onChange={e => setRightIdx(parseInt(e.target.value))} style={{ ...inputStyle, marginTop: 4 }}>
+                {updates.map((u, i) => <option key={i} value={i}>{u.date}</option>)}
+              </select>
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+            {[updates[leftIdx], updates[rightIdx]].map((u, ci) => u ? (
+              <div key={ci} style={{ border: "1px solid #E8E5DE", borderRadius: 4, padding: 16, background: ci === 1 ? "#FAFFF8" : "#FAFAFA" }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "#666", marginBottom: 8 }}>{u.date}</div>
+                <div style={{ fontSize: 13, color: "#444", lineHeight: 1.6, marginBottom: 12 }}>{u.text}</div>
+                {(u.completionPct != null || u.unitsSold != null || u.revenue != null || u.status) && (
+                  <div style={{ borderTop: "1px solid #E8E5DE", paddingTop: 10, fontSize: 12, color: "#888" }}>
+                    {u.completionPct != null && <div>Completion: <strong>{u.completionPct}%</strong></div>}
+                    {u.unitsSold != null && <div>Units Sold: <strong>{u.unitsSold}</strong></div>}
+                    {u.revenue != null && <div>Revenue: <strong>{fmtCurrency(u.revenue)}</strong></div>}
+                    {u.status && <div>Status: <strong>{u.status}</strong></div>}
+                  </div>
+                )}
+              </div>
+            ) : null)}
+          </div>
+          {/* Delta indicators */}
+          {updates[leftIdx] && updates[rightIdx] && (
+            <div style={{ marginTop: 12, padding: "10px 0", borderTop: "1px solid #E8E5DE" }}>
+              <div style={{ fontSize: 11, color: "#888", marginBottom: 6 }}>Changes:</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                <DeltaBadge label="Completion" before={updates[leftIdx].completionPct} after={updates[rightIdx].completionPct} />
+                <DeltaBadge label="Units Sold" before={updates[leftIdx].unitsSold} after={updates[rightIdx].unitsSold} />
+                <DeltaBadge label="Revenue" before={updates[leftIdx].revenue} after={updates[rightIdx].revenue} isCurrency />
+                {updates[leftIdx].status !== updates[rightIdx].status && updates[leftIdx].status && updates[rightIdx].status && (
+                  <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 3, background: "#F0F8FF", color: "#336" }}>
+                    Status: {updates[leftIdx].status} → {updates[rightIdx].status}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div style={section}>
+          {updates.length > 0 ? updates.map((u, i) => (
+            <div key={u.id} style={{ padding: "12px 0", borderBottom: i < updates.length - 1 ? "1px solid #F5F3F0" : "none" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                <div style={{ fontSize: 11, color: "#999" }}>{u.date}</div>
+                {u.completionPct != null && <span style={{ fontSize: 10, color: "#999", padding: "2px 6px", border: "1px solid #E8E5DE", borderRadius: 3 }}>{u.completionPct}% complete</span>}
+              </div>
+              <div style={{ fontSize: 13, color: "#444", lineHeight: 1.6 }}>{u.text}</div>
+              {/* Show delta vs previous */}
+              {i < updates.length - 1 && (() => {
+                const prev = updates[i + 1];
+                const deltas = [];
+                if (u.completionPct != null && prev.completionPct != null && u.completionPct !== prev.completionPct) {
+                  const d = u.completionPct - prev.completionPct;
+                  deltas.push({ label: "Completion", value: `${d > 0 ? "+" : ""}${d}%`, positive: d > 0 });
+                }
+                if (u.unitsSold != null && prev.unitsSold != null && u.unitsSold !== prev.unitsSold) {
+                  const d = u.unitsSold - prev.unitsSold;
+                  deltas.push({ label: "Units Sold", value: `${d > 0 ? "+" : ""}${d}`, positive: d > 0 });
+                }
+                if (u.revenue != null && prev.revenue != null && u.revenue !== prev.revenue) {
+                  const d = u.revenue - prev.revenue;
+                  deltas.push({ label: "Revenue", value: `${d > 0 ? "+" : ""}${fmtCurrency(d)}`, positive: d > 0 });
+                }
+                if (deltas.length === 0) return null;
+                return (
+                  <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                    {deltas.map((d, j) => (
+                      <span key={j} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 3, background: d.positive ? "#EFE" : "#FEE", color: d.positive ? green : red }}>
+                        {d.positive ? "\u2191" : "\u2193"} {d.label}: {d.value}
+                      </span>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          )) : <p style={{ color: "#BBB", fontSize: 13, fontStyle: "italic" }}>No updates posted</p>}
+        </div>
+      )}
+    </>
+  );
+}
+
+// ─── PROJECT CASH FLOWS TAB (with edit/delete) ───
+function ProjectCashFlowsTab({ project, projectId, cashFlowsList, cfInvestors, showCfModal, setShowCfModal, cfDate, setCfDate, cfAmount, setCfAmount, cfType, setCfType, cfUserId, setCfUserId, cfDesc, setCfDesc, handleRecordCashFlow, handleRecalculate, recalculating, loadCashFlows, toast, section }) {
+  const [editingCf, setEditingCf] = useState(null);
+  const [editDate, setEditDate] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [editType, setEditType] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+
+  function startEdit(cf) {
+    setEditingCf(cf.id);
+    setEditDate(new Date(cf.date).toISOString().split("T")[0]);
+    setEditAmount(String(Math.abs(cf.amount)));
+    setEditType(cf.type);
+    setEditDesc(cf.description || "");
+  }
+
+  async function handleSaveEdit(e) {
+    e.preventDefault();
+    try {
+      const amountVal = parseFloat(editAmount);
+      const finalAmount = editType === "capital_call" ? -Math.abs(amountVal) : Math.abs(amountVal);
+      await updateCashFlow(editingCf, { date: editDate, amount: finalAmount, type: editType, description: editDesc || null });
+      toast("Cash flow updated");
+      setEditingCf(null);
+      loadCashFlows();
+    } catch (err) { toast(err.message, "error"); }
+  }
+
+  async function handleDelete(id) {
+    if (!confirm("Delete this cash flow record?")) return;
+    try {
+      await deleteCashFlow(id);
+      toast("Cash flow deleted");
+      loadCashFlows();
+    } catch (err) { toast(err.message, "error"); }
+  }
+
+  // Calculate running balance and totals
+  const totalContributed = cashFlowsList.filter(cf => cf.amount < 0).reduce((s, cf) => s + Math.abs(cf.amount), 0);
+  const totalDistributed = cashFlowsList.filter(cf => cf.amount > 0).reduce((s, cf) => s + cf.amount, 0);
+  const netCF = totalDistributed - totalContributed;
+
+  return (
+    <div style={section}>
+      {/* Summary */}
+      <div style={{ display: "flex", gap: 24, marginBottom: 16, padding: "12px 16px", background: "#FAFAF8", borderRadius: 4, border: "1px solid #E8E5DE" }}>
+        <div>
+          <div style={{ fontSize: 10, color: "#999", textTransform: "uppercase", letterSpacing: ".06em" }}>Capital Called</div>
+          <div style={{ fontSize: 16, fontWeight: 500, color: red }}>${fmt(totalContributed)}</div>
+        </div>
+        <div>
+          <div style={{ fontSize: 10, color: "#999", textTransform: "uppercase", letterSpacing: ".06em" }}>Distributed</div>
+          <div style={{ fontSize: 16, fontWeight: 500, color: green }}>${fmt(totalDistributed)}</div>
+        </div>
+        <div>
+          <div style={{ fontSize: 10, color: "#999", textTransform: "uppercase", letterSpacing: ".06em" }}>Net</div>
+          <div style={{ fontSize: 16, fontWeight: 500, color: netCF >= 0 ? green : red }}>{netCF >= 0 ? "+" : "-"}${fmt(Math.abs(netCF))}</div>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "#666" }}>Cash Flow History ({cashFlowsList.length} records)</div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => setShowCfModal(true)} style={btnStyle}>Record Cash Flow</button>
+          <button onClick={handleRecalculate} disabled={recalculating} style={{ ...btnOutline, opacity: recalculating ? 0.5 : 1 }}>
+            {recalculating ? "Recalculating..." : "Recalculate IRR/MOIC"}
+          </button>
+        </div>
+      </div>
+      {cashFlowsList.length > 0 ? (
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "100px 1fr 1fr 100px 100px 80px", fontSize: 11, color: "#999", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
+            <span>Date</span><span>Investor</span><span>Description</span><span style={{ textAlign: "right" }}>Amount</span><span style={{ textAlign: "right" }}>Type</span><span style={{ textAlign: "right" }}>Actions</span>
+          </div>
+          {cashFlowsList.map((cf, i) => (
+            editingCf === cf.id ? (
+              <form key={cf.id} onSubmit={handleSaveEdit} style={{ display: "grid", gridTemplateColumns: "100px 1fr 1fr 100px 100px 80px", padding: "8px 0", borderBottom: "1px solid #F5F3F0", gap: 4, alignItems: "center" }}>
+                <input type="date" value={editDate} onChange={e => setEditDate(e.target.value)} style={{ ...inputStyle, padding: "4px 6px", fontSize: 11 }} />
+                <span style={{ fontSize: 12 }}>{cf.investorName || `User ${cf.userId}`}</span>
+                <input value={editDesc} onChange={e => setEditDesc(e.target.value)} style={{ ...inputStyle, padding: "4px 6px", fontSize: 11 }} placeholder="Description" />
+                <input type="number" step="0.01" value={editAmount} onChange={e => setEditAmount(e.target.value)} style={{ ...inputStyle, padding: "4px 6px", fontSize: 11, textAlign: "right" }} />
+                <select value={editType} onChange={e => setEditType(e.target.value)} style={{ ...inputStyle, padding: "4px 6px", fontSize: 10 }}>
+                  <option value="capital_call">Capital Call</option>
+                  <option value="distribution">Distribution</option>
+                  <option value="return_of_capital">Return of Capital</option>
+                  <option value="income">Income</option>
+                </select>
+                <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
+                  <button type="submit" style={{ fontSize: 10, padding: "3px 6px", background: green, color: "#fff", border: "none", borderRadius: 3, cursor: "pointer" }}>Save</button>
+                  <button type="button" onClick={() => setEditingCf(null)} style={{ fontSize: 10, padding: "3px 6px", background: "#fff", color: "#999", border: "1px solid #DDD", borderRadius: 3, cursor: "pointer" }}>X</button>
+                </div>
+              </form>
+            ) : (
+              <div key={cf.id || i} style={{ display: "grid", gridTemplateColumns: "100px 1fr 1fr 100px 100px 80px", padding: "10px 0", borderBottom: "1px solid #F5F3F0", fontSize: 13 }}>
+                <span style={{ color: "#999", fontSize: 12 }}>{new Date(cf.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}</span>
+                <span style={{ fontWeight: 500 }}>{cf.investorName || `User ${cf.userId}`}</span>
+                <span style={{ color: "#666" }}>{cf.description || cf.type}</span>
+                <span style={{ textAlign: "right", fontWeight: 500, color: cf.amount < 0 ? red : green }}>
+                  {cf.amount < 0 ? `-$${fmt(Math.abs(cf.amount))}` : `+$${fmt(cf.amount)}`}
+                </span>
+                <span style={{ textAlign: "right", fontSize: 11, color: "#999", textTransform: "capitalize" }}>{(cf.type || "").replace(/_/g, " ")}</span>
+                <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                  <span onClick={() => startEdit(cf)} style={{ fontSize: 11, color: "#666", cursor: "pointer" }}>Edit</span>
+                  <span onClick={() => handleDelete(cf.id)} style={{ fontSize: 11, color: red, cursor: "pointer" }}>Del</span>
+                </div>
+              </div>
+            )
+          ))}
+        </>
+      ) : <p style={{ color: "#BBB", fontSize: 13, fontStyle: "italic" }}>No cash flows recorded</p>}
+
+      {/* Record Cash Flow Modal */}
+      {showCfModal && (
+        <div onClick={() => setShowCfModal(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 8, padding: 32, width: 420, boxShadow: "0 8px 32px rgba(0,0,0,.15)" }}>
+            <h3 style={{ fontSize: 18, fontWeight: 500, marginBottom: 20 }}>Record Cash Flow</h3>
+            <form onSubmit={handleRecordCashFlow}>
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ fontSize: 11, color: "#888" }}>Investor</label>
+                <select value={cfUserId} onChange={e => setCfUserId(e.target.value)} style={{ ...inputStyle, marginTop: 4 }} required>
+                  <option value="">Select investor...</option>
+                  {(cfInvestors || []).map(inv => <option key={inv.userId} value={inv.userId}>{inv.name}</option>)}
+                </select>
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ fontSize: 11, color: "#888" }}>Date</label>
+                <input type="date" value={cfDate} onChange={e => setCfDate(e.target.value)} style={{ ...inputStyle, marginTop: 4 }} required />
+              </div>
+              <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: 11, color: "#888" }}>Amount ($)</label>
+                  <input type="number" step="0.01" value={cfAmount} onChange={e => setCfAmount(e.target.value)} placeholder="e.g. 50000" style={{ ...inputStyle, marginTop: 4 }} required />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ fontSize: 11, color: "#888" }}>Type</label>
+                  <select value={cfType} onChange={e => setCfType(e.target.value)} style={{ ...inputStyle, marginTop: 4 }}>
+                    <option value="capital_call">Capital Call</option>
+                    <option value="distribution">Distribution</option>
+                    <option value="return_of_capital">Return of Capital</option>
+                    <option value="income">Income</option>
+                  </select>
+                </div>
+              </div>
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ fontSize: 11, color: "#888" }}>Description</label>
+                <input value={cfDesc} onChange={e => setCfDesc(e.target.value)} placeholder="Optional description" style={{ ...inputStyle, marginTop: 4 }} />
+              </div>
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                <button type="button" onClick={() => setShowCfModal(false)} style={btnOutline}>Cancel</button>
+                <button type="submit" style={btnStyle}>Record</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── INVESTOR CASH FLOWS SECTION (for investor profile) ───
+function InvestorCashFlowsSection({ investorId, investorName, projects, toast }) {
+  const [cashFlows, setCashFlows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editingId, setEditingId] = useState(null);
+  const [editDate, setEditDate] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [editType, setEditType] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+
+  useEffect(() => { loadAll(); }, [investorId]);
+
+  async function loadAll() {
+    setLoading(true);
+    const allFlows = [];
+    for (const p of projects) {
+      try {
+        const flows = await fetchCashFlows(investorId, p.projectId);
+        allFlows.push(...flows.map(f => ({ ...f, projectName: p.projectName })));
+      } catch (e) { /* skip */ }
+    }
+    allFlows.sort((a, b) => new Date(a.date) - new Date(b.date));
+    setCashFlows(allFlows);
+    setLoading(false);
+  }
+
+  function startEdit(cf) {
+    setEditingId(cf.id);
+    setEditDate(new Date(cf.date).toISOString().split("T")[0]);
+    setEditAmount(String(Math.abs(cf.amount)));
+    setEditType(cf.type);
+    setEditDesc(cf.description || "");
+  }
+
+  async function handleSave(e) {
+    e.preventDefault();
+    try {
+      const amountVal = parseFloat(editAmount);
+      const finalAmount = editType === "capital_call" ? -Math.abs(amountVal) : Math.abs(amountVal);
+      await updateCashFlow(editingId, { date: editDate, amount: finalAmount, type: editType, description: editDesc || null });
+      toast("Cash flow updated");
+      setEditingId(null);
+      loadAll();
+    } catch (err) { toast(err.message, "error"); }
+  }
+
+  async function handleDelete(id) {
+    if (!confirm("Delete this cash flow record?")) return;
+    try { await deleteCashFlow(id); toast("Cash flow deleted"); loadAll(); } catch (err) { toast(err.message, "error"); }
+  }
+
+  const totalContributed = cashFlows.filter(cf => cf.amount < 0).reduce((s, cf) => s + Math.abs(cf.amount), 0);
+  const totalDistributed = cashFlows.filter(cf => cf.amount > 0).reduce((s, cf) => s + cf.amount, 0);
+
+  const section = { background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: "20px 24px", marginBottom: 16 };
+  const sectionTitle = { fontSize: 13, fontWeight: 600, color: "#666", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 14 };
+
+  if (loading) return <div style={section}><div style={sectionTitle}>Cash Flows</div><p style={{ color: "#BBB", fontSize: 13 }}>Loading...</p></div>;
+
+  return (
+    <div style={section}>
+      <div style={sectionTitle}>Cash Flows ({cashFlows.length} records)</div>
+      {cashFlows.length > 0 && (
+        <div style={{ display: "flex", gap: 24, marginBottom: 16, padding: "10px 14px", background: "#FAFAF8", borderRadius: 4, border: "1px solid #E8E5DE" }}>
+          <div><div style={{ fontSize: 10, color: "#999", textTransform: "uppercase" }}>Total Contributed</div><div style={{ fontSize: 15, fontWeight: 500, color: red }}>${fmt(totalContributed)}</div></div>
+          <div><div style={{ fontSize: 10, color: "#999", textTransform: "uppercase" }}>Total Distributed</div><div style={{ fontSize: 15, fontWeight: 500, color: green }}>${fmt(totalDistributed)}</div></div>
+        </div>
+      )}
+      {cashFlows.length > 0 ? (
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "90px 1fr 1fr 100px 90px 70px", fontSize: 11, color: "#999", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
+            <span>Date</span><span>Project</span><span>Description</span><span style={{ textAlign: "right" }}>Amount</span><span style={{ textAlign: "right" }}>Type</span><span style={{ textAlign: "right" }}>Actions</span>
+          </div>
+          {cashFlows.map(cf => (
+            editingId === cf.id ? (
+              <form key={cf.id} onSubmit={handleSave} style={{ display: "grid", gridTemplateColumns: "90px 1fr 1fr 100px 90px 70px", padding: "6px 0", borderBottom: "1px solid #F5F3F0", gap: 4, alignItems: "center" }}>
+                <input type="date" value={editDate} onChange={e => setEditDate(e.target.value)} style={{ ...inputStyle, padding: "4px 6px", fontSize: 11 }} />
+                <span style={{ fontSize: 12 }}>{cf.projectName}</span>
+                <input value={editDesc} onChange={e => setEditDesc(e.target.value)} style={{ ...inputStyle, padding: "4px 6px", fontSize: 11 }} />
+                <input type="number" step="0.01" value={editAmount} onChange={e => setEditAmount(e.target.value)} style={{ ...inputStyle, padding: "4px 6px", fontSize: 11, textAlign: "right" }} />
+                <select value={editType} onChange={e => setEditType(e.target.value)} style={{ ...inputStyle, padding: "4px 4px", fontSize: 9 }}>
+                  <option value="capital_call">Capital Call</option><option value="distribution">Distribution</option><option value="return_of_capital">Return of Capital</option><option value="income">Income</option>
+                </select>
+                <div style={{ display: "flex", gap: 3, justifyContent: "flex-end" }}>
+                  <button type="submit" style={{ fontSize: 9, padding: "3px 5px", background: green, color: "#fff", border: "none", borderRadius: 3, cursor: "pointer" }}>OK</button>
+                  <button type="button" onClick={() => setEditingId(null)} style={{ fontSize: 9, padding: "3px 5px", background: "#fff", color: "#999", border: "1px solid #DDD", borderRadius: 3, cursor: "pointer" }}>X</button>
+                </div>
+              </form>
+            ) : (
+              <div key={cf.id} style={{ display: "grid", gridTemplateColumns: "90px 1fr 1fr 100px 90px 70px", padding: "8px 0", borderBottom: "1px solid #F5F3F0", fontSize: 12 }}>
+                <span style={{ color: "#999", fontSize: 11 }}>{new Date(cf.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}</span>
+                <span style={{ fontWeight: 500 }}>{cf.projectName}</span>
+                <span style={{ color: "#666" }}>{cf.description || cf.type}</span>
+                <span style={{ textAlign: "right", fontWeight: 500, color: cf.amount < 0 ? red : green }}>{cf.amount < 0 ? `-$${fmt(Math.abs(cf.amount))}` : `+$${fmt(cf.amount)}`}</span>
+                <span style={{ textAlign: "right", fontSize: 10, color: "#999", textTransform: "capitalize" }}>{(cf.type || "").replace(/_/g, " ")}</span>
+                <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                  <span onClick={() => startEdit(cf)} style={{ fontSize: 11, color: "#666", cursor: "pointer" }}>Edit</span>
+                  <span onClick={() => handleDelete(cf.id)} style={{ fontSize: 11, color: red, cursor: "pointer" }}>Del</span>
+                </div>
+              </div>
+            )
+          ))}
+        </>
+      ) : <span style={{ fontSize: 12, color: "#BBB", fontStyle: "italic" }}>No cash flows</span>}
+    </div>
   );
 }
 

@@ -106,6 +106,74 @@ router.post("/record-cashflow", requireRole("ADMIN", "GP"), async (req, res) => 
   }
 });
 
+// ─── GET /cashflows?projectId=X — list all cash flows for a project (ADMIN) ──
+router.get("/cashflows", requireRole("ADMIN", "GP"), async (req, res) => {
+  try {
+    const { projectId } = req.query;
+    if (!projectId) return res.status(400).json({ error: "projectId query param is required" });
+
+    const cashFlows = await prisma.cashFlow.findMany({
+      where: { projectId: parseInt(projectId) },
+      include: { user: { select: { id: true, name: true } }, project: { select: { id: true, name: true } } },
+      orderBy: { date: "asc" },
+    });
+
+    res.json(cashFlows.map(cf => ({
+      id: cf.id, projectId: cf.projectId, userId: cf.userId,
+      investorName: cf.user.name, projectName: cf.project.name,
+      date: cf.date, amount: cf.amount, type: cf.type, description: cf.description, createdAt: cf.createdAt,
+    })));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── PUT /cashflows/:id — edit a cash flow record (ADMIN) ──
+router.put("/cashflows/:id", requireRole("ADMIN", "GP"), async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { date, amount, type, description } = req.body;
+
+    const existing = await prisma.cashFlow.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: "Cash flow not found" });
+
+    const validTypes = ["capital_call", "distribution", "return_of_capital", "income"];
+    if (type && !validTypes.includes(type)) {
+      return res.status(400).json({ error: `type must be one of: ${validTypes.join(", ")}` });
+    }
+
+    const updated = await prisma.cashFlow.update({
+      where: { id },
+      data: {
+        ...(date !== undefined && { date: new Date(date) }),
+        ...(amount !== undefined && { amount: parseFloat(amount) }),
+        ...(type !== undefined && { type }),
+        ...(description !== undefined && { description: description || null }),
+      },
+    });
+
+    audit.log(req, "cash_flow_edit", `cashflow:${id}`, { projectId: updated.projectId, userId: updated.userId, amount: updated.amount, type: updated.type });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── DELETE /cashflows/:id — delete a cash flow record (ADMIN) ──
+router.delete("/cashflows/:id", requireRole("ADMIN", "GP"), async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const existing = await prisma.cashFlow.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: "Cash flow not found" });
+
+    await prisma.cashFlow.delete({ where: { id } });
+    audit.log(req, "cash_flow_delete", `cashflow:${id}`, { projectId: existing.projectId, userId: existing.userId, amount: existing.amount });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── GET /cashflows/:userId/:projectId ──────────────────
 router.get("/cashflows/:userId/:projectId", async (req, res) => {
   try {

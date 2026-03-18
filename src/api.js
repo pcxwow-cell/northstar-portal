@@ -124,6 +124,39 @@ export function logout() {
   setDemoMode(false);
 }
 
+// ─── Password Management ───
+export async function changePassword(currentPassword, newPassword) {
+  if (_demoMode) return { success: true };
+  return apiFetch("/auth/change-password", { method: "PUT", body: JSON.stringify({ currentPassword, newPassword }) });
+}
+
+export async function forgotPassword(email) {
+  if (_demoMode) {
+    console.log("[DEMO] Password reset requested for:", email);
+    return { success: true };
+  }
+  return apiFetch("/auth/forgot-password", { method: "POST", body: JSON.stringify({ email }) });
+}
+
+export async function resetPassword(token, newPassword) {
+  if (_demoMode) return { success: true };
+  return apiFetch("/auth/reset-password", { method: "POST", body: JSON.stringify({ token, newPassword }) });
+}
+
+// ─── Login History ───
+export async function fetchLoginHistory() {
+  if (_demoMode) {
+    return [
+      { id: 1, ip: "192.168.1.42", userAgent: "Mozilla/5.0 Chrome/120", success: true, createdAt: new Date().toISOString() },
+      { id: 2, ip: "192.168.1.42", userAgent: "Mozilla/5.0 Chrome/120", success: true, createdAt: new Date(Date.now() - 86400000).toISOString() },
+      { id: 3, ip: "10.0.0.15", userAgent: "Mozilla/5.0 Safari/17", success: false, createdAt: new Date(Date.now() - 172800000).toISOString() },
+      { id: 4, ip: "192.168.1.42", userAgent: "Mozilla/5.0 Chrome/120", success: true, createdAt: new Date(Date.now() - 259200000).toISOString() },
+      { id: 5, ip: "192.168.1.42", userAgent: "Mozilla/5.0 Chrome/120", success: true, createdAt: new Date(Date.now() - 604800000).toISOString() },
+    ];
+  }
+  return apiFetch("/auth/login-history");
+}
+
 // ─── Data fetching (with demo fallback) ───
 export async function fetchProjects() {
   if (_demoMode) return demoProjects.map(p => ({ id: p.id, name: p.name, location: p.location, type: p.type, status: p.status, sqft: p.sqft, units: p.units, completion: p.completion, totalRaise: p.totalRaise, description: p.description }));
@@ -539,6 +572,29 @@ export async function calculateWaterfallApi(data) {
 export async function recordCashFlow(data) {
   if (_demoMode) return { id: Date.now(), ...data, createdAt: new Date().toISOString() };
   return apiFetch("/finance/record-cashflow", { method: "POST", body: JSON.stringify(data) });
+}
+
+export async function updateCashFlow(id, data) {
+  if (_demoMode) return { id, ...data };
+  return apiFetch(`/finance/cashflows/${id}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export async function deleteCashFlow(id) {
+  if (_demoMode) return { ok: true };
+  return apiFetch(`/finance/cashflows/${id}`, { method: "DELETE" });
+}
+
+export async function fetchProjectCashFlows(projectId) {
+  if (_demoMode) {
+    return [
+      { id: 1, projectId, userId: 1, investorName: "James Chen", date: "2023-01-15T00:00:00.000Z", amount: -500000, type: "capital_call", description: "Initial investment" },
+      { id: 2, projectId, userId: 1, investorName: "James Chen", date: "2023-06-01T00:00:00.000Z", amount: -100000, type: "capital_call", description: "Capital call #2" },
+      { id: 3, projectId, userId: 1, investorName: "James Chen", date: "2024-09-15T00:00:00.000Z", amount: 8500, type: "distribution", description: "Q3 2024 income distribution" },
+      { id: 4, projectId, userId: 1, investorName: "James Chen", date: "2024-12-15T00:00:00.000Z", amount: 10200, type: "distribution", description: "Q4 2024 income distribution" },
+      { id: 5, projectId, userId: 1, investorName: "James Chen", date: "2025-03-15T00:00:00.000Z", amount: 8900, type: "distribution", description: "Q1 2025 income distribution" },
+    ];
+  }
+  return apiFetch(`/finance/cashflows?projectId=${projectId}`);
 }
 
 export async function recalculateProject(projectId) {

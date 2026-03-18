@@ -123,7 +123,7 @@ router.get("/projects/:id", async (req, res, next) => {
         id: d.id, name: d.name, category: d.category, date: d.date, size: d.size, status: d.status,
         viewedBy: d.assignments.filter(a => a.viewedAt).length,
       })),
-      updates: project.updates.map(u => ({ id: u.id, date: u.date, text: u.text })),
+      updates: project.updates.map(u => ({ id: u.id, date: u.date, text: u.text, completionPct: u.completionPct, unitsSold: u.unitsSold, revenue: u.revenue, status: u.status })),
     });
   } catch (err) { next(err); }
 });
@@ -178,9 +178,23 @@ router.post("/projects/:id/updates", async (req, res, next) => {
   try {
     const { text } = req.body;
     if (!text) return res.status(400).json({ error: "Update text is required" });
+    const projectId = parseInt(req.params.id);
     const date = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
+    // Capture current project metrics as snapshot
+    const project = await prisma.project.findUnique({ where: { id: projectId } });
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
     const update = await prisma.projectUpdate.create({
-      data: { project: { connect: { id: parseInt(req.params.id) } }, date, text },
+      data: {
+        project: { connect: { id: projectId } },
+        date,
+        text,
+        completionPct: project.completionPct,
+        unitsSold: project.unitsSold,
+        revenue: project.revenue,
+        status: project.status,
+      },
     });
     res.status(201).json(update);
   } catch (err) { next(err); }
