@@ -6,6 +6,7 @@ async function main() {
   console.log("Seeding database...");
 
   // Clear all tables (reverse dependency order)
+  await prisma.prospect.deleteMany();
   await prisma.notificationLog.deleteMany();
   await prisma.notificationPreference.deleteMany();
   await prisma.signatureSigner.deleteMany();
@@ -366,6 +367,67 @@ async function main() {
   ];
   await prisma.notificationLog.createMany({ data: notifLogs });
   console.log("  NotificationLogs: " + notifLogs.length);
+
+  // ─── Prospects (prospective investors) ───
+  const prospectsData = [
+    {
+      name: "Sarah Mitchell",
+      email: "sarah.mitchell@westcoastwealth.ca",
+      phone: "604-555-0142",
+      entityType: "Individual",
+      accreditationStatus: "Accredited",
+      investmentRange: "$250K-$500K",
+      interestedProjectId: 1,
+      message: "Interested in the Porthaven development. Would like to schedule a call to discuss the investment structure and timeline.",
+      status: "new",
+    },
+    {
+      name: "David Park",
+      email: "dpark@harbourinvestments.com",
+      phone: "778-555-0319",
+      entityType: "LLC",
+      accreditationStatus: "Accredited",
+      investmentRange: "$500K+",
+      interestedProjectId: 2,
+      message: "Our firm is looking at residential development opportunities in the Port Coquitlam area. Livy looks like a strong fit.",
+      status: "contacted",
+    },
+    {
+      name: "Michelle Wong",
+      email: "mwong@pacificridge.ca",
+      phone: "604-555-0287",
+      entityType: "Trust",
+      accreditationStatus: "Accredited",
+      investmentRange: "$100K-$250K",
+      interestedProjectId: 3,
+      message: "Interested in the affordable housing component of Estrella. Our family trust focuses on impact investing.",
+      status: "qualified",
+    },
+    {
+      name: "Robert Fraser",
+      email: "rob.fraser@gmail.com",
+      phone: null,
+      entityType: "Individual",
+      accreditationStatus: "Not Yet",
+      investmentRange: "$50K-$100K",
+      interestedProjectId: null,
+      message: "Just learning about real estate investment. Would appreciate any introductory materials you can share.",
+      status: "declined",
+    },
+    {
+      name: "Jennifer Liu",
+      email: "jliu@mapleleafcapital.ca",
+      phone: "604-555-0456",
+      entityType: "IRA",
+      accreditationStatus: "Accredited",
+      investmentRange: "$250K-$500K",
+      interestedProjectId: 1,
+      message: "Looking to allocate from our self-directed IRA into real estate development. Porthaven's structure looks well-suited.",
+      status: "new",
+    },
+  ];
+  await prisma.prospect.createMany({ data: prospectsData });
+  console.log("  Prospects: " + prospectsData.length);
 
   console.log("\nSeed complete!");
 }

@@ -2,17 +2,18 @@ import { useState, useCallback, useEffect, useRef, createContext, useContext } f
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { login as apiLogin, logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, downloadDocument, fetchThreads, fetchThread, createThread, replyToThread, updateProfile, fetchSignatureRequests, signDocument, fetchNotificationPreferences, updateNotificationPreferences, fmt, fmtCurrency } from "./api.js";
 import AdminPanel from "./Admin.jsx";
+import ProspectPortal from "./ProspectPortal.jsx";
 
 // ─── THEME ───────────────────────────────────────────────
-const serif = "'Cormorant Garamond', Georgia, serif";
-const sans = "'DM Sans', -apple-system, sans-serif";
-const red = "#EA2028";
-const darkText = "#231F20";
-const cream = "#FDFAF2";
-const green = "#3D7A54";
+export const serif = "'Cormorant Garamond', Georgia, serif";
+export const sans = "'DM Sans', -apple-system, sans-serif";
+export const red = "#EA2028";
+export const darkText = "#231F20";
+export const cream = "#FDFAF2";
+export const green = "#3D7A54";
 
 // Northstar "N" icon — two parallelogram shapes from brand
-const NorthstarIcon = ({ size = 32, color = red }) => (
+export const NorthstarIcon = ({ size = 32, color = red }) => (
   <svg width={size} height={size} viewBox="0 0 163 162" fill="none">
     <polygon points="7.2,10 7.2,135.7 68.9,135.7 68.9,63.9" fill={color}/>
     <polygon points="152.2,152.2 152.2,26.5 90.6,26.5 90.6,98.3" fill={color}/>
@@ -20,7 +21,7 @@ const NorthstarIcon = ({ size = 32, color = red }) => (
 );
 
 // Northstar wordmark — geometric letter paths from brand SVG
-const NorthstarWordmark = ({ height = 20, color = darkText }) => (
+export const NorthstarWordmark = ({ height = 20, color = darkText }) => (
   <svg height={height} viewBox="0 0 499.5 72" fill="none">
     <path d="M17,8v7l22.7,22.7V8h8.4V66h-8.4V48.8L17,26.1V66H8.6V8L17,8L17,8z" fill={color}/>
     <path d="M66.4,26c0-12.3,7-18.9,20-18.9s20,6.6,20,18.9v22c0,12.4-7,19-20,19s-20-6.6-20-19V26z M74.8,47.9c0,7.5,4.1,11.6,11.6,11.6C94,59.6,98,55.5,98,47.9V26c0-7.5-4-11.6-11.6-11.6c-7.5,0-11.6,4.1-11.6,11.6V47.9z" fill={color}/>
@@ -1116,7 +1117,7 @@ function ProfilePage({ investor, toast, onUpdate }) {
 }
 
 // ─── LOGIN PAGE ─────────────────────────────────────────
-function LoginPage({ onLogin }) {
+function LoginPage({ onLogin, onShowProspects }) {
   const { bg, surface, line, t1, t2, t3 } = useTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -1284,7 +1285,7 @@ function LoginPage({ onLogin }) {
               </div>
             </form>
             <p style={{ fontSize: 12, color: "#999", textAlign: "center", marginTop: 20 }}>
-              Interested in investing? <span style={{ color: red, cursor: "pointer", fontWeight: 500 }}>Contact us →</span>
+              Interested in investing? <span onClick={onShowProspects} style={{ color: red, cursor: "pointer", fontWeight: 500 }}>Learn more →</span>
             </p>
           </div>
         </div>
@@ -1308,8 +1309,26 @@ export default function App() {
   const [themeMode, setThemeMode] = useState(() => localStorage.getItem("northstar_theme") || "light");
   const [view, setView] = useState("overview");
   const [msgs, setMsgs] = useState([]);
+  const [showProspectPortal, setShowProspectPortal] = useState(() => {
+    const hash = window.location.hash;
+    return hash === "#/invest" || hash === "#/opportunities" || hash === "#/about";
+  });
   const toast = useToast();
   const th = themes[themeMode];
+
+  // Listen for hash changes
+  useEffect(() => {
+    function onHashChange() {
+      const hash = window.location.hash;
+      if (hash === "#/invest" || hash === "#/opportunities" || hash === "#/about") {
+        setShowProspectPortal(true);
+      } else if (hash === "#/login") {
+        setShowProspectPortal(false);
+      }
+    }
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
 
   // Load data after auth
   async function loadData(u) {
@@ -1376,8 +1395,10 @@ export default function App() {
     <ThemeContext.Provider value={th}>
       {loading ? (
         <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: th.bg, fontFamily: sans, color: th.t2 }}>Loading...</div>
+      ) : showProspectPortal ? (
+        <ProspectPortal onNavigateLogin={() => { setShowProspectPortal(false); window.location.hash = "#/login"; }} />
       ) : (
-        <LoginPage onLogin={handleLogin} />
+        <LoginPage onLogin={handleLogin} onShowProspects={() => { setShowProspectPortal(true); window.location.hash = "#/invest"; }} />
       )}
     </ThemeContext.Provider>
   );

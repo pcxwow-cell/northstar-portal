@@ -61,6 +61,7 @@ model Project {
   performanceHistory PerformanceHistory[]
   targetedMessages   Message[] @relation("messageTarget")
   targetedThreads    MessageThread[] @relation("threadTarget")
+  prospects          Prospect[]
 
   @@map("projects")
 }
@@ -361,4 +362,25 @@ model NotificationPreference {
   user User @relation(fields: [userId], references: [id])
 
   @@map("notification_preferences")
+}
+
+// ─── PROSPECTS (prospective investors) ─────────────────
+
+model Prospect {
+  id                  Int      @id @default(autoincrement())
+  name                String
+  email               String
+  phone               String?
+  entityType          String?  @map("entity_type") // Individual | LLC | Trust | IRA
+  accreditationStatus String?  @map("accreditation_status") // Accredited | Not Yet | Unsure
+  investmentRange     String?  @map("investment_range") // $50K-$100K | $100K-$250K | $250K-$500K | $500K+
+  interestedProjectId Int?     @map("interested_project_id")
+  message             String?
+  status              String   @default("new") // new | contacted | qualified | converted | declined
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  interestedProject Project? @relation(fields: [interestedProjectId], references: [id])
+
+  @@map("prospects")
 }

@@ -22,6 +22,7 @@ const { authenticate } = require("./middleware/auth");
 
 // Public routes
 app.use("/api/v1/auth", require("./routes/auth"));
+app.use("/api/v1/prospects", require("./routes/prospects"));
 
 // Protected routes (require valid JWT)
 app.use("/api/v1/projects", authenticate, require("./routes/projects"));

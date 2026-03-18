@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchDashboard, fetchAdminProjects, updateProject, postUpdate, fetchAdminInvestors, sendMessage, uploadDocument, inviteInvestor, updateInvestor, approveInvestor, deactivateInvestor, resetInvestorPassword, assignInvestorProject, updateInvestorKPI, fetchThreads, fetchThread, createThread, replyToThread, fetchInvestorProfile, fetchGroups, createGroup, updateGroup, deleteGroup, fetchGroupDetail, addGroupMembers, removeGroupMember, fetchStaff, createStaff, updateStaff, fetchAdminDocuments, fetchAdminDocumentDetail, fetchAdminProjectDetail, updateWaterfall, fetchSignatureRequests, createSignatureRequest, cancelSignatureRequest, fmt, fmtCurrency } from "./api.js";
+import { fetchDashboard, fetchAdminProjects, updateProject, postUpdate, fetchAdminInvestors, sendMessage, uploadDocument, inviteInvestor, updateInvestor, approveInvestor, deactivateInvestor, resetInvestorPassword, assignInvestorProject, updateInvestorKPI, fetchThreads, fetchThread, createThread, replyToThread, fetchInvestorProfile, fetchGroups, createGroup, updateGroup, deleteGroup, fetchGroupDetail, addGroupMembers, removeGroupMember, fetchStaff, createStaff, updateStaff, fetchAdminDocuments, fetchAdminDocumentDetail, fetchAdminProjectDetail, updateWaterfall, fetchSignatureRequests, createSignatureRequest, cancelSignatureRequest, fetchProspects, updateProspectStatus, fetchProspectStats, fmt, fmtCurrency } from "./api.js";
 
 const sans = "'DM Sans', -apple-system, sans-serif";
 const red = "#EA2028";
@@ -22,6 +22,7 @@ export default function AdminPanel({ user, onLogout }) {
     { id: "signatures", label: "Signatures" },
     { id: "groups", label: "Groups" },
     { id: "staff", label: "Staff" },
+    { id: "prospects", label: "Prospects" },
     { id: "inbox", label: "Inbox" },
   ];
 
@@ -41,6 +42,7 @@ export default function AdminPanel({ user, onLogout }) {
     signatures: <SignatureManager toast={showToast} />,
     groups: <GroupManager toast={showToast} />,
     staff: <StaffManager toast={showToast} />,
+    prospects: <ProspectManager toast={showToast} />,
     inbox: <AdminInbox user={user} toast={showToast} />,
   };
 
@@ -1188,6 +1190,154 @@ function SignatureManager({ toast }) {
         </div>
       )}
     </>
+  );
+}
+
+// ─── PROSPECT MANAGER ───
+function ProspectManager({ toast }) {
+  const [prospects, setProspects] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [expandedId, setExpandedId] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  async function load() {
+    setLoading(true);
+    try {
+      const [list, s] = await Promise.all([
+        fetchProspects(filterStatus !== "all" ? { status: filterStatus } : {}),
+        fetchProspectStats(),
+      ]);
+      setProspects(list);
+      setStats(s);
+    } catch (err) {
+      toast("Failed to load prospects: " + err.message, "error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { load(); }, [filterStatus]);
+
+  async function handleStatusChange(id, newStatus) {
+    try {
+      await updateProspectStatus(id, newStatus);
+      toast("Prospect status updated", "success");
+      load();
+    } catch (err) {
+      toast("Failed to update: " + err.message, "error");
+    }
+  }
+
+  const statusColors = {
+    new: "#2563EB", contacted: "#8B7128", qualified: green, converted: "#7C3AED", declined: "#999",
+  };
+
+  if (loading && !prospects.length) return <div style={{ padding: 40, color: "#999", textAlign: "center" }}>Loading prospects...</div>;
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <h2 style={{ fontSize: 20, fontWeight: 400, color: darkText }}>Prospect Leads</h2>
+      </div>
+
+      {/* Stats Badges */}
+      {stats && (
+        <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
+          {[
+            { key: "all", label: "All", count: stats.total },
+            { key: "new", label: "New", count: stats.new, color: "#2563EB" },
+            { key: "contacted", label: "Contacted", count: stats.contacted, color: "#8B7128" },
+            { key: "qualified", label: "Qualified", count: stats.qualified, color: green },
+            { key: "converted", label: "Converted", count: stats.converted, color: "#7C3AED" },
+            { key: "declined", label: "Declined", count: stats.declined, color: "#999" },
+          ].map(s => (
+            <button key={s.key} onClick={() => setFilterStatus(s.key)} style={{
+              padding: "6px 14px", borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans,
+              display: "flex", alignItems: "center", gap: 6,
+              background: filterStatus === s.key ? (s.color || darkText) : "#fff",
+              color: filterStatus === s.key ? "#fff" : (s.color || darkText),
+              border: `1px solid ${filterStatus === s.key ? "transparent" : "#DDD"}`,
+              fontWeight: filterStatus === s.key ? 500 : 400,
+            }}>
+              {s.label}
+              <span style={{
+                padding: "1px 6px", borderRadius: 8, fontSize: 10,
+                background: filterStatus === s.key ? "rgba(255,255,255,.25)" : `${s.color || darkText}15`,
+                color: filterStatus === s.key ? "#fff" : (s.color || darkText),
+              }}>{s.count}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Table */}
+      <div style={{ border: "1px solid #E8E5DE", borderRadius: 6, overflow: "hidden", background: "#fff" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+          <thead>
+            <tr style={{ background: "#FAFAF8", borderBottom: "1px solid #E8E5DE" }}>
+              {["Name", "Email", "Interest Range", "Project", "Status", "Date"].map(h => (
+                <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontWeight: 500, color: "#888", fontSize: 11, textTransform: "uppercase", letterSpacing: ".04em" }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {prospects.length === 0 && (
+              <tr><td colSpan={6} style={{ padding: 40, textAlign: "center", color: "#999" }}>No prospects found</td></tr>
+            )}
+            {prospects.map(p => (
+              <>
+                <tr key={p.id} onClick={() => setExpandedId(expandedId === p.id ? null : p.id)} style={{
+                  borderBottom: "1px solid #F0EDEA", cursor: "pointer", transition: "background .1s",
+                }} onMouseEnter={e => e.currentTarget.style.background = "#FAFAF8"}
+                   onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                  <td style={{ padding: "12px 16px", fontWeight: 500, color: darkText }}>{p.name}</td>
+                  <td style={{ padding: "12px 16px", color: "#666" }}>{p.email}</td>
+                  <td style={{ padding: "12px 16px", color: "#666" }}>{p.investmentRange || "—"}</td>
+                  <td style={{ padding: "12px 16px", color: "#666" }}>{p.interestedProject?.name || "General"}</td>
+                  <td style={{ padding: "12px 16px" }}>
+                    <span style={{
+                      fontSize: 11, padding: "3px 10px", borderRadius: 3,
+                      background: `${statusColors[p.status] || "#999"}15`,
+                      color: statusColors[p.status] || "#999",
+                      fontWeight: 500, textTransform: "capitalize",
+                    }}>{p.status}</span>
+                  </td>
+                  <td style={{ padding: "12px 16px", color: "#999", fontSize: 12 }}>{new Date(p.createdAt).toLocaleDateString()}</td>
+                </tr>
+                {expandedId === p.id && (
+                  <tr key={`${p.id}-detail`}>
+                    <td colSpan={6} style={{ padding: "16px 24px", background: "#FAFAF8", borderBottom: "1px solid #E8E5DE" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 16 }}>
+                        <div><span style={{ fontSize: 11, color: "#AAA", display: "block", marginBottom: 4 }}>Phone</span><span style={{ fontSize: 13, color: darkText }}>{p.phone || "Not provided"}</span></div>
+                        <div><span style={{ fontSize: 11, color: "#AAA", display: "block", marginBottom: 4 }}>Entity Type</span><span style={{ fontSize: 13, color: darkText }}>{p.entityType || "Not specified"}</span></div>
+                        <div><span style={{ fontSize: 11, color: "#AAA", display: "block", marginBottom: 4 }}>Accreditation</span><span style={{ fontSize: 13, color: darkText }}>{p.accreditationStatus || "Not specified"}</span></div>
+                      </div>
+                      {p.message && (
+                        <div style={{ marginBottom: 16 }}>
+                          <span style={{ fontSize: 11, color: "#AAA", display: "block", marginBottom: 4 }}>Message</span>
+                          <p style={{ fontSize: 13, color: "#555", lineHeight: 1.6, background: "#fff", padding: "12px 16px", borderRadius: 4, border: "1px solid #E8E5DE" }}>{p.message}</p>
+                        </div>
+                      )}
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <span style={{ fontSize: 12, color: "#888" }}>Update status:</span>
+                        <select value={p.status} onChange={e => handleStatusChange(p.id, e.target.value)} style={{
+                          padding: "6px 12px", border: "1px solid #DDD", borderRadius: 4, fontSize: 12, fontFamily: sans,
+                        }}>
+                          {["new", "contacted", "qualified", "converted", "declined"].map(s => (
+                            <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
 
