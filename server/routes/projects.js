@@ -61,8 +61,13 @@ function toFullProject(p) {
       file: d.file,
     })),
     updates: (p.updates || []).map((u) => ({
+      id: u.id,
       date: u.date,
       text: u.text,
+      completionPct: u.completionPct,
+      unitsSold: u.unitsSold,
+      revenue: u.revenue,
+      status: u.status,
     })),
     performanceHistory: (p.performanceHistory || []).map((h) => ({
       month: h.month,

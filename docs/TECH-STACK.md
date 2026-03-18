@@ -2,39 +2,44 @@
 
 > Last updated: 2026-03-17
 
-## Current Stack (Prototype)
+## Current Stack
 
 | Layer | Technology | Notes |
 |-------|-----------|-------|
 | Frontend | React 18 + Vite 5 | Single-page app, inline styles |
 | Charts | Recharts | AreaChart, BarChart |
 | Styling | Inline styles, CSS-in-JS objects | Dark/light theme via React Context |
-| Auth | Hardcoded demo credentials | sessionStorage, no real auth |
-| Data | Static mock data (`data.js`) | No backend, no database |
-| Hosting | Local dev only | Not deployed |
+| Backend | Express 4 (REST API) | 25+ endpoints, port 3003 |
+| Database | SQLite + Prisma ORM | 22 models, proper migration history |
+| Auth | JWT + bcrypt | Role-based (INVESTOR/ADMIN/GP), password validation, login history |
+| File Storage | Local disk + S3 adapter | Abstraction layer, signed URL ready |
+| Email | Demo logger (dev mode) | SendGrid-ready templates for all notification types |
+| Testing | Jest + Supertest | 57 automated security tests (auth, IDOR, RBAC) |
+| Deployment | Docker + docker-compose | Multi-stage build, production-ready |
+| Financial Engine | Custom JS (XIRR, MOIC, waterfall) | Newton-Raphson IRR, scenario modeling |
 
 ---
 
-## Production Stack (Planned)
+## Production Scaling (Future)
 
 ### Core Infrastructure
 
-| Layer | Recommended | Alternatives | Cost |
-|-------|------------|-------------|------|
-| **Database** | PostgreSQL + Prisma ORM | Supabase (hosted Postgres) | Free–$25/mo |
-| **Backend API** | Express or Fastify (REST) | Next.js API routes, tRPC | Free |
-| **Hosting (API)** | Railway or Fly.io | AWS ECS, Render | $5–20/mo |
-| **Hosting (Frontend)** | Vercel | Netlify, Cloudflare Pages | Free–$20/mo |
-| **Domain + SSL** | Custom domain via registrar | SSL free via hosting provider | ~$12/yr |
+| Layer | Current | Production Upgrade | Cost |
+|-------|---------|-------------------|------|
+| **Database** | SQLite + Prisma ORM | PostgreSQL (Railway/Supabase) | Free–$25/mo |
+| **Backend API** | Express 4 (REST) | Same (already production-grade) | Free |
+| **Hosting** | Docker (local/any host) | Railway, Fly.io, or AWS ECS | $5–20/mo |
+| **Frontend** | Vite build → static | Vercel/Netlify or served from Express | Free–$20/mo |
+| **Domain + SSL** | Local dev | Custom domain via registrar | ~$12/yr |
 
-### Authentication & Security
+### Authentication & Security (Built)
 
-| Service | Recommended | Alternatives | Cost |
-|---------|------------|-------------|------|
-| **Auth** | Custom JWT (bcrypt + refresh tokens) | Clerk ($25/mo after 10K MAU), Auth0 (free < 7.5K MAU) | Free–$25/mo |
-| **2FA** | Twilio Verify | Built into Clerk/Auth0, or TOTP via `speakeasy` | $0.05/verification |
-| **Session management** | Custom (token refresh + idle timeout) | Clerk/Auth0 handle this | Free |
-| **RBAC** | Custom middleware (Investor, Admin, GP roles) | Clerk Organizations | Free |
+| Service | Status | Notes | Cost |
+|---------|--------|-------|------|
+| **Auth** | Built — Custom JWT + bcrypt | Password validation, login history, audit logging | Free |
+| **RBAC** | Built — Custom middleware | INVESTOR/ADMIN/GP roles, IDOR protection on all routes | Free |
+| **Security Tests** | Built — 57 automated tests | Auth, IDOR, role-based access regression tests | Free |
+| **2FA** | Planned | Twilio Verify or TOTP via `speakeasy` | $0.05/verification |
 
 ### Document Storage & E-Signature
 

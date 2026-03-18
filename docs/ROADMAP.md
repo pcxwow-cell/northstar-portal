@@ -6,45 +6,43 @@
 
 **Architecture**: React 18 + Vite 5 frontend → Express API + Prisma ORM + SQLite (dev)
 
-### What's Built (Sprints 1-5 + targeting)
+### What's Built (Sprints 1-11)
 - JWT authentication with bcrypt, role-based access (INVESTOR/ADMIN/GP)
-- Express API with 7+ endpoints serving data from SQLite database
-- Prisma schema with 13 models (users, projects, cap tables, waterfalls, distributions, documents, messages, threads)
-- All 6 investor pages fetch from API (no more static data.js)
+- Express API with 25+ endpoints serving data from SQLite database
+- Prisma schema with 22 models, proper migration history
+- All investor pages fetch from API (no more static data.js)
 - File storage abstraction (local disk + S3 adapter ready)
-- Document upload/download with per-investor access control
-- Admin panel: dashboard, project management, investor management, doc upload, messaging
-- Targeted messaging (ALL/PROJECT/INDIVIDUAL), investor invite/approve/deactivate
-- KPI editing (committed, called, currentValue, IRR, MOIC per investor per project)
-- Threaded messaging models + API routes (backend complete, frontend WIP)
+- Document upload/download with per-investor access control and audit trail
+- Admin panel: dashboard, project management, investor CRM, doc upload, messaging
+- Threaded messaging (bidirectional): investor-to-staff, admin compose with recipient picker
+- Investor segments/groups with CRUD API and member management
+- Project KPI dashboard with inline editing, waterfall config, construction updates
+- Capital account statements, XIRR/MOIC calculations, cash flow recording
+- E-signature integration, notification system with email templates
+- Self-service profile editing, password change, login history
+- IDOR protection on all investor-scoped endpoints
+- Automated security test suite (57 tests covering auth, IDOR, RBAC)
+- Docker deployment (Dockerfile + docker-compose)
+- Audit logging for all sensitive operations
 - Branded UI matching northstardevelopment.ca (logo, colors, responsive)
 
-### What's Missing (based on Juniper Square / Agora / InvestNext research)
+### What's Remaining
 **Investor side:**
-- Threaded messaging with Northstar staff (backend done, frontend WIP)
-- Portfolio summary dashboard (total contributions/distributions chart)
-- Capital account statement per project
-- Self-service profile editing
-- Investment detail page with photos, map, transaction history
-- Notification center
+- Recent activity feed on dashboard
+- Mobile-optimized layouts
 
 **Admin side:**
-- Investor profile pages (full CRM view per investor)
-- Admin inbox for receiving/replying to messages
-- Searchable recipient picker (Gmail-style To field + investor table)
-- Project KPI dashboard with inline editing
-- Document access audit trail (who can see what, who viewed it)
-- Company staff management (add/edit ADMIN/GP users)
-- Investor segments/tags for bulk operations
+- Bulk document upload
+- Read receipts and engagement tracking
 
 **Infrastructure:**
-- Email notifications (new docs, messages, distributions)
-- Docker deployment + HTTPS
-- E-signatures, KYC/AML, payment processing
+- Production email transport (SendGrid/Resend — currently demo mode)
+- KYC/AML, payment processing
+- Two-factor authentication
 
 ---
 
-## Phase 1 — Foundation (Backend + Auth)
+## Phase 1 — Foundation (Backend + Auth) -- COMPLETE
 
 **Goal**: Replace mock data with a real backend. Secure the portal.
 
@@ -62,7 +60,7 @@
 
 ---
 
-## Phase 2 — Admin Panel (GP/Staff Tools)
+## Phase 2 — Admin Panel (GP/Staff Tools) -- COMPLETE
 
 **Goal**: Give Northstar staff the ability to manage data without touching code.
 
@@ -122,7 +120,7 @@ Real estate developers typically provide prospective investors with:
 
 ---
 
-## Phase 4 — Document & Signature Infrastructure
+## Phase 4 — Document & Signature Infrastructure -- MOSTLY COMPLETE
 
 **Goal**: Real document storage, delivery, and legally binding e-signatures.
 
@@ -139,7 +137,7 @@ Real estate developers typically provide prospective investors with:
 
 ---
 
-## Phase 5 — Financial Engine
+## Phase 5 — Financial Engine -- COMPLETE
 
 **Goal**: Automate calculations that are currently hardcoded.
 
@@ -189,18 +187,18 @@ Real estate developers typically provide prospective investors with:
 
 ---
 
-## Technology Decisions (TBD)
+## Technology Decisions (Resolved)
 
-| Decision | Options | Notes |
-|----------|---------|-------|
-| Backend framework | Express, Fastify, Next.js API routes | Currently Vite SPA — could migrate to Next.js for SSR + API |
-| Database | PostgreSQL + Prisma, Supabase | Prisma schema already exists in server/ directory |
-| Auth provider | Custom JWT, Auth0, Clerk, Supabase Auth | Depends on complexity needs |
-| File storage | AWS S3, Supabase Storage, Cloudflare R2 | Need signed URLs for secure doc access |
-| E-signature | DocuSign, HelloSign, PandaDoc, built-in | Legal requirements drive this choice |
-| Payments | Stripe, Dwolla, Covercy | For distribution ACH payments |
-| Email | SendGrid, Postmark, SES | Transactional email for notifications |
-| Hosting | Vercel, AWS, Railway, Fly.io | Depends on backend choice |
+| Decision | Chosen | Notes |
+|----------|--------|-------|
+| Backend framework | Express 4 | REST API, Vite SPA frontend |
+| Database | SQLite (dev) + Prisma ORM | Migrations in place, ready for PostgreSQL in production |
+| Auth provider | Custom JWT + bcrypt | Role-based access (INVESTOR/ADMIN/GP), login history, password validation |
+| File storage | Local disk + S3 adapter | Abstraction layer ready for S3/R2 swap |
+| E-signature | Built-in (demo mode) | DocuSign/HelloSign integration ready for production |
+| Email | Demo logger (dev), SendGrid-ready | Templates for all notification types built |
+| Hosting | Docker (Dockerfile + docker-compose) | Ready for Railway, Fly.io, AWS, etc. |
+| Testing | Jest + Supertest | 57 automated security tests (auth, IDOR, RBAC) |
 
 ---
 

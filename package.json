@@ -7,7 +7,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "cd server && npx jest --forceExit --detectOpenHandles",
+    "db:migrate": "npx prisma migrate deploy",
+    "db:seed": "cd server && node seed.js",
+    "db:reset": "npx prisma migrate reset --force"
   },
   "dependencies": {
     "@prisma/client": "^6.19.2",

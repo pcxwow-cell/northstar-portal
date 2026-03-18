@@ -35,15 +35,18 @@
 - [x] Investor can log in with real credentials (JWT + bcrypt)
 - [x] Investor sees only their projects with real data from database
 - [x] Investor can download real documents (local storage + S3-ready)
-- [ ] Investor can send/receive threaded messages with Northstar staff
-- [ ] Investor can view capital account statement per project
-- [ ] Investor can update own profile/contact info
+- [x] Investor can send/receive threaded messages with Northstar staff
+- [x] Investor can view capital account statement per project
+- [x] Investor can update own profile/contact info
 - [x] Admin can log in and see admin dashboard
-- [ ] Admin has full investor CRM (profile pages, search, filter, segments)
+- [x] Admin has full investor CRM (profile pages, search, filter, segments)
 - [x] Admin can upload documents and assign to projects/investors
-- [ ] Admin has inbox to receive and reply to investor messages
-- [ ] Admin can edit project KPIs from project detail view
+- [x] Admin has inbox to receive and reply to investor messages
+- [x] Admin can edit project KPIs from project detail view
 - [x] Admin can update project status and construction progress
+- [x] IDOR protection on all investor-scoped endpoints
+- [x] Automated security test suite (57 tests covering auth, IDOR, RBAC)
+- [x] Prisma migrations set up (no more db push in production)
 
 ---
 
@@ -53,15 +56,15 @@
 
 | ID | Description | Priority | Status |
 |----|-------------|----------|--------|
-| M7.1 | Mount thread routes in Express server (`/api/v1/threads`) | P0 | ○ |
-| M7.2 | Migrate seed data: convert 5 existing messages into threads | P0 | ○ |
-| M7.3 | Add thread API functions to frontend `api.js` | P0 | ○ |
-| M7.4 | **Investor MessagesPage**: thread list → thread detail → reply | P0 | ○ |
-| M7.5 | **Investor compose**: "New Message" → subject + body (auto-targets staff) | P0 | ○ |
-| M7.6 | **Admin Inbox page**: thread list with unread badges, filter by status | P0 | ○ |
-| M7.7 | **Admin compose**: searchable recipient picker (search bar + investor table modal) | P0 | ○ |
-| M7.8 | **Admin thread detail**: view conversation, reply inline | P0 | ○ |
-| M7.9 | Investor constraint: can only message STAFF, not other investors | P0 | ○ |
+| M7.1 | Mount thread routes in Express server (`/api/v1/threads`) | P0 | ● |
+| M7.2 | Migrate seed data: convert 5 existing messages into threads | P0 | ● |
+| M7.3 | Add thread API functions to frontend `api.js` | P0 | ● |
+| M7.4 | **Investor MessagesPage**: thread list → thread detail → reply | P0 | ● |
+| M7.5 | **Investor compose**: "New Message" → subject + body (auto-targets staff) | P0 | ● |
+| M7.6 | **Admin Inbox page**: thread list with unread badges, filter by status | P0 | ● |
+| M7.7 | **Admin compose**: searchable recipient picker (search bar + investor table modal) | P0 | ● |
+| M7.8 | **Admin thread detail**: view conversation, reply inline | P0 | ● |
+| M7.9 | Investor constraint: can only message STAFF, not other investors | P0 | ● |
 
 ---
 
@@ -71,16 +74,16 @@
 
 | ID | Description | Priority | Status |
 |----|-------------|----------|--------|
-| M8.1 | **Investor profile page**: click investor name → full detail view | P0 | ○ |
-| M8.2 | Profile sections: contact info, project assignments with KPIs, documents they access, message history | P0 | ○ |
-| M8.3 | **Edit KPIs inline**: from profile page, edit committed/called/value/IRR/MOIC per project | P0 | ○ |
-| M8.4 | **Document access matrix**: per investor, show all docs they can see + view/download status | P0 | ○ |
-| M8.5 | **Message history**: show all threads with this investor on their profile page | P1 | ○ |
-| M8.6 | **User management**: invite, approve, deactivate, reset password, edit role (INVESTOR/ADMIN/GP) | P0 | ○ |
-| M8.7 | **Company staff management**: add/edit ADMIN and GP users, not just investors | P0 | ○ |
-| M8.8 | **Investor segments/groups**: create custom groups ("Class A LPs", "Porthaven Investors", "2024 Cohort"), assign investors to groups | P0 | ○ |
-| M8.9 | **Group CRUD API**: create/edit/delete groups, add/remove members, list groups with member counts | P0 | ○ |
-| M8.10 | **Use groups everywhere**: messaging targets groups, doc distribution targets groups, filter investor list by group | P0 | ○ |
+| M8.1 | **Investor profile page**: click investor name → full detail view | P0 | ● |
+| M8.2 | Profile sections: contact info, project assignments with KPIs, documents they access, message history | P0 | ● |
+| M8.3 | **Edit KPIs inline**: from profile page, edit committed/called/value/IRR/MOIC per project | P0 | ● |
+| M8.4 | **Document access matrix**: per investor, show all docs they can see + view/download status | P0 | ● |
+| M8.5 | **Message history**: show all threads with this investor on their profile page | P1 | ● |
+| M8.6 | **User management**: invite, approve, deactivate, reset password, edit role (INVESTOR/ADMIN/GP) | P0 | ● |
+| M8.7 | **Company staff management**: add/edit ADMIN and GP users, not just investors | P0 | ● |
+| M8.8 | **Investor segments/groups**: create custom groups ("Class A LPs", "Porthaven Investors", "2024 Cohort"), assign investors to groups | P0 | ● |
+| M8.9 | **Group CRUD API**: create/edit/delete groups, add/remove members, list groups with member counts | P0 | ● |
+| M8.10 | **Use groups everywhere**: messaging targets groups, doc distribution targets groups, filter investor list by group | P0 | ● |
 
 ---
 
@@ -90,14 +93,14 @@
 
 | ID | Description | Priority | Status |
 |----|-------------|----------|--------|
-| M9.1 | **Admin document dashboard**: table with name, project, category, investor count, view/download stats | P0 | ○ |
-| M9.2 | **Document detail view (admin)**: metadata, file preview thumbnail, access list with view/download timestamps | P0 | ○ |
-| M9.3 | **Upload with targeting**: upload → assign to project, investor group, specific investors, or general (all) | P0 | ○ |
-| M9.4 | **Enhance DocumentAssignment**: add viewedAt, downloadedAt, acknowledgedAt columns | P0 | ○ |
-| M9.5 | **Track downloads**: when investor clicks download, record timestamp in DocumentAssignment | P0 | ○ |
-| M9.6 | **Investor document center**: two tabs (General / Signature docs), filter by project + category | P1 | ○ |
-| M9.7 | **Documents within investment detail page**: project-specific docs appear inline on project detail | P1 | ○ |
-| M9.8 | **Action required workflow**: investor acknowledges "Action Required" docs, admin sees who acknowledged | P1 | ○ |
+| M9.1 | **Admin document dashboard**: table with name, project, category, investor count, view/download stats | P0 | ● |
+| M9.2 | **Document detail view (admin)**: metadata, file preview thumbnail, access list with view/download timestamps | P0 | ● |
+| M9.3 | **Upload with targeting**: upload → assign to project, investor group, specific investors, or general (all) | P0 | ● |
+| M9.4 | **Enhance DocumentAssignment**: add viewedAt, downloadedAt, acknowledgedAt columns | P0 | ● |
+| M9.5 | **Track downloads**: when investor clicks download, record timestamp in DocumentAssignment | P0 | ● |
+| M9.6 | **Investor document center**: two tabs (General / Signature docs), filter by project + category | P1 | ● |
+| M9.7 | **Documents within investment detail page**: project-specific docs appear inline on project detail | P1 | ● |
+| M9.8 | **Action required workflow**: investor acknowledges "Action Required" docs, admin sees who acknowledged | P1 | ● |
 | M9.9 | **Bulk upload**: upload multiple files at once with batch assignment | P2 | ○ |
 
 ---
@@ -108,13 +111,13 @@
 
 | ID | Description | Priority | Status |
 |----|-------------|----------|--------|
-| M10.1 | **Project detail page (admin)**: click project → full dashboard | P0 | ○ |
-| M10.2 | Project KPI section: edit totalRaise, status, completion%, description | P0 | ○ |
-| M10.3 | **Investor table within project**: all LPs in this project with their KPIs, editable inline | P0 | ○ |
-| M10.4 | **Waterfall config editor**: edit prefReturn, catchUp, carry; manage tiers | P1 | ○ |
-| M10.5 | **Documents tab within project**: all docs assigned to this project, upload new | P0 | ○ |
-| M10.6 | **Construction updates tab**: post updates, view history | P0 | ○ |
-| M10.7 | **Cap table view within project**: same as investor view but editable | P1 | ○ |
+| M10.1 | **Project detail page (admin)**: click project → full dashboard | P0 | ● |
+| M10.2 | Project KPI section: edit totalRaise, status, completion%, description | P0 | ● |
+| M10.3 | **Investor table within project**: all LPs in this project with their KPIs, editable inline | P0 | ● |
+| M10.4 | **Waterfall config editor**: edit prefReturn, catchUp, carry; manage tiers | P1 | ● |
+| M10.5 | **Documents tab within project**: all docs assigned to this project, upload new | P0 | ● |
+| M10.6 | **Construction updates tab**: post updates, view history | P0 | ● |
+| M10.7 | **Cap table view within project**: same as investor view but editable | P1 | ● |
 
 ---
 
@@ -124,11 +127,11 @@
 
 | ID | Description | Priority | Status |
 |----|-------------|----------|--------|
-| M11.1 | **Portfolio summary dashboard**: total contributions, total distributions, total value chart | P0 | ○ |
-| M11.2 | **Capital account statement**: per project — contributions, distributions, ending balance | P0 | ○ |
-| M11.3 | **Investment detail page**: click project → full detail with photos, map placeholder, description, docs, updates, transaction history | P1 | ○ |
-| M11.4 | **Self-service profile**: investor can update name, email, phone, entity info | P1 | ○ |
-| M11.5 | **Notification center**: in-app notifications for new docs, messages, distributions | P1 | ○ |
+| M11.1 | **Portfolio summary dashboard**: total contributions, total distributions, total value chart | P0 | ● |
+| M11.2 | **Capital account statement**: per project — contributions, distributions, ending balance | P0 | ● |
+| M11.3 | **Investment detail page**: click project → full detail with photos, map placeholder, description, docs, updates, transaction history | P1 | ● |
+| M11.4 | **Self-service profile**: investor can update name, email, phone, entity info | P1 | ● |
+| M11.5 | **Notification center**: in-app notifications for new docs, messages, distributions | P1 | ● |
 | M11.6 | **Recent activity feed** on dashboard: "New document uploaded", "Distribution received", "Message from GP" | P2 | ○ |
 
 ---
@@ -151,9 +154,9 @@
 
 | ID | Description | Priority | Status |
 |----|-------------|----------|--------|
-| B.1 | E-signature integration (DocuSign / HelloSign) | P1 | ○ |
+| B.1 | E-signature integration (DocuSign / HelloSign) | P1 | ● |
 | B.2 | K-1 mass upload with auto-matching to investors | P1 | ○ |
-| B.3 | Document view tracking (who opened, when, how long) | P1 | ○ |
+| B.3 | Document view tracking (who opened, when, how long) | P1 | ● |
 | B.4 | Watermarked document viewing | P2 | ○ |
 | B.5 | Capital call notice PDF generation | P2 | ○ |
 | B.6 | Quarterly report PDF generation | P2 | ○ |
@@ -162,17 +165,17 @@
 
 | ID | Description | Priority | Status |
 |----|-------------|----------|--------|
-| C.1 | IRR calculation from actual cash flows | P1 | ○ |
-| C.2 | MOIC calculation | P1 | ○ |
-| C.3 | Waterfall distribution calculator | P2 | ○ |
-| C.4 | Capital account tracking (automated) | P2 | ○ |
+| C.1 | IRR calculation from actual cash flows | P1 | ● |
+| C.2 | MOIC calculation | P1 | ● |
+| C.3 | Waterfall distribution calculator | P2 | ● |
+| C.4 | Capital account tracking (automated) | P2 | ● |
 | C.5 | Distribution payment processing (ACH/wire) | P3 | ○ |
 
 ### Phase D — Notifications & Integrations
 
 | ID | Description | Priority | Status |
 |----|-------------|----------|--------|
-| D.1 | Email notifications (SendGrid/Resend): new docs, messages, distributions, capital calls | P1 | ○ |
+| D.1 | Email notifications (SendGrid/Resend): new docs, messages, distributions, capital calls | P1 | ● |
 | D.2 | Read receipts and engagement tracking | P2 | ○ |
 | D.3 | Slack/Teams integration for admin alerts | P3 | ○ |
 | D.4 | Accounting integration (QuickBooks/Xero) | P3 | ○ |
@@ -186,10 +189,10 @@
 | E.3 | Table sorting and search on all data tables | P1 | ○ |
 | E.4 | PDF/CSV export for distributions, cap table | P2 | ○ |
 | E.5 | Two-factor authentication | P2 | ○ |
-| E.6 | Audit logging for compliance | P2 | ○ |
-| E.7 | Multi-entity support (Individual, LLC, Trust, IRA) | P2 | ○ |
+| E.6 | Audit logging for compliance | P2 | ● |
+| E.7 | Multi-entity support (Individual, LLC, Trust, IRA) | P2 | ● |
 | E.8 | White-label branding configuration | P3 | ○ |
-| E.9 | Docker deployment + HTTPS | P0 | ○ |
+| E.9 | Docker deployment + HTTPS | P0 | ● |
 
 ---
 
@@ -211,4 +214,16 @@
 | M5 | Sprint 5: Admin Panel (dashboard, projects, investors, doc upload, messaging) | 2026-03-17 |
 | — | Message targeting (ALL/PROJECT/INDIVIDUAL) | 2026-03-17 |
 | — | Investor management (invite, approve, deactivate, KPI editing) | 2026-03-17 |
-| — | Thread models + routes (WIP — backend only) | 2026-03-17 |
+| M6 | Sprint 6: E-signature integration, notification system, prospect forms | 2026-03-17 |
+| M7 | Sprint 7: Threaded Messaging (backend + frontend, bidirectional) | 2026-03-17 |
+| M8 | Sprint 8: Admin Investor CRM (profile pages, groups, staff management) | 2026-03-17 |
+| M9 | Sprint 9: Document Management (upload/download tracking, access audit) | 2026-03-17 |
+| M10 | Sprint 10: Project KPI Dashboard (admin project detail, waterfall config) | 2026-03-17 |
+| M11 | Sprint 11: Investor Portal Enhancements (capital accounts, self-service profile) | 2026-03-17 |
+| — | Financial engine: XIRR, MOIC, waterfall calculator, scenario modeling | 2026-03-17 |
+| — | IDOR protection on all investor-scoped routes | 2026-03-17 |
+| — | Automated security test suite (57 tests: auth, IDOR, RBAC) | 2026-03-17 |
+| — | Prisma migrations (proper migration history, no more db push) | 2026-03-17 |
+| — | Docker deployment (Dockerfile + docker-compose) | 2026-03-17 |
+| — | Audit logging for all sensitive operations | 2026-03-17 |
+| — | Email notification templates (document, signature, message, capital call) | 2026-03-17 |
