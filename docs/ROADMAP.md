@@ -28,17 +28,20 @@
 
 ### What's Remaining
 **Investor side:**
-- Recent activity feed on dashboard
-- Mobile-optimized layouts
+- Photo gallery and map integration on project detail
+- Banking details in self-service profile
+- Live offerings banner on dashboard
 
 **Admin side:**
-- Bulk document upload
-- Read receipts and engagement tracking
+- Bulk document upload / K-1 auto-matching
+- Activity timeline on investor profiles
+- Read receipts and engagement metrics
 
 **Infrastructure:**
-- Production email transport (SendGrid/Resend — currently demo mode)
-- KYC/AML, payment processing
-- Two-factor authentication
+- Production email transport (SendGrid/Resend — adapters built, needs real API keys)
+- KYC/AML integration (Parallel Markets / VerifyInvestor)
+- Payment processing (ACH/wire)
+- Sentry error tracking (middleware wired, needs DSN)
 
 ---
 
@@ -198,7 +201,7 @@ Real estate developers typically provide prospective investors with:
 | E-signature | Built-in (demo mode) | DocuSign/HelloSign integration ready for production |
 | Email | Demo logger (dev), SendGrid-ready | Templates for all notification types built |
 | Hosting | Docker (Dockerfile + docker-compose) | Ready for Railway, Fly.io, AWS, etc. |
-| Testing | Jest + Supertest | 57 automated security tests (auth, IDOR, RBAC) |
+| Testing | Jest + Supertest | 107+ automated tests (auth, IDOR, RBAC, workflow e2e) |
 
 ---
 

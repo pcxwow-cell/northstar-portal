@@ -13,20 +13,20 @@
 
 | Feature | Northstar (Current) | Industry Standard (JS/Agora/IN) | Gap |
 |---------|--------------------|---------------------------------|-----|
-| **Investor Dashboard** | Project cards with basic metrics | Card-style portfolio overview with charts, total contributions/distributions, live offerings banner | Missing: portfolio summary charts, total contribution/distribution visuals |
-| **Investment Detail** | Project page with cap table, waterfall, docs | Click-through to full investment detail: contributions, ownership %, outstanding capital, property photos, map, transaction history | Missing: transaction history, map, photo gallery |
-| **Capital Account** | IRR/MOIC shown per project (manually entered) | Per-investor capital account statement: contributions, distributions, ending balance, gain/loss | Missing: capital account view entirely |
-| **Documents** | Flat list with project/category filter | Two-tab layout (General / Signature docs), filter by investment/date/profile, docs appear within investment pages too | Missing: signature tab, docs within project detail, view tracking |
-| **Messaging** | One-way broadcasts, fake replies | Threaded communication tied to investor profile, email notifications, engagement tracking | Missing: real threads (WIP), email notifications, read receipts |
-| **Self-Service** | Login only | Update profile, banking details, contact info, entity management | Missing: profile editing, entity management |
-| **Onboarding** | None (admin creates accounts) | Self-guided subscription: profile → investment amount → payment → doc signing → KYC | Missing: entire onboarding flow |
-| **Live Offerings** | None | Data rooms with "Invest Now" button, offering cards on dashboard | Missing: prospective investor features |
-| **Notifications** | None | Email alerts for new docs, distributions, capital calls, messages | Missing: email notification system |
-| **Mobile** | Responsive CSS | Dedicated mobile app or fully responsive portal | Partial — basic responsive |
-| **Admin CRM** | Flat investor list with search/filter | Full CRM: investor profile pages, activity timeline, segment/tags, pipeline management | Missing: profile pages, activity log, segments |
-| **Admin Docs** | Upload with project assignment | Bulk upload, auto-match K-1s to investors, access audit trail, view tracking | Missing: bulk upload, view tracking, audit |
-| **Admin Messaging** | Send-only composer | Inbox + sent, threaded replies, segment targeting, email integration, engagement metrics | Missing: admin inbox (WIP), engagement tracking |
-| **Admin KPIs** | Edit via investor expand panel | Per-project dashboard with editable KPIs, waterfall config UI, capital account management | Missing: project KPI dashboard, waterfall editor |
+| **Investor Dashboard** | KPI strip, action center, project cards, charts, activity feed | Card-style portfolio overview with charts, total contributions/distributions, live offerings banner | Mostly closed — missing: live offerings banner |
+| **Investment Detail** | Project detail with cap table, waterfall, docs, construction updates | Click-through to full investment detail: contributions, ownership %, outstanding capital, property photos, map, transaction history | Mostly closed — missing: map integration, photo gallery |
+| **Capital Account** | Per-project capital account with IRR/MOIC from real cash flows | Per-investor capital account statement: contributions, distributions, ending balance, gain/loss | Complete |
+| **Documents** | Filter by project/category, download tracking, signature status | Two-tab layout (General / Signature docs), filter by investment/date/profile, docs appear within investment pages too | Complete |
+| **Messaging** | Bidirectional threaded messaging, email notifications, compose | Threaded communication tied to investor profile, email notifications, engagement tracking | Mostly closed — missing: read receipts |
+| **Self-Service** | Profile editing, entity management, password change, MFA | Update profile, banking details, contact info, entity management | Mostly closed — missing: banking details |
+| **Onboarding** | Welcome wizard for first-time users | Self-guided subscription: profile → investment amount → payment → doc signing → KYC | Partial — wizard exists, missing: subscription flow, KYC |
+| **Live Offerings** | Prospect portal with project detail and interest forms | Data rooms with "Invest Now" button, offering cards on dashboard | Partial — missing: gated data rooms, "Invest Now" |
+| **Notifications** | Email templates + demo mode + SendGrid/Resend adapters | Email alerts for new docs, distributions, capital calls, messages | Scaffolded — needs real API keys |
+| **Mobile** | Responsive tables, mobile nav, stat grid reflow | Dedicated mobile app or fully responsive portal | Good — covers most layouts |
+| **Admin CRM** | Profile pages, search/filter, groups, KPI editing, message history | Full CRM: investor profile pages, activity timeline, segment/tags, pipeline management | Mostly closed — missing: activity timeline |
+| **Admin Docs** | Upload with targeting, access audit, view/download tracking | Bulk upload, auto-match K-1s to investors, access audit trail, view tracking | Mostly closed — missing: bulk upload, K-1 matching |
+| **Admin Messaging** | Inbox, compose with recipient picker, threaded replies | Inbox + sent, threaded replies, segment targeting, email integration, engagement metrics | Mostly closed — missing: engagement metrics |
+| **Admin KPIs** | Project KPI dashboard, waterfall config, cash flow CRUD | Per-project dashboard with editable KPIs, waterfall config UI, capital account management | Complete |
 
 ---
 
@@ -142,10 +142,10 @@
 
 | ID | Description | Priority | Status |
 |----|-------------|----------|--------|
-| A.1 | Company landing page: about, investment approach, leadership, track record | P1 | ○ |
-| A.2 | Active opportunities listing with project summary cards | P1 | ○ |
-| A.3 | Project detail / deal page with data room | P1 | ○ |
-| A.4 | Investor interest form + lead capture | P1 | ○ |
+| A.1 | Company landing page: about, investment approach, leadership, track record | P1 | ● |
+| A.2 | Active opportunities listing with project summary cards | P1 | ● |
+| A.3 | Project detail / deal page with data room | P1 | ● |
+| A.4 | Investor interest form + lead capture | P1 | ● |
 | A.5 | Self-service subscription workflow (invest online) | P2 | ○ |
 | A.6 | Accreditation verification (Parallel Markets / Verify Investor) | P2 | ○ |
 | A.7 | KYC/AML identity verification | P3 | ○ |
@@ -184,11 +184,11 @@
 
 | ID | Description | Priority | Status |
 |----|-------------|----------|--------|
-| E.1 | Loading states and error handling for all API calls | P1 | ○ |
-| E.2 | Empty states ("No distributions yet", etc.) | P1 | ○ |
-| E.3 | Table sorting and search on all data tables | P1 | ○ |
-| E.4 | PDF/CSV export for distributions, cap table | P2 | ○ |
-| E.5 | Two-factor authentication | P2 | ○ |
+| E.1 | Loading states and error handling for all API calls | P1 | ● |
+| E.2 | Empty states ("No distributions yet", etc.) | P1 | ● |
+| E.3 | Table sorting and search on all data tables | P1 | ● |
+| E.4 | PDF/CSV export for distributions, cap table | P2 | ● |
+| E.5 | Two-factor authentication | P2 | ● |
 | E.6 | Audit logging for compliance | P2 | ● |
 | E.7 | Multi-entity support (Individual, LLC, Trust, IRA) | P2 | ● |
 | E.8 | White-label branding configuration | P3 | ○ |

@@ -636,11 +636,17 @@ router.post("/groups/:id/members", async (req, res, next) => {
     const { userIds } = req.body;
     if (!userIds?.length) return res.status(400).json({ error: "userIds required" });
     const groupId = parseInt(req.params.id);
-    await prisma.groupMember.createMany({
-      data: userIds.map(uid => ({ groupId, userId: parseInt(uid) })),
-      skipDuplicates: true,
-    });
-    res.json({ ok: true, added: userIds.length });
+    let added = 0;
+    for (const uid of userIds) {
+      try {
+        await prisma.groupMember.create({ data: { groupId, userId: parseInt(uid) } });
+        added++;
+      } catch (e) {
+        // Skip duplicates (unique constraint violation)
+        if (!e.message.includes("Unique constraint")) throw e;
+      }
+    }
+    res.json({ ok: true, added });
   } catch (err) { next(err); }
 });
 
