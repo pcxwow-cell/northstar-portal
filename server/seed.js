@@ -9,6 +9,9 @@ async function main() {
   // Clear all tables (reverse dependency order)
   await prisma.cashFlow.deleteMany();
   await prisma.prospect.deleteMany();
+  await prisma.investorEntity.deleteMany();
+  await prisma.groupMember.deleteMany();
+  await prisma.investorGroup.deleteMany();
   await prisma.notificationLog.deleteMany();
   await prisma.notificationPreference.deleteMany();
   await prisma.signatureSigner.deleteMany();
@@ -67,6 +70,14 @@ async function main() {
       sqft: "96,000", units: 108, completionPct: 68, totalRaise: 6000000,
       description: "Redefining Downtown Port Coquitlam. Mixed-use development with 108 residences and curated ground-floor retail adjacent to Leigh Square.",
       prefReturnPct: 8.0, gpCatchupPct: 100, carryPct: 20,
+      estimatedCompletion: new Date("2027-06-30"),
+      unitsSold: 42, revenue: 18500000,
+      orgChart: JSON.stringify([
+        { role: "Project Lead", name: "Gord Wylie", company: "Northstar Pacific" },
+        { role: "EVP Development", name: "Jeff Brown", company: "Northstar Pacific" },
+        { role: "Architect", name: "RHA Architecture", company: "RHA" },
+        { role: "General Contractor", name: "Marcon Construction", company: "Marcon" },
+      ]),
     },
     {
       id: 2, name: "Livy", location: "Port Coquitlam",
@@ -74,6 +85,12 @@ async function main() {
       sqft: "52,000", units: 64, completionPct: 15, totalRaise: 4500000,
       description: "Launching Spring 2025. Studio to 2 bedroom and den residences in the heart of Poco. Transit-oriented with walkable amenities.",
       prefReturnPct: 8.0, gpCatchupPct: 100, carryPct: 20,
+      estimatedCompletion: new Date("2028-03-31"),
+      unitsSold: 0, revenue: 0,
+      orgChart: JSON.stringify([
+        { role: "Project Lead", name: "Jeff Brown", company: "Northstar Pacific" },
+        { role: "Architect", name: "RHA Architecture", company: "RHA" },
+      ]),
     },
     {
       id: 3, name: "Estrella", location: "British Columbia",
@@ -81,6 +98,12 @@ async function main() {
       sqft: "38,000", units: 40, completionPct: 45, totalRaise: 3800000,
       description: "40 unit purpose-built rental with 20% affordable housing allocation. Construction underway with anticipated completion Q2 2026.",
       prefReturnPct: 8.0, gpCatchupPct: 100, carryPct: 20,
+      estimatedCompletion: new Date("2026-06-30"),
+      unitsSold: 0, revenue: 840000,
+      orgChart: JSON.stringify([
+        { role: "Project Lead", name: "Gord Wylie", company: "Northstar Pacific" },
+        { role: "Property Manager", name: "Coastal PM", company: "Coastal PM Inc." },
+      ]),
     },
     {
       id: 4, name: "Panorama Building 6", location: "Surrey, BC",
@@ -88,6 +111,12 @@ async function main() {
       sqft: "55,000", units: null, completionPct: 100, totalRaise: 8000000,
       description: "Purpose-built 55,000sf office building for the Federal Government. Completed Fall 2024. Fully leased on a long-term net lease.",
       prefReturnPct: 8.0, gpCatchupPct: 100, carryPct: 20,
+      estimatedCompletion: new Date("2024-10-15"),
+      unitsSold: 0, revenue: 2200000,
+      orgChart: JSON.stringify([
+        { role: "Project Lead", name: "Gord Wylie", company: "Northstar Pacific" },
+        { role: "Tenant", name: "Government of Canada", company: "PSPC" },
+      ]),
     },
   ];
 
@@ -96,11 +125,20 @@ async function main() {
   }
   console.log("  Projects: 4");
 
+  // ─── Investor Entities ───
+  const entity1 = await prisma.investorEntity.create({
+    data: { userId: 1, name: "James Chen (Individual)", type: "Individual", taxId: "***-**-1234", address: "1234 Marine Drive, Vancouver BC", state: "BC", isDefault: true },
+  });
+  const entity2 = await prisma.investorEntity.create({
+    data: { userId: 1, name: "Chen Family Trust", type: "Trust", taxId: "88-***7890", address: "1234 Marine Drive, Vancouver BC", state: "BC", isDefault: false },
+  });
+  console.log("  InvestorEntities: 2");
+
   // ─── Investor-Project relationships ───
   await prisma.investorProject.createMany({
     data: [
-      { userId: 1, projectId: 1, committed: 500000, called: 400000, currentValue: 480000, irr: 18.4, moic: 1.20 },
-      { userId: 1, projectId: 2, committed: 350000, called: 175000, currentValue: 192500, irr: 22.1, moic: 1.10 },
+      { userId: 1, projectId: 1, committed: 500000, called: 400000, currentValue: 480000, irr: 18.4, moic: 1.20, entityId: entity1.id },
+      { userId: 1, projectId: 2, committed: 350000, called: 175000, currentValue: 192500, irr: 22.1, moic: 1.10, entityId: entity2.id },
     ],
   });
   console.log("  InvestorProjects: 2");
@@ -430,6 +468,21 @@ async function main() {
   ];
   await prisma.prospect.createMany({ data: prospectsData });
   console.log("  Prospects: " + prospectsData.length);
+
+  // ─── Investor Groups (with hierarchy) ───
+  const classAGroup = await prisma.investorGroup.create({
+    data: { name: "Class A LPs", description: "Primary Class A limited partners", color: "#3D7A54", tier: "primary" },
+  });
+  const subLPGroup = await prisma.investorGroup.create({
+    data: { name: "Class A — West Coast", description: "West Coast sub-group of Class A", color: "#2E6B45", tier: "sub-lp", parentId: classAGroup.id },
+  });
+  const classBGroup = await prisma.investorGroup.create({
+    data: { name: "Class B LPs", description: "Secondary Class B limited partners", color: "#8B7128", tier: "primary" },
+  });
+  // Add James Chen to Class A
+  await prisma.groupMember.create({ data: { groupId: classAGroup.id, userId: 1 } });
+  await prisma.groupMember.create({ data: { groupId: subLPGroup.id, userId: 1 } });
+  console.log("  InvestorGroups: 3 (with hierarchy)");
 
   // ─── Cash Flows ───
   const cashFlowsData = [

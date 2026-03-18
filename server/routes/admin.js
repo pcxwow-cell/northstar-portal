@@ -24,6 +24,48 @@ router.get("/dashboard", async (req, res, next) => {
 });
 
 // ─── PROJECTS CRUD ───
+router.post("/projects", async (req, res, next) => {
+  try {
+    const { name, location, type, status, description, sqft, units, totalRaise,
+            estimatedCompletion, unitsSold, revenue, prefReturnPct, gpCatchupPct, carryPct, orgChart } = req.body;
+    if (!name) return res.status(400).json({ error: "Project name is required" });
+    const project = await prisma.project.create({
+      data: {
+        name,
+        location: location || null,
+        type: type || null,
+        status: status || "Pre-Development",
+        description: description || null,
+        sqft: sqft || null,
+        units: units != null ? parseInt(units) : null,
+        totalRaise: totalRaise ? parseFloat(totalRaise) : 0,
+        estimatedCompletion: estimatedCompletion ? new Date(estimatedCompletion) : null,
+        unitsSold: unitsSold ? parseInt(unitsSold) : 0,
+        revenue: revenue ? parseFloat(revenue) : 0,
+        orgChart: orgChart || null,
+        prefReturnPct: prefReturnPct != null ? parseFloat(prefReturnPct) : 8.0,
+        gpCatchupPct: gpCatchupPct != null ? parseFloat(gpCatchupPct) : 100,
+        carryPct: carryPct != null ? parseFloat(carryPct) : 20,
+      },
+    });
+    // Create default waterfall tiers
+    const tiers = [
+      { name: "Return of Capital", lpShare: "100%", gpShare: "0%", threshold: "1.0x" },
+      { name: `Preferred Return (${project.prefReturnPct}%)`, lpShare: "100%", gpShare: "0%", threshold: `${project.prefReturnPct}% IRR` },
+      { name: "GP Catch-Up", lpShare: "0%", gpShare: "100%", threshold: "Until 20/80" },
+      { name: "Carried Interest", lpShare: `${100 - project.carryPct}%`, gpShare: `${project.carryPct}%`, threshold: "Above pref" },
+    ];
+    await prisma.waterfallTier.createMany({
+      data: tiers.map((t, i) => ({
+        projectId: project.id, tierOrder: i + 1, tierName: t.name,
+        lpShare: t.lpShare, gpShare: t.gpShare, threshold: t.threshold, status: "pending",
+      })),
+    });
+    audit.log(req, "project_create", `project:${project.id}`, { name: project.name });
+    res.status(201).json({ id: project.id, name: project.name, status: project.status });
+  } catch (err) { next(err); }
+});
+
 router.get("/projects", async (req, res, next) => {
   try {
     const projects = await prisma.project.findMany({
@@ -60,6 +102,8 @@ router.get("/projects/:id", async (req, res, next) => {
       status: project.status, description: project.description, sqft: project.sqft,
       units: project.units, completion: project.completionPct, totalRaise: project.totalRaise,
       prefReturn: project.prefReturnPct, catchUp: project.gpCatchupPct, carry: project.carryPct,
+      estimatedCompletion: project.estimatedCompletion, unitsSold: project.unitsSold,
+      revenue: project.revenue, orgChart: project.orgChart,
       investors: project.investorProjects.map(ip => ({
         userId: ip.user.id, name: ip.user.name, email: ip.user.email,
         committed: ip.committed, called: ip.called, currentValue: ip.currentValue, irr: ip.irr, moic: ip.moic,
@@ -86,7 +130,8 @@ router.get("/projects/:id", async (req, res, next) => {
 
 router.put("/projects/:id", async (req, res, next) => {
   try {
-    const { name, location, type, status, description, sqft, units, completionPct, totalRaise } = req.body;
+    const { name, location, type, status, description, sqft, units, completionPct, totalRaise,
+            estimatedCompletion, unitsSold, revenue, orgChart } = req.body;
     const project = await prisma.project.update({
       where: { id: parseInt(req.params.id) },
       data: {
@@ -99,6 +144,10 @@ router.put("/projects/:id", async (req, res, next) => {
         ...(units !== undefined && { units }),
         ...(completionPct !== undefined && { completionPct }),
         ...(totalRaise !== undefined && { totalRaise }),
+        ...(estimatedCompletion !== undefined && { estimatedCompletion: estimatedCompletion ? new Date(estimatedCompletion) : null }),
+        ...(unitsSold !== undefined && { unitsSold: parseInt(unitsSold) }),
+        ...(revenue !== undefined && { revenue: parseFloat(revenue) }),
+        ...(orgChart !== undefined && { orgChart }),
       },
     });
     audit.log(req, "project_update", `project:${project.id}`, { name: project.name });
@@ -516,28 +565,34 @@ router.get("/investors/:id/profile", async (req, res, next) => {
 router.get("/groups", async (req, res, next) => {
   try {
     const groups = await prisma.investorGroup.findMany({
-      include: { _count: { select: { members: true } } },
+      include: { _count: { select: { members: true, children: true } }, children: { select: { id: true } } },
       orderBy: { name: "asc" },
     });
-    res.json(groups.map(g => ({ id: g.id, name: g.name, description: g.description, color: g.color, memberCount: g._count.members })));
+    res.json(groups.map(g => ({ id: g.id, name: g.name, description: g.description, color: g.color, parentId: g.parentId, tier: g.tier, memberCount: g._count.members, childCount: g._count.children })));
   } catch (err) { next(err); }
 });
 
 router.post("/groups", async (req, res, next) => {
   try {
-    const { name, description, color } = req.body;
+    const { name, description, color, parentId, tier } = req.body;
     if (!name) return res.status(400).json({ error: "Group name is required" });
-    const group = await prisma.investorGroup.create({ data: { name, description, color } });
-    res.status(201).json({ id: group.id, name: group.name, description: group.description, color: group.color, memberCount: 0 });
+    const group = await prisma.investorGroup.create({
+      data: { name, description, color, parentId: parentId ? parseInt(parentId) : null, tier: tier || "primary" },
+    });
+    res.status(201).json({ id: group.id, name: group.name, description: group.description, color: group.color, parentId: group.parentId, tier: group.tier, memberCount: 0 });
   } catch (err) { next(err); }
 });
 
 router.put("/groups/:id", async (req, res, next) => {
   try {
-    const { name, description, color } = req.body;
+    const { name, description, color, parentId, tier } = req.body;
     const group = await prisma.investorGroup.update({
       where: { id: parseInt(req.params.id) },
-      data: { ...(name !== undefined && { name }), ...(description !== undefined && { description }), ...(color !== undefined && { color }) },
+      data: {
+        ...(name !== undefined && { name }), ...(description !== undefined && { description }),
+        ...(color !== undefined && { color }), ...(parentId !== undefined && { parentId: parentId ? parseInt(parentId) : null }),
+        ...(tier !== undefined && { tier }),
+      },
     });
     res.json(group);
   } catch (err) { next(err); }
@@ -578,11 +633,18 @@ router.get("/groups/:id", async (req, res, next) => {
   try {
     const group = await prisma.investorGroup.findUnique({
       where: { id: parseInt(req.params.id) },
-      include: { members: { include: { user: { select: { id: true, name: true, email: true, status: true } } } } },
+      include: {
+        members: { include: { user: { select: { id: true, name: true, email: true, status: true } } } },
+        children: { include: { _count: { select: { members: true } } } },
+        parent: { select: { id: true, name: true } },
+      },
     });
     if (!group) return res.status(404).json({ error: "Group not found" });
     res.json({
       id: group.id, name: group.name, description: group.description, color: group.color,
+      parentId: group.parentId, tier: group.tier,
+      parent: group.parent ? { id: group.parent.id, name: group.parent.name } : null,
+      children: group.children.map(c => ({ id: c.id, name: c.name, color: c.color, tier: c.tier, memberCount: c._count.members })),
       members: group.members.map(m => ({ id: m.user.id, name: m.user.name, email: m.user.email, status: m.user.status })),
     });
   } catch (err) { next(err); }

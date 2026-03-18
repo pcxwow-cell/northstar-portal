@@ -556,6 +556,99 @@ export async function fetchAuditLog(params = {}) {
   return apiFetch(`/admin/audit-log${qs ? "?" + qs : ""}`);
 }
 
+// ─── Create Project (admin) ───
+export async function createProject(data) {
+  if (_demoMode) {
+    const newProject = { id: Date.now(), ...data, completion: 0, investorCount: 0, docCount: 0 };
+    return newProject;
+  }
+  return apiFetch("/admin/projects", { method: "POST", body: JSON.stringify(data) });
+}
+
+// ─── Investor Entities ───
+const _demoEntities = [
+  { id: 1, name: "James Chen (Individual)", type: "Individual", taxId: "***-**-1234", address: "1234 Marine Drive, Vancouver BC", state: "BC", isDefault: true, investmentCount: 1, createdAt: new Date().toISOString() },
+  { id: 2, name: "Chen Family Trust", type: "Trust", taxId: "88-***7890", address: "1234 Marine Drive, Vancouver BC", state: "BC", isDefault: false, investmentCount: 1, createdAt: new Date().toISOString() },
+];
+
+export async function fetchEntities(userId) {
+  if (_demoMode) return _demoEntities;
+  return apiFetch(`/investors/${userId}/entities`);
+}
+
+export async function createEntity(userId, data) {
+  if (_demoMode) {
+    const entity = { id: Date.now(), ...data, investmentCount: 0, createdAt: new Date().toISOString() };
+    _demoEntities.push(entity);
+    return entity;
+  }
+  return apiFetch(`/investors/${userId}/entities`, { method: "POST", body: JSON.stringify(data) });
+}
+
+export async function updateEntity(entityId, data) {
+  if (_demoMode) {
+    const e = _demoEntities.find(x => x.id === entityId);
+    if (e) Object.assign(e, data);
+    return e || { id: entityId, ...data };
+  }
+  return apiFetch(`/entities/${entityId}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export async function deleteEntity(entityId) {
+  if (_demoMode) {
+    const idx = _demoEntities.findIndex(x => x.id === entityId);
+    if (idx >= 0) _demoEntities.splice(idx, 1);
+    return { ok: true };
+  }
+  return apiFetch(`/entities/${entityId}`, { method: "DELETE" });
+}
+
+// ─── Financial Modeler ───
+export async function runFinancialModel(data) {
+  if (_demoMode) {
+    const { scenario = {} } = data;
+    const { totalInvestment = 500000, holdPeriodYears = 5, exitValue = 1000000, annualCashFlow = 0, prefReturnPct = 8, carryPct = 20 } = scenario;
+    const totalCashFlows = annualCashFlow * holdPeriodYears;
+    const totalDistributable = exitValue + totalCashFlows;
+    const prefAmount = totalInvestment * (Math.pow(1 + prefReturnPct / 100, holdPeriodYears) - 1);
+    const roc = Math.min(totalDistributable, totalInvestment);
+    const pref = Math.min(totalDistributable - roc, prefAmount);
+    const remaining = totalDistributable - roc - pref;
+    const catchup = Math.min(remaining, pref * carryPct / (100 - carryPct));
+    const rest = remaining - catchup;
+    const lpReturn = roc + pref + rest * (100 - carryPct) / 100;
+    const gpReturn = catchup + rest * carryPct / 100;
+    const lpMOIC = totalInvestment > 0 ? Math.round((lpReturn / totalInvestment) * 100) / 100 : 0;
+    const lpIRR = holdPeriodYears > 0 ? Math.round((Math.pow(lpReturn / totalInvestment, 1 / holdPeriodYears) - 1) * 10000) / 10000 : 0;
+    const yearByYear = [{ year: 0, cashFlow: -totalInvestment, cumulativeCashFlow: -totalInvestment, balance: totalInvestment }];
+    let cumCF = -totalInvestment;
+    for (let y = 1; y <= holdPeriodYears; y++) {
+      const cf = y < holdPeriodYears ? annualCashFlow : annualCashFlow + exitValue;
+      cumCF += cf;
+      yearByYear.push({ year: y, cashFlow: cf, cumulativeCashFlow: cumCF, balance: y < holdPeriodYears ? totalInvestment : 0 });
+    }
+    return {
+      totalReturn: lpReturn + gpReturn, lpReturn, gpReturn, lpIRR, gpIRR: null, lpMOIC,
+      equityMultiple: lpMOIC, cashOnCash: totalInvestment > 0 ? Math.round((totalCashFlows / totalInvestment) * 10000) / 100 : 0,
+      yearByYear,
+      waterfallBreakdown: [
+        { name: "Return of Capital", lpAmount: roc, gpAmount: 0, total: roc },
+        { name: `Preferred Return (${prefReturnPct}%)`, lpAmount: Math.round(pref * 100) / 100, gpAmount: 0, total: Math.round(pref * 100) / 100 },
+        { name: "GP Catch-Up", lpAmount: 0, gpAmount: Math.round(catchup * 100) / 100, total: Math.round(catchup * 100) / 100 },
+        { name: "Carried Interest", lpAmount: Math.round(rest * (100 - carryPct) / 100 * 100) / 100, gpAmount: Math.round(rest * carryPct / 100 * 100) / 100, total: Math.round(rest * 100) / 100 },
+      ],
+      sensitivity: [
+        { label: "-20%", exitValue: Math.round(exitValue * 0.8), lpReturn: Math.round(lpReturn * 0.85), lpIRR: lpIRR * 0.7, lpMOIC: Math.round(lpMOIC * 0.85 * 100) / 100 },
+        { label: "-10%", exitValue: Math.round(exitValue * 0.9), lpReturn: Math.round(lpReturn * 0.92), lpIRR: lpIRR * 0.85, lpMOIC: Math.round(lpMOIC * 0.92 * 100) / 100 },
+        { label: "+0%", exitValue, lpReturn, lpIRR, lpMOIC },
+        { label: "+10%", exitValue: Math.round(exitValue * 1.1), lpReturn: Math.round(lpReturn * 1.08), lpIRR: lpIRR * 1.15, lpMOIC: Math.round(lpMOIC * 1.08 * 100) / 100 },
+        { label: "+20%", exitValue: Math.round(exitValue * 1.2), lpReturn: Math.round(lpReturn * 1.15), lpIRR: lpIRR * 1.3, lpMOIC: Math.round(lpMOIC * 1.15 * 100) / 100 },
+      ],
+    };
+  }
+  return apiFetch("/finance/model-scenario", { method: "POST", body: JSON.stringify(data) });
+}
+
 // ─── Utility (kept from data.js) ───
 export const fmt = (n) => {
   if (typeof n !== "number") return n;

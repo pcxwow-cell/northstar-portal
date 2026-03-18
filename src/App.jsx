@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef, createContext, useContext } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-import { login as apiLogin, logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, downloadDocument, fetchThreads, fetchThread, createThread, replyToThread, updateProfile, fetchSignatureRequests, signDocument, fetchNotificationPreferences, updateNotificationPreferences, fetchCapitalAccount, fetchCashFlows, calculateWaterfallApi, fmt, fmtCurrency } from "./api.js";
+import { login as apiLogin, logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, downloadDocument, fetchThreads, fetchThread, createThread, replyToThread, updateProfile, fetchSignatureRequests, signDocument, fetchNotificationPreferences, updateNotificationPreferences, fetchCapitalAccount, fetchCashFlows, calculateWaterfallApi, fetchEntities, createEntity, updateEntity, deleteEntity, runFinancialModel, fmt, fmtCurrency } from "./api.js";
 import AdminPanel from "./Admin.jsx";
 import ProspectPortal from "./ProspectPortal.jsx";
 
@@ -536,9 +536,11 @@ function Portfolio({ myProjects, investor }) {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
               {[
                 { label: "Size", value: `${project.sqft} sf` },
-                { label: "Units", value: project.units || "N/A" },
+                { label: "Units", value: project.units ? `${project.unitsSold || 0} sold / ${project.units} total` : "N/A" },
                 { label: "Completion", value: `${project.completion}%` },
                 { label: "Total Raise", value: fmtCurrency(project.totalRaise) },
+                ...(project.estimatedCompletion ? [{ label: "Est. Completion", value: new Date(project.estimatedCompletion).toLocaleDateString("en-US", { month: "short", year: "numeric" }) }] : []),
+                ...(project.revenue ? [{ label: "Revenue", value: fmtCurrency(project.revenue) }] : []),
               ].map((d, i) => (
                 <div key={i} style={{ padding: "12px 0", borderBottom: `1px solid ${line}` }}>
                   <div style={{ fontSize: 10, color: t3, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>{d.label}</div>
@@ -1256,6 +1258,172 @@ function MessagesPage({ toast, investor }) {
 }
 
 // ─── PAGE: PROFILE ──────────────────────────────────────
+// ─── PAGE: FINANCIAL MODELER ──────────────────────────────
+function FinancialModelerPage({ myProjects, investor }) {
+  const { bg, surface, line, t1, t2, t3 } = useTheme();
+  const [selectedIdx, setSelectedIdx] = useState(0);
+  const project = myProjects[selectedIdx];
+
+  const [exitValue, setExitValue] = useState("");
+  const [holdYears, setHoldYears] = useState("5");
+  const [annualCF, setAnnualCF] = useState("0");
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  async function handleRun() {
+    setLoading(true);
+    try {
+      const r = await runFinancialModel({
+        projectId: project.id,
+        scenario: {
+          totalInvestment: project.totalRaise || 0,
+          holdPeriodYears: parseInt(holdYears) || 5,
+          exitValue: parseFloat(exitValue) || (project.totalRaise || 0) * 2,
+          annualCashFlow: parseFloat(annualCF) || 0,
+          prefReturnPct: project.waterfall?.prefReturn || 8,
+          gpCatchupPct: 100,
+          carryPct: project.waterfall?.carry || 20,
+        },
+      });
+      setResult(r);
+    } catch (err) { console.error(err); }
+    setLoading(false);
+  }
+
+  const inputSt = { width: "100%", padding: "10px 14px", background: `${line}33`, border: `1px solid ${line}`, borderRadius: 2, fontSize: 14, fontFamily: sans, color: t1, boxSizing: "border-box", outline: "none" };
+
+  return (
+    <>
+      <div style={{ marginBottom: 40 }}>
+        <h1 style={{ fontFamily: serif, fontSize: 36, fontWeight: 300 }}>Financial Modeler</h1>
+        <p style={{ fontSize: 14, color: t2, marginTop: 6 }}>Scenario modeling with waterfall distribution analysis</p>
+      </div>
+
+      {/* Project selector */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
+        {myProjects.map((p, i) => (
+          <span key={p.id} onClick={() => { setSelectedIdx(i); setResult(null); }} style={{
+            fontSize: 12, padding: "6px 16px", borderRadius: 2, cursor: "pointer",
+            border: `1px solid ${selectedIdx === i ? red + "55" : line}`,
+            color: selectedIdx === i ? t1 : t3,
+            background: selectedIdx === i ? `${red}11` : "transparent",
+          }}>{p.name}</span>
+        ))}
+      </div>
+
+      {/* Inputs */}
+      <div style={{ border: `1px solid ${line}`, borderRadius: 2, padding: 24, background: surface, marginBottom: 32 }}>
+        <div style={{ fontSize: 12, color: t3, marginBottom: 16 }}>
+          Total Investment: ${fmt(project.totalRaise || 0)} | Pref: {project.waterfall?.prefReturn || 8}% | Carry: {project.waterfall?.carry || 20}%
+        </div>
+        <div style={{ display: "flex", gap: 16, alignItems: "flex-end" }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 11, color: t3, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>Exit Value ($)</div>
+            <input type="number" value={exitValue} onChange={e => setExitValue(e.target.value)} placeholder={`e.g. ${fmt((project.totalRaise || 0) * 2)}`} style={inputSt} />
+          </div>
+          <div style={{ width: 140 }}>
+            <div style={{ fontSize: 11, color: t3, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>Hold Period (yrs)</div>
+            <input type="number" min="1" max="30" value={holdYears} onChange={e => setHoldYears(e.target.value)} style={inputSt} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 11, color: t3, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>Annual Cash Flow ($)</div>
+            <input type="number" value={annualCF} onChange={e => setAnnualCF(e.target.value)} placeholder="0" style={inputSt} />
+          </div>
+          <button onClick={handleRun} disabled={loading} style={{
+            padding: "10px 24px", background: loading ? `${red}88` : red, color: "#fff",
+            border: "none", borderRadius: 2, fontSize: 13, cursor: loading ? "default" : "pointer", fontFamily: sans, whiteSpace: "nowrap",
+          }}>{loading ? "Running..." : "Run Scenario"}</button>
+        </div>
+      </div>
+
+      {result && (
+        <>
+          {/* Summary cards */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 1, background: line, borderRadius: 2, overflow: "hidden", marginBottom: 40 }}>
+            {[
+              { label: "LP IRR", value: result.lpIRR != null ? `${(result.lpIRR * 100).toFixed(1)}%` : "--" },
+              { label: "LP MOIC", value: `${result.lpMOIC}x` },
+              { label: "Equity Multiple", value: `${result.equityMultiple}x` },
+              { label: "Cash on Cash", value: `${result.cashOnCash}%` },
+            ].map((c, i) => (
+              <div key={i} style={{ background: surface, padding: 24 }}>
+                <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: t3, marginBottom: 10 }}>{c.label}</div>
+                <div style={{ fontSize: 22, fontFamily: serif, fontWeight: 400 }}>{c.value}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Waterfall breakdown */}
+          <SectionHeader title="Waterfall Breakdown" />
+          <div style={{ border: `1px solid ${line}`, borderRadius: 2, overflow: "hidden", marginBottom: 40 }}>
+            {result.waterfallBreakdown.map((tier, i) => {
+              const total = tier.lpAmount + tier.gpAmount;
+              const lpPct = total > 0 ? (tier.lpAmount / total) * 100 : 0;
+              return (
+                <div key={i} style={{ padding: "16px 20px", borderBottom: i < result.waterfallBreakdown.length - 1 ? `1px solid ${line}` : "none" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                    <span style={{ fontFamily: serif, fontSize: 14, color: t1 }}>{tier.name}</span>
+                    <span style={{ fontSize: 12, color: t3 }}>LP: ${fmt(Math.round(tier.lpAmount))} | GP: ${fmt(Math.round(tier.gpAmount))}</span>
+                  </div>
+                  <div style={{ height: 10, background: `${line}55`, borderRadius: 2, overflow: "hidden", display: "flex" }}>
+                    <div style={{ width: `${lpPct}%`, background: green, height: "100%" }} />
+                    <div style={{ width: `${100 - lpPct}%`, background: `${red}88`, height: "100%" }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Year-by-year */}
+          <SectionHeader title="Year-by-Year Cash Flow" />
+          <div style={{ border: `1px solid ${line}`, borderRadius: 2, overflow: "hidden", marginBottom: 40 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "100px 1fr 1fr 1fr", padding: "10px 20px", borderBottom: `1px solid ${line}`, background: `${line}33` }}>
+              {["Year", "Cash Flow", "Cumulative", "Balance"].map(h => (
+                <span key={h} style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".08em", color: t3, textAlign: h === "Year" ? "left" : "right" }}>{h}</span>
+              ))}
+            </div>
+            {result.yearByYear.map((y, i) => (
+              <div key={i} style={{ display: "grid", gridTemplateColumns: "100px 1fr 1fr 1fr", padding: "12px 20px", borderBottom: i < result.yearByYear.length - 1 ? `1px solid ${line}` : "none" }}>
+                <span style={{ fontSize: 13, color: t2 }}>{y.year === 0 ? "Initial" : `Year ${y.year}`}</span>
+                <span style={{ textAlign: "right", fontSize: 13, fontWeight: 500, color: y.cashFlow < 0 ? red : green }}>
+                  {y.cashFlow < 0 ? `-$${fmt(Math.abs(Math.round(y.cashFlow)))}` : `$${fmt(Math.round(y.cashFlow))}`}
+                </span>
+                <span style={{ textAlign: "right", fontSize: 13, color: y.cumulativeCashFlow < 0 ? red : green }}>
+                  {y.cumulativeCashFlow < 0 ? `-$${fmt(Math.abs(Math.round(y.cumulativeCashFlow)))}` : `$${fmt(Math.round(y.cumulativeCashFlow))}`}
+                </span>
+                <span style={{ textAlign: "right", fontSize: 13, color: t2 }}>${fmt(Math.round(y.balance))}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Sensitivity */}
+          {result.sensitivity && (
+            <>
+              <SectionHeader title="Sensitivity Analysis" right="IRR at different exit values" />
+              <div style={{ border: `1px solid ${line}`, borderRadius: 2, overflow: "hidden", marginBottom: 40 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "80px 1fr 1fr 100px 80px", padding: "10px 20px", borderBottom: `1px solid ${line}`, background: `${line}33` }}>
+                  {["", "Exit Value", "LP Return", "LP IRR", "MOIC"].map(h => (
+                    <span key={h} style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".08em", color: t3, textAlign: h === "" ? "left" : "right" }}>{h}</span>
+                  ))}
+                </div>
+                {result.sensitivity.map((s, i) => (
+                  <div key={i} style={{ display: "grid", gridTemplateColumns: "80px 1fr 1fr 100px 80px", padding: "12px 20px", borderBottom: i < result.sensitivity.length - 1 ? `1px solid ${line}` : "none", background: s.label === "+0%" ? `${line}22` : "transparent" }}>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: t1 }}>{s.label}</span>
+                    <span style={{ textAlign: "right", fontSize: 13, color: t2 }}>${fmt(s.exitValue)}</span>
+                    <span style={{ textAlign: "right", fontSize: 13, color: green }}>${fmt(Math.round(s.lpReturn))}</span>
+                    <span style={{ textAlign: "right", fontSize: 13, color: t1 }}>{s.lpIRR != null ? `${(s.lpIRR * 100).toFixed(1)}%` : "--"}</span>
+                    <span style={{ textAlign: "right", fontSize: 13, color: t2 }}>{s.lpMOIC}x</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </>
+      )}
+    </>
+  );
+}
+
 function ProfilePage({ investor, toast, onUpdate }) {
   const { bg, surface, line, t1, t2, t3 } = useTheme();
   const [name, setName] = useState(investor.name);
@@ -1264,10 +1432,31 @@ function ProfilePage({ investor, toast, onUpdate }) {
   const [saving, setSaving] = useState(false);
   const [notifPrefs, setNotifPrefs] = useState(null);
   const [savingPrefs, setSavingPrefs] = useState(false);
+  const [entities, setEntities] = useState([]);
+  const [showEntityForm, setShowEntityForm] = useState(false);
+  const [entityForm, setEntityForm] = useState({ name: "", type: "Individual", taxId: "", address: "", state: "", isDefault: false });
 
   useEffect(() => {
     fetchNotificationPreferences().then(p => setNotifPrefs(p)).catch(() => {});
+    if (investor.id) loadEntities();
   }, []);
+
+  function loadEntities() { fetchEntities(investor.id).then(setEntities).catch(() => setEntities([])); }
+
+  async function handleCreateEntity(e) {
+    e.preventDefault();
+    try {
+      await createEntity(investor.id, entityForm);
+      toast.add("Entity created", "success");
+      setShowEntityForm(false);
+      setEntityForm({ name: "", type: "Individual", taxId: "", address: "", state: "", isDefault: false });
+      loadEntities();
+    } catch (err) { toast.add(err.message, "error"); }
+  }
+
+  async function handleDeleteEntity(entityId) {
+    try { await deleteEntity(entityId); toast.add("Entity deleted", "success"); loadEntities(); } catch (err) { toast.add(err.message, "error"); }
+  }
 
   async function handlePrefToggle(key) {
     const updated = { ...notifPrefs, [key]: !notifPrefs[key] };
@@ -1354,6 +1543,65 @@ function ProfilePage({ investor, toast, onUpdate }) {
             <div style={{ fontSize: 13, color: t2, marginBottom: 8 }}>Password: ••••••••</div>
             <div style={{ fontSize: 12, color: t3 }}>Contact admin to change password</div>
           </div>
+        </div>
+      </div>
+
+      {/* Investment Entities */}
+      <div style={{ marginTop: 40 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <h2 style={{ fontFamily: serif, fontSize: 24, fontWeight: 300 }}>Investment Entities</h2>
+          <span onClick={() => setShowEntityForm(!showEntityForm)} style={{ fontSize: 12, padding: "6px 14px", border: `1px solid ${line}`, borderRadius: 4, cursor: "pointer", color: t3 }}>{showEntityForm ? "Cancel" : "Add Entity"}</span>
+        </div>
+        {showEntityForm && (
+          <form onSubmit={handleCreateEntity} style={{ border: `1px solid ${line}`, borderRadius: 4, padding: "20px 24px", background: surface, marginBottom: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+              <div>
+                <label style={{ fontSize: 11, color: t3, display: "block", marginBottom: 4 }}>Entity Name</label>
+                <input value={entityForm.name} onChange={e => setEntityForm(f => ({ ...f, name: e.target.value }))} required style={inputStyle} placeholder="e.g. Chen Family Trust" />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, color: t3, display: "block", marginBottom: 4 }}>Type</label>
+                <select value={entityForm.type} onChange={e => setEntityForm(f => ({ ...f, type: e.target.value }))} style={inputStyle}>
+                  <option>Individual</option><option>LLC</option><option>Trust</option><option>IRA</option><option>Corporation</option><option>Partnership</option>
+                </select>
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
+              <div>
+                <label style={{ fontSize: 11, color: t3, display: "block", marginBottom: 4 }}>Tax ID</label>
+                <input value={entityForm.taxId} onChange={e => setEntityForm(f => ({ ...f, taxId: e.target.value }))} style={inputStyle} placeholder="EIN or SSN" />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, color: t3, display: "block", marginBottom: 4 }}>State</label>
+                <input value={entityForm.state} onChange={e => setEntityForm(f => ({ ...f, state: e.target.value }))} style={inputStyle} placeholder="e.g. BC" />
+              </div>
+              <div style={{ display: "flex", alignItems: "flex-end", gap: 12 }}>
+                <label style={{ fontSize: 12, color: t2, display: "flex", alignItems: "center", gap: 6 }}>
+                  <input type="checkbox" checked={entityForm.isDefault} onChange={e => setEntityForm(f => ({ ...f, isDefault: e.target.checked }))} /> Default
+                </label>
+                <button type="submit" style={{ padding: "8px 16px", background: red, color: "#fff", border: "none", borderRadius: 4, fontSize: 13, cursor: "pointer", fontFamily: sans }}>Create</button>
+              </div>
+            </div>
+          </form>
+        )}
+        <div style={{ border: `1px solid ${line}`, borderRadius: 4, overflow: "hidden", background: surface }}>
+          {entities.length === 0 ? (
+            <div style={{ padding: 24, textAlign: "center", color: t3, fontSize: 13 }}>No investment entities. Add one to manage your investments.</div>
+          ) : entities.map((ent, i) => (
+            <div key={ent.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: i < entities.length - 1 ? `1px solid ${line}` : "none" }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 500, color: t1 }}>{ent.name}</div>
+                <div style={{ fontSize: 12, color: t3, marginTop: 2 }}>
+                  {ent.type}{ent.state ? ` \u00B7 ${ent.state}` : ""}{ent.taxId ? ` \u00B7 ${ent.taxId}` : ""}
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                {ent.isDefault && <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 3, background: `${green}20`, color: green }}>Default</span>}
+                {ent.investmentCount > 0 && <span style={{ fontSize: 11, color: t3 }}>{ent.investmentCount} investment{ent.investmentCount > 1 ? "s" : ""}</span>}
+                {ent.investmentCount === 0 && <span onClick={() => handleDeleteEntity(ent.id)} style={{ fontSize: 12, color: red, cursor: "pointer" }}>Remove</span>}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -1773,6 +2021,7 @@ export default function App() {
     overview: <Overview onNavigate={setView} investor={investor} projects={projects} myProjects={myProjects} allDistributions={allDistributions} msgs={msgs} />,
     portfolio: <Portfolio myProjects={myProjects} investor={investor} />,
     captable: <CapTablePage myProjects={myProjects} investor={investor} />,
+    modeler: <FinancialModelerPage myProjects={myProjects} investor={investor} />,
     documents: <DocumentsPage toast={toast} allDocuments={allDocuments} myProjects={myProjects} investor={investor} />,
     distributions: <DistributionsPage allDistributions={allDistributions} myProjects={myProjects} />,
     messages: <MessagesPage toast={toast} investor={investor} />,
@@ -1783,6 +2032,7 @@ export default function App() {
     { id: "overview", label: "Overview" },
     { id: "portfolio", label: "Portfolio" },
     { id: "captable", label: "Cap Table" },
+    { id: "modeler", label: "Modeler" },
     { id: "documents", label: "Documents" },
     { id: "distributions", label: "Distributions" },
     { id: "messages", label: "Messages" },

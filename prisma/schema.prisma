@@ -33,26 +33,31 @@ model User {
   notificationPrefs    NotificationPreference?
   cashFlows            CashFlow[]
   auditLogs            AuditLog[]
+  entities             InvestorEntity[]
 
   @@map("users")
 }
 
 model Project {
-  id            Int      @id @default(autoincrement())
-  name          String
-  location      String?
-  type          String?
-  status        String   // Under Construction | Pre-Development | Completed
-  description   String?
-  sqft          String?
-  units         Int?
-  completionPct Int      @default(0) @map("completion_pct")
-  totalRaise    Float    @default(0) @map("total_raise")
-  prefReturnPct Float    @default(8.0) @map("pref_return_pct")
-  gpCatchupPct  Float    @default(100) @map("gp_catchup_pct")
-  carryPct      Float    @default(20) @map("carry_pct")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id                  Int       @id @default(autoincrement())
+  name                String
+  location            String?
+  type                String?
+  status              String   // Under Construction | Pre-Development | Completed
+  description         String?
+  sqft                String?
+  units               Int?
+  completionPct       Int      @default(0) @map("completion_pct")
+  totalRaise          Float    @default(0) @map("total_raise")
+  prefReturnPct       Float    @default(8.0) @map("pref_return_pct")
+  gpCatchupPct        Float    @default(100) @map("gp_catchup_pct")
+  carryPct            Float    @default(20) @map("carry_pct")
+  estimatedCompletion DateTime? @map("estimated_completion")
+  unitsSold           Int       @default(0) @map("units_sold")
+  revenue             Float     @default(0)
+  orgChart            String?   @map("org_chart") // JSON string: [{role, name, company}]
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
 
   investorProjects   InvestorProject[]
   capTableEntries    CapTableEntry[]
@@ -78,10 +83,12 @@ model InvestorProject {
   currentValue Float @default(0) @map("current_value")
   irr          Float?
   moic         Float?
+  entityId     Int?  @map("entity_id")
   createdAt    DateTime @default(now()) @map("created_at")
 
-  user    User    @relation(fields: [userId], references: [id])
-  project Project @relation(fields: [projectId], references: [id])
+  user    User              @relation(fields: [userId], references: [id])
+  project Project           @relation(fields: [projectId], references: [id])
+  entity  InvestorEntity?   @relation(fields: [entityId], references: [id])
 
   @@unique([userId, projectId])
   @@map("investor_projects")
@@ -272,6 +279,26 @@ model DocumentAssignment {
   @@map("document_assignments")
 }
 
+// ─── INVESTOR ENTITIES ──────────────────────────────────
+
+model InvestorEntity {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  name        String   // "Chen Family Trust", "Pacific Ventures LLC"
+  type        String   // Individual | LLC | Trust | IRA | Corporation | Partnership
+  taxId       String?  @map("tax_id") // EIN or SSN (encrypted in production)
+  address     String?
+  state       String?  // state of formation
+  isDefault   Boolean  @default(false) @map("is_default")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user        User     @relation(fields: [userId], references: [id])
+  investments InvestorProject[]
+
+  @@map("investor_entities")
+}
+
 // ─── INVESTOR GROUPS / SEGMENTS ──────────────────────────
 
 model InvestorGroup {
@@ -279,10 +306,14 @@ model InvestorGroup {
   name        String   @unique
   description String?
   color       String?  // hex color for UI badges
+  parentId    Int?     @map("parent_id")
+  tier        String   @default("primary") // primary | sub-lp | fund-of-funds
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  members GroupMember[]
+  parent      InvestorGroup?  @relation("groupHierarchy", fields: [parentId], references: [id])
+  children    InvestorGroup[] @relation("groupHierarchy")
+  members     GroupMember[]
 
   @@map("investor_groups")
 }

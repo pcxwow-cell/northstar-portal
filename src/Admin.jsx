@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchDashboard, fetchAdminProjects, updateProject, postUpdate, fetchAdminInvestors, sendMessage, uploadDocument, inviteInvestor, updateInvestor, approveInvestor, deactivateInvestor, resetInvestorPassword, assignInvestorProject, updateInvestorKPI, fetchThreads, fetchThread, createThread, replyToThread, fetchInvestorProfile, fetchGroups, createGroup, updateGroup, deleteGroup, fetchGroupDetail, addGroupMembers, removeGroupMember, fetchStaff, createStaff, updateStaff, fetchAdminDocuments, fetchAdminDocumentDetail, fetchAdminProjectDetail, updateWaterfall, fetchSignatureRequests, createSignatureRequest, cancelSignatureRequest, fetchProspects, updateProspectStatus, fetchProspectStats, fetchCashFlows, recordCashFlow, recalculateProject, fetchAuditLog, fmt, fmtCurrency } from "./api.js";
+import { fetchDashboard, fetchAdminProjects, updateProject, postUpdate, fetchAdminInvestors, sendMessage, uploadDocument, inviteInvestor, updateInvestor, approveInvestor, deactivateInvestor, resetInvestorPassword, assignInvestorProject, updateInvestorKPI, fetchThreads, fetchThread, createThread, replyToThread, fetchInvestorProfile, fetchGroups, createGroup, updateGroup, deleteGroup, fetchGroupDetail, addGroupMembers, removeGroupMember, fetchStaff, createStaff, updateStaff, fetchAdminDocuments, fetchAdminDocumentDetail, fetchAdminProjectDetail, updateWaterfall, fetchSignatureRequests, createSignatureRequest, cancelSignatureRequest, fetchProspects, updateProspectStatus, fetchProspectStats, fetchCashFlows, recordCashFlow, recalculateProject, fetchAuditLog, createProject, fetchEntities, createEntity, updateEntity, deleteEntity, runFinancialModel, fmt, fmtCurrency } from "./api.js";
 
 const sans = "'DM Sans', -apple-system, sans-serif";
 const red = "#EA2028";
@@ -151,7 +151,11 @@ function ProjectManager({ toast, onViewProject }) {
   const [projects, setProjects] = useState([]);
   const [editing, setEditing] = useState(null);
   const [updateText, setUpdateText] = useState("");
-  useEffect(() => { fetchAdminProjects().then(setProjects); }, []);
+  const [showCreate, setShowCreate] = useState(false);
+  const [cpForm, setCpForm] = useState({ name: "", location: "", type: "Residential", status: "Pre-Development", description: "", sqft: "", units: "", totalRaise: "", estimatedCompletion: "", unitsSold: "", revenue: "", prefReturnPct: "8", gpCatchupPct: "100", carryPct: "20" });
+
+  function reload() { fetchAdminProjects().then(setProjects); }
+  useEffect(() => { reload(); }, []);
 
   async function handleSave(id, field, value) {
     try { await updateProject(id, { [field]: value }); setProjects(p => p.map(x => x.id === id ? { ...x, [field === "completionPct" ? "completion" : field]: value } : x)); toast("Updated"); } catch (e) { toast(e.message, "error"); }
@@ -160,10 +164,105 @@ function ProjectManager({ toast, onViewProject }) {
     if (!updateText.trim()) return;
     try { await postUpdate(pid, updateText); toast("Update posted"); setUpdateText(""); } catch (e) { toast(e.message, "error"); }
   }
+  async function handleCreateProject(e) {
+    e.preventDefault();
+    if (!cpForm.name.trim()) { toast("Project name is required", "error"); return; }
+    try {
+      const data = { ...cpForm };
+      if (data.units) data.units = parseInt(data.units);
+      if (data.totalRaise) data.totalRaise = parseFloat(data.totalRaise);
+      if (data.unitsSold) data.unitsSold = parseInt(data.unitsSold);
+      if (data.revenue) data.revenue = parseFloat(data.revenue);
+      if (data.prefReturnPct) data.prefReturnPct = parseFloat(data.prefReturnPct);
+      if (data.gpCatchupPct) data.gpCatchupPct = parseFloat(data.gpCatchupPct);
+      if (data.carryPct) data.carryPct = parseFloat(data.carryPct);
+      await createProject(data);
+      toast("Project created");
+      setShowCreate(false);
+      setCpForm({ name: "", location: "", type: "Residential", status: "Pre-Development", description: "", sqft: "", units: "", totalRaise: "", estimatedCompletion: "", unitsSold: "", revenue: "", prefReturnPct: "8", gpCatchupPct: "100", carryPct: "20" });
+      reload();
+    } catch (err) { toast(err.message, "error"); }
+  }
 
   return (
     <>
-      <h1 style={{ fontSize: 28, fontWeight: 300, marginBottom: 32 }}>Projects</h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+        <h1 style={{ fontSize: 28, fontWeight: 300 }}>Projects</h1>
+        <button onClick={() => setShowCreate(!showCreate)} style={btnStyle}>{showCreate ? "Cancel" : "Create Project"}</button>
+      </div>
+
+      {/* Create Project Form */}
+      {showCreate && (
+        <form onSubmit={handleCreateProject} style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: "24px", marginBottom: 24 }}>
+          <div style={{ fontSize: 16, fontWeight: 500, marginBottom: 16 }}>New Project</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+            <div>
+              <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 4 }}>Name *</label>
+              <input value={cpForm.name} onChange={e => setCpForm(f => ({ ...f, name: e.target.value }))} required style={inputStyle} placeholder="Project name" />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 4 }}>Location</label>
+              <input value={cpForm.location} onChange={e => setCpForm(f => ({ ...f, location: e.target.value }))} style={inputStyle} placeholder="City, Province" />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 4 }}>Type</label>
+              <select value={cpForm.type} onChange={e => setCpForm(f => ({ ...f, type: e.target.value }))} style={inputStyle}>
+                <option>Residential</option><option>Mixed-Use</option><option>Commercial</option>
+              </select>
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+            <div>
+              <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 4 }}>Status</label>
+              <select value={cpForm.status} onChange={e => setCpForm(f => ({ ...f, status: e.target.value }))} style={inputStyle}>
+                <option>Pre-Development</option><option>Under Construction</option><option>Completed</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 4 }}>Square Footage</label>
+              <input value={cpForm.sqft} onChange={e => setCpForm(f => ({ ...f, sqft: e.target.value }))} style={inputStyle} placeholder="e.g. 96,000" />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 4 }}>Units</label>
+              <input type="number" value={cpForm.units} onChange={e => setCpForm(f => ({ ...f, units: e.target.value }))} style={inputStyle} placeholder="e.g. 108" />
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+            <div>
+              <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 4 }}>Total Raise ($)</label>
+              <input type="number" value={cpForm.totalRaise} onChange={e => setCpForm(f => ({ ...f, totalRaise: e.target.value }))} style={inputStyle} placeholder="e.g. 6000000" />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 4 }}>Est. Completion Date</label>
+              <input type="date" value={cpForm.estimatedCompletion} onChange={e => setCpForm(f => ({ ...f, estimatedCompletion: e.target.value }))} style={inputStyle} />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 4 }}>Units Sold</label>
+              <input type="number" value={cpForm.unitsSold} onChange={e => setCpForm(f => ({ ...f, unitsSold: e.target.value }))} style={inputStyle} />
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+            <div>
+              <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 4 }}>Revenue ($)</label>
+              <input type="number" value={cpForm.revenue} onChange={e => setCpForm(f => ({ ...f, revenue: e.target.value }))} style={inputStyle} />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 4 }}>Pref Return %</label>
+              <input type="number" step="0.1" value={cpForm.prefReturnPct} onChange={e => setCpForm(f => ({ ...f, prefReturnPct: e.target.value }))} style={inputStyle} />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 4 }}>Carry %</label>
+              <input type="number" value={cpForm.carryPct} onChange={e => setCpForm(f => ({ ...f, carryPct: e.target.value }))} style={inputStyle} />
+            </div>
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 4 }}>Description</label>
+            <textarea value={cpForm.description} onChange={e => setCpForm(f => ({ ...f, description: e.target.value }))} rows={3} style={{ ...inputStyle, resize: "vertical" }} placeholder="Project description..." />
+          </div>
+          <button type="submit" style={btnStyle}>Create Project</button>
+        </form>
+      )}
+
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {projects.map(p => (
           <div key={p.id} style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: "20px 24px" }}>
@@ -465,8 +564,50 @@ function ProjectDetail({ projectId, onBack, toast }) {
 
   if (!project) return <p style={{ color: "#999" }}>Loading...</p>;
 
+  // Financial modeler state
+  const [fmExitValue, setFmExitValue] = useState("");
+  const [fmHoldYears, setFmHoldYears] = useState("5");
+  const [fmAnnualCF, setFmAnnualCF] = useState("0");
+  const [fmResult, setFmResult] = useState(null);
+  const [fmLoading, setFmLoading] = useState(false);
+
+  // Org chart state
+  const [orgChart, setOrgChart] = useState([]);
+  useEffect(() => {
+    if (project?.orgChart) {
+      try { setOrgChart(JSON.parse(project.orgChart)); } catch { setOrgChart([]); }
+    }
+  }, [project?.orgChart]);
+
+  async function handleRunModel() {
+    setFmLoading(true);
+    try {
+      const result = await runFinancialModel({
+        projectId: project.id,
+        scenario: {
+          totalInvestment: project.totalRaise,
+          holdPeriodYears: parseInt(fmHoldYears) || 5,
+          exitValue: parseFloat(fmExitValue) || project.totalRaise * 2,
+          annualCashFlow: parseFloat(fmAnnualCF) || 0,
+          prefReturnPct: project.prefReturn,
+          gpCatchupPct: project.catchUp,
+          carryPct: project.carry,
+        },
+      });
+      setFmResult(result);
+    } catch (err) { toast(err.message, "error"); }
+    setFmLoading(false);
+  }
+
+  async function handleSaveOrgChart() {
+    try {
+      await updateProject(projectId, { orgChart: JSON.stringify(orgChart) });
+      toast("Org chart saved");
+    } catch (e) { toast(e.message, "error"); }
+  }
+
   const section = { background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: "20px 24px", marginBottom: 16 };
-  const tabs = ["overview", "investors", "documents", "updates", "waterfall", "cashflows"];
+  const tabs = ["overview", "investors", "documents", "updates", "waterfall", "cashflows", "model"];
 
   return (
     <>
@@ -505,28 +646,78 @@ function ProjectDetail({ projectId, onBack, toast }) {
 
       {/* Overview tab */}
       {tab === "overview" && (
-        <div style={section}>
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 11, color: "#888" }}>Description</label>
-            <p style={{ fontSize: 14, color: "#444", lineHeight: 1.6, marginTop: 4 }}>{project.description}</p>
+        <>
+          <div style={section}>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 11, color: "#888" }}>Description</label>
+              <p style={{ fontSize: 14, color: "#444", lineHeight: 1.6, marginTop: 4 }}>{project.description}</p>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 16 }}>
+              <div>
+                <label style={{ fontSize: 11, color: "#888" }}>Status</label>
+                <select defaultValue={project.status} onChange={e => handleSaveField("status", e.target.value)} style={{ ...inputStyle, marginTop: 4 }}>
+                  <option>Pre-Development</option><option>Under Construction</option><option>Completed</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: 11, color: "#888" }}>Completion %</label>
+                <input type="number" min="0" max="100" defaultValue={project.completion} onBlur={e => handleSaveField("completionPct", parseInt(e.target.value))} style={{ ...inputStyle, marginTop: 4 }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, color: "#888" }}>Total Raise ($)</label>
+                <input type="number" defaultValue={project.totalRaise} onBlur={e => handleSaveField("totalRaise", parseFloat(e.target.value))} style={{ ...inputStyle, marginTop: 4 }} />
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 16 }}>
+              <div>
+                <label style={{ fontSize: 11, color: "#888" }}>Est. Completion Date</label>
+                <input type="date" defaultValue={project.estimatedCompletion ? new Date(project.estimatedCompletion).toISOString().split("T")[0] : ""} onBlur={e => handleSaveField("estimatedCompletion", e.target.value)} style={{ ...inputStyle, marginTop: 4 }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, color: "#888" }}>Units Sold</label>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                  <input type="number" defaultValue={project.unitsSold || 0} onBlur={e => handleSaveField("unitsSold", parseInt(e.target.value))} style={{ ...inputStyle, width: 80 }} />
+                  <span style={{ fontSize: 12, color: "#999" }}>/ {project.units || 0} total</span>
+                  {project.units > 0 && (
+                    <div style={{ flex: 1, height: 6, background: "#F0EDE8", borderRadius: 3, overflow: "hidden" }}>
+                      <div style={{ width: `${Math.min(100, ((project.unitsSold || 0) / project.units) * 100)}%`, height: "100%", background: green, borderRadius: 3 }} />
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: 11, color: "#888" }}>Revenue ($)</label>
+                <input type="number" defaultValue={project.revenue || 0} onBlur={e => handleSaveField("revenue", parseFloat(e.target.value))} style={{ ...inputStyle, marginTop: 4 }} />
+              </div>
+            </div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
-            <div>
-              <label style={{ fontSize: 11, color: "#888" }}>Status</label>
-              <select defaultValue={project.status} onChange={e => handleSaveField("status", e.target.value)} style={{ ...inputStyle, marginTop: 4 }}>
-                <option>Pre-Development</option><option>Under Construction</option><option>Completed</option>
-              </select>
+
+          {/* Org Chart */}
+          <div style={section}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#666" }}>Organization Chart</div>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button onClick={() => setOrgChart(oc => [...oc, { role: "", name: "", company: "" }])} style={{ ...btnOutline, padding: "4px 10px", fontSize: 11 }}>Add Row</button>
+                <button onClick={handleSaveOrgChart} style={{ ...btnStyle, padding: "4px 10px", fontSize: 11 }}>Save</button>
+              </div>
             </div>
-            <div>
-              <label style={{ fontSize: 11, color: "#888" }}>Completion %</label>
-              <input type="number" min="0" max="100" defaultValue={project.completion} onBlur={e => handleSaveField("completionPct", parseInt(e.target.value))} style={{ ...inputStyle, marginTop: 4 }} />
-            </div>
-            <div>
-              <label style={{ fontSize: 11, color: "#888" }}>Total Raise ($)</label>
-              <input type="number" defaultValue={project.totalRaise} onBlur={e => handleSaveField("totalRaise", parseFloat(e.target.value))} style={{ ...inputStyle, marginTop: 4 }} />
-            </div>
+            {orgChart.length > 0 ? (
+              <>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 30px", fontSize: 11, color: "#999", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
+                  <span>Role</span><span>Name</span><span>Company</span><span></span>
+                </div>
+                {orgChart.map((row, i) => (
+                  <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 30px", gap: 6, padding: "6px 0", borderBottom: "1px solid #F5F3F0", alignItems: "center" }}>
+                    <input value={row.role} onChange={e => { const oc = [...orgChart]; oc[i] = { ...oc[i], role: e.target.value }; setOrgChart(oc); }} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} placeholder="Role" />
+                    <input value={row.name} onChange={e => { const oc = [...orgChart]; oc[i] = { ...oc[i], name: e.target.value }; setOrgChart(oc); }} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} placeholder="Name" />
+                    <input value={row.company} onChange={e => { const oc = [...orgChart]; oc[i] = { ...oc[i], company: e.target.value }; setOrgChart(oc); }} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} placeholder="Company" />
+                    <span onClick={() => setOrgChart(oc => oc.filter((_, j) => j !== i))} style={{ fontSize: 16, color: "#CCC", cursor: "pointer", textAlign: "center" }}>&times;</span>
+                  </div>
+                ))}
+              </>
+            ) : <p style={{ color: "#BBB", fontSize: 13, fontStyle: "italic" }}>No org chart entries. Click "Add Row" to start.</p>}
           </div>
-        </div>
+        </>
       )}
 
       {/* Investors tab */}
@@ -736,6 +927,112 @@ function ProjectDetail({ projectId, onBack, toast }) {
                 </form>
               </div>
             </div>
+          )}
+        </div>
+      )}
+
+      {/* Financial Model tab */}
+      {tab === "model" && (
+        <div style={section}>
+          <div style={{ fontSize: 16, fontWeight: 500, marginBottom: 20 }}>Financial Scenario Model</div>
+          <div style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "flex-end" }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 11, color: "#888" }}>Exit Value ($)</label>
+              <input type="number" value={fmExitValue} onChange={e => setFmExitValue(e.target.value)} placeholder={`e.g. ${fmt(project.totalRaise * 2)}`} style={{ ...inputStyle, marginTop: 4 }} />
+            </div>
+            <div style={{ width: 120 }}>
+              <label style={{ fontSize: 11, color: "#888" }}>Hold Period (yrs)</label>
+              <input type="number" min="1" max="30" value={fmHoldYears} onChange={e => setFmHoldYears(e.target.value)} style={{ ...inputStyle, marginTop: 4 }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 11, color: "#888" }}>Annual Cash Flow ($)</label>
+              <input type="number" value={fmAnnualCF} onChange={e => setFmAnnualCF(e.target.value)} placeholder="0" style={{ ...inputStyle, marginTop: 4 }} />
+            </div>
+            <button onClick={handleRunModel} disabled={fmLoading} style={{ ...btnStyle, opacity: fmLoading ? 0.5 : 1 }}>
+              {fmLoading ? "Running..." : "Run Scenario"}
+            </button>
+          </div>
+          <div style={{ fontSize: 12, color: "#999", marginBottom: 20 }}>
+            Pre-filled: Total Investment ${fmt(project.totalRaise)} | Pref: {project.prefReturn}% | Carry: {project.carry}%
+          </div>
+
+          {fmResult && (
+            <>
+              {/* Summary cards */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
+                {[
+                  { label: "LP IRR", value: fmResult.lpIRR != null ? `${(fmResult.lpIRR * 100).toFixed(1)}%` : "--" },
+                  { label: "LP MOIC", value: `${fmResult.lpMOIC}x` },
+                  { label: "Equity Multiple", value: `${fmResult.equityMultiple}x` },
+                  { label: "Cash on Cash", value: `${fmResult.cashOnCash}%` },
+                ].map((c, i) => (
+                  <div key={i} style={{ background: "#F8F7F4", borderRadius: 6, padding: "16px 20px", textAlign: "center" }}>
+                    <div style={{ fontSize: 22, fontWeight: 300, color: darkText }}>{c.value}</div>
+                    <div style={{ fontSize: 10, color: "#999", textTransform: "uppercase", letterSpacing: ".06em", marginTop: 4 }}>{c.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Waterfall breakdown with LP/GP bar */}
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#666", marginBottom: 12 }}>Waterfall Breakdown</div>
+              {fmResult.waterfallBreakdown.map((tier, i) => {
+                const total = tier.lpAmount + tier.gpAmount;
+                const lpPct = total > 0 ? (tier.lpAmount / total) * 100 : 0;
+                return (
+                  <div key={i} style={{ marginBottom: 12 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                      <span style={{ fontWeight: 500 }}>{tier.name}</span>
+                      <span style={{ color: "#999" }}>LP: ${fmt(Math.round(tier.lpAmount))} | GP: ${fmt(Math.round(tier.gpAmount))}</span>
+                    </div>
+                    <div style={{ height: 12, background: "#F0EDE8", borderRadius: 2, overflow: "hidden", display: "flex" }}>
+                      <div style={{ width: `${lpPct}%`, background: green, height: "100%" }} />
+                      <div style={{ width: `${100 - lpPct}%`, background: red, height: "100%", opacity: 0.6 }} />
+                    </div>
+                  </div>
+                );
+              })}
+              <div style={{ display: "flex", gap: 16, fontSize: 11, color: "#999", marginBottom: 24, marginTop: 8 }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, background: green, borderRadius: 2, display: "inline-block" }} /> LP</span>
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, background: `${red}99`, borderRadius: 2, display: "inline-block" }} /> GP</span>
+              </div>
+
+              {/* Year-by-year */}
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#666", marginBottom: 12 }}>Year-by-Year Cash Flow</div>
+              <div style={{ display: "grid", gridTemplateColumns: "80px 120px 120px 120px", fontSize: 11, color: "#999", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
+                <span>Year</span><span style={{ textAlign: "right" }}>Cash Flow</span><span style={{ textAlign: "right" }}>Cumulative</span><span style={{ textAlign: "right" }}>Balance</span>
+              </div>
+              {fmResult.yearByYear.map((y, i) => (
+                <div key={i} style={{ display: "grid", gridTemplateColumns: "80px 120px 120px 120px", padding: "8px 0", borderBottom: "1px solid #F5F3F0", fontSize: 13 }}>
+                  <span>{y.year === 0 ? "Initial" : `Year ${y.year}`}</span>
+                  <span style={{ textAlign: "right", color: y.cashFlow < 0 ? red : green, fontWeight: 500 }}>
+                    {y.cashFlow < 0 ? `-$${fmt(Math.abs(Math.round(y.cashFlow)))}` : `$${fmt(Math.round(y.cashFlow))}`}
+                  </span>
+                  <span style={{ textAlign: "right", color: y.cumulativeCashFlow < 0 ? red : green }}>
+                    {y.cumulativeCashFlow < 0 ? `-$${fmt(Math.abs(Math.round(y.cumulativeCashFlow)))}` : `$${fmt(Math.round(y.cumulativeCashFlow))}`}
+                  </span>
+                  <span style={{ textAlign: "right", color: "#666" }}>${fmt(Math.round(y.balance))}</span>
+                </div>
+              ))}
+
+              {/* Sensitivity table */}
+              {fmResult.sensitivity && (
+                <>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#666", marginBottom: 12, marginTop: 24 }}>Sensitivity Analysis</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "80px 120px 120px 100px 80px", fontSize: 11, color: "#999", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
+                    <span>Scenario</span><span style={{ textAlign: "right" }}>Exit Value</span><span style={{ textAlign: "right" }}>LP Return</span><span style={{ textAlign: "right" }}>LP IRR</span><span style={{ textAlign: "right" }}>LP MOIC</span>
+                  </div>
+                  {fmResult.sensitivity.map((s, i) => (
+                    <div key={i} style={{ display: "grid", gridTemplateColumns: "80px 120px 120px 100px 80px", padding: "8px 0", borderBottom: "1px solid #F5F3F0", fontSize: 13, background: s.label === "+0%" ? "#F8F7F4" : "transparent" }}>
+                      <span style={{ fontWeight: 500 }}>{s.label}</span>
+                      <span style={{ textAlign: "right" }}>${fmt(s.exitValue)}</span>
+                      <span style={{ textAlign: "right", color: green }}>${fmt(Math.round(s.lpReturn))}</span>
+                      <span style={{ textAlign: "right" }}>{s.lpIRR != null ? `${(s.lpIRR * 100).toFixed(1)}%` : "--"}</span>
+                      <span style={{ textAlign: "right" }}>{s.lpMOIC}x</span>
+                    </div>
+                  ))}
+                </>
+              )}
+            </>
           )}
         </div>
       )}
@@ -1011,7 +1308,28 @@ function DocumentManager({ toast }) {
 // ─── INVESTOR PROFILE PAGE ───
 function InvestorProfile({ investorId, onBack, toast }) {
   const [profile, setProfile] = useState(null);
-  useEffect(() => { fetchInvestorProfile(investorId).then(setProfile); }, [investorId]);
+  const [entities, setEntities] = useState([]);
+  const [showEntityForm, setShowEntityForm] = useState(false);
+  const [entityForm, setEntityForm] = useState({ name: "", type: "Individual", taxId: "", address: "", state: "", isDefault: false });
+
+  useEffect(() => { fetchInvestorProfile(investorId).then(setProfile); loadEntities(); }, [investorId]);
+  function loadEntities() { fetchEntities(investorId).then(setEntities).catch(() => setEntities([])); }
+
+  async function handleCreateEntity(e) {
+    e.preventDefault();
+    try {
+      await createEntity(investorId, entityForm);
+      toast("Entity created");
+      setShowEntityForm(false);
+      setEntityForm({ name: "", type: "Individual", taxId: "", address: "", state: "", isDefault: false });
+      loadEntities();
+    } catch (err) { toast(err.message, "error"); }
+  }
+
+  async function handleDeleteEntity(entityId) {
+    try { await deleteEntity(entityId); toast("Entity deleted"); loadEntities(); } catch (err) { toast(err.message, "error"); }
+  }
+
   if (!profile) return <p style={{ color: "#999" }}>Loading...</p>;
 
   const section = { background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: "20px 24px", marginBottom: 16 };
@@ -1041,6 +1359,61 @@ function InvestorProfile({ investorId, onBack, toast }) {
             <span key={g.id} style={{ padding: "4px 12px", borderRadius: 16, fontSize: 12, background: g.color ? `${g.color}20` : "#F0EDE8", color: g.color || "#666", border: `1px solid ${g.color ? `${g.color}40` : "#E0DDD8"}` }}>{g.name}</span>
           )) : <span style={{ fontSize: 12, color: "#BBB", fontStyle: "italic" }}>No groups assigned</span>}
         </div>
+      </div>
+
+      {/* Investment Entities */}
+      <div style={section}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <div style={sectionTitle}>Investment Entities</div>
+          <button onClick={() => setShowEntityForm(!showEntityForm)} style={{ ...btnOutline, padding: "4px 10px", fontSize: 11 }}>{showEntityForm ? "Cancel" : "Add Entity"}</button>
+        </div>
+        {showEntityForm && (
+          <form onSubmit={handleCreateEntity} style={{ padding: "12px", background: "#FAFAF8", borderRadius: 4, marginBottom: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
+              <div>
+                <label style={{ fontSize: 10, color: "#999" }}>Name</label>
+                <input value={entityForm.name} onChange={e => setEntityForm(f => ({ ...f, name: e.target.value }))} required style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} placeholder="Entity name" />
+              </div>
+              <div>
+                <label style={{ fontSize: 10, color: "#999" }}>Type</label>
+                <select value={entityForm.type} onChange={e => setEntityForm(f => ({ ...f, type: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }}>
+                  <option>Individual</option><option>LLC</option><option>Trust</option><option>IRA</option><option>Corporation</option><option>Partnership</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: 10, color: "#999" }}>Tax ID</label>
+                <input value={entityForm.taxId} onChange={e => setEntityForm(f => ({ ...f, taxId: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} placeholder="EIN/SSN" />
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 8, alignItems: "flex-end" }}>
+              <div>
+                <label style={{ fontSize: 10, color: "#999" }}>State</label>
+                <input value={entityForm.state} onChange={e => setEntityForm(f => ({ ...f, state: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} placeholder="e.g. BC" />
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, paddingBottom: 4 }}>
+                <input type="checkbox" checked={entityForm.isDefault} onChange={e => setEntityForm(f => ({ ...f, isDefault: e.target.checked }))} />
+                <label style={{ fontSize: 11, color: "#666" }}>Default entity</label>
+              </div>
+              <button type="submit" style={{ ...btnStyle, padding: "6px 12px", fontSize: 11 }}>Create</button>
+            </div>
+          </form>
+        )}
+        {entities.length > 0 ? (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 120px 60px 70px 40px", fontSize: 11, color: "#999", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
+            <span>Entity Name</span><span>Type</span><span>Tax ID</span><span>State</span><span>Default</span><span></span>
+          </div>
+        ) : null}
+        {entities.map(e => (
+          <div key={e.id} style={{ display: "grid", gridTemplateColumns: "1fr 100px 120px 60px 70px 40px", padding: "10px 0", borderBottom: "1px solid #F5F3F0", fontSize: 13, alignItems: "center" }}>
+            <span style={{ fontWeight: 500 }}>{e.name}</span>
+            <span style={{ color: "#666" }}>{e.type}</span>
+            <span style={{ color: "#999", fontSize: 11 }}>{e.taxId || "\u2014"}</span>
+            <span style={{ color: "#999" }}>{e.state || "\u2014"}</span>
+            <span>{e.isDefault ? <span style={{ fontSize: 10, padding: "2px 6px", background: "#EFE", color: green, borderRadius: 3 }}>Default</span> : ""}</span>
+            <span onClick={() => handleDeleteEntity(e.id)} style={{ fontSize: 14, color: "#CCC", cursor: "pointer" }}>&times;</span>
+          </div>
+        ))}
+        {entities.length === 0 && !showEntityForm && <span style={{ fontSize: 12, color: "#BBB", fontStyle: "italic" }}>No entities</span>}
       </div>
 
       {/* Projects + KPIs */}
@@ -1095,6 +1468,8 @@ function GroupManager({ toast }) {
   const [groups, setGroups] = useState([]);
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState("#EA2028");
+  const [newParentId, setNewParentId] = useState("");
+  const [newTier, setNewTier] = useState("primary");
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [groupDetail, setGroupDetail] = useState(null);
   const [investors, setInvestors] = useState([]);
@@ -1103,10 +1478,21 @@ function GroupManager({ toast }) {
   useEffect(() => { loadGroups(); fetchAdminInvestors().then(setInvestors); }, []);
   function loadGroups() { fetchGroups().then(setGroups); }
 
+  // Build tree structure
+  const rootGroups = groups.filter(g => !g.parentId);
+  const childGroupsOf = (parentId) => groups.filter(g => g.parentId === parentId);
+  const totalMembers = (g) => {
+    const children = childGroupsOf(g.id);
+    return g.memberCount + children.reduce((s, c) => s + (c.memberCount || 0), 0);
+  };
+
+  const tierLabels = { primary: "Primary LP", "sub-lp": "Sub-LP", "fund-of-funds": "Fund of Funds" };
+  const tierColors = { primary: "#3D7A54", "sub-lp": "#8B7128", "fund-of-funds": "#4466AA" };
+
   async function handleCreate(e) {
     e.preventDefault();
     if (!newName.trim()) return;
-    try { await createGroup({ name: newName, color: newColor }); toast("Group created"); setNewName(""); loadGroups(); } catch (e) { toast(e.message, "error"); }
+    try { await createGroup({ name: newName, color: newColor, parentId: newParentId ? parseInt(newParentId) : null, tier: newTier }); toast("Group created"); setNewName(""); setNewParentId(""); loadGroups(); } catch (e) { toast(e.message, "error"); }
   }
 
   async function handleDelete(id) {
@@ -1136,10 +1522,25 @@ function GroupManager({ toast }) {
       <h1 style={{ fontSize: 28, fontWeight: 300, marginBottom: 24 }}>Investor Groups</h1>
 
       {/* Create group */}
-      <form onSubmit={handleCreate} style={{ display: "flex", gap: 10, marginBottom: 24, alignItems: "flex-end" }}>
-        <div style={{ flex: 1 }}>
+      <form onSubmit={handleCreate} style={{ display: "flex", gap: 10, marginBottom: 24, alignItems: "flex-end", flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 140 }}>
           <label style={{ fontSize: 11, color: "#888" }}>Group Name</label>
           <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Class A LPs" style={inputStyle} required />
+        </div>
+        <div style={{ width: 140 }}>
+          <label style={{ fontSize: 11, color: "#888" }}>Parent Group</label>
+          <select value={newParentId} onChange={e => setNewParentId(e.target.value)} style={inputStyle}>
+            <option value="">None (top-level)</option>
+            {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+          </select>
+        </div>
+        <div style={{ width: 130 }}>
+          <label style={{ fontSize: 11, color: "#888" }}>Tier</label>
+          <select value={newTier} onChange={e => setNewTier(e.target.value)} style={inputStyle}>
+            <option value="primary">Primary LP</option>
+            <option value="sub-lp">Sub-LP</option>
+            <option value="fund-of-funds">Fund of Funds</option>
+          </select>
         </div>
         <div>
           <label style={{ fontSize: 11, color: "#888" }}>Color</label>
@@ -1150,24 +1551,33 @@ function GroupManager({ toast }) {
 
       <div style={{ display: "flex", gap: 20 }}>
         {/* Group list */}
-        <div style={{ width: 280, flexShrink: 0 }}>
+        <div style={{ width: 300, flexShrink: 0 }}>
           <div style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, overflow: "hidden" }}>
-            {groups.length === 0 ? <div style={{ padding: 20, color: "#999", textAlign: "center", fontSize: 13 }}>No groups yet</div> : groups.map((g, i) => (
-              <div key={g.id} onClick={() => openGroup(g.id)} style={{
-                padding: "14px 16px", borderBottom: i < groups.length - 1 ? "1px solid #F0EDE8" : "none",
-                cursor: "pointer", background: selectedGroup === g.id ? "#F8F7F4" : "#fff",
-                display: "flex", justifyContent: "space-between", alignItems: "center",
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: g.color || "#CCC" }} />
-                  <span style={{ fontSize: 14, fontWeight: selectedGroup === g.id ? 500 : 400 }}>{g.name}</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 11, color: "#999" }}>{g.memberCount}</span>
-                  <span onClick={(e) => { e.stopPropagation(); handleDelete(g.id); }} style={{ fontSize: 14, color: "#CCC", cursor: "pointer" }}>&times;</span>
-                </div>
-              </div>
-            ))}
+            {groups.length === 0 ? <div style={{ padding: 20, color: "#999", textAlign: "center", fontSize: 13 }}>No groups yet</div> : (() => {
+              const renderGroup = (g, indent = 0) => {
+                const children = childGroupsOf(g.id);
+                return [
+                  <div key={g.id} onClick={() => openGroup(g.id)} style={{
+                    padding: "12px 16px", paddingLeft: 16 + indent * 20, borderBottom: "1px solid #F0EDE8",
+                    cursor: "pointer", background: selectedGroup === g.id ? "#F8F7F4" : "#fff",
+                    display: "flex", justifyContent: "space-between", alignItems: "center",
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      {indent > 0 && <span style={{ color: "#CCC", fontSize: 10 }}>&#x2514;</span>}
+                      <div style={{ width: 10, height: 10, borderRadius: "50%", background: g.color || "#CCC" }} />
+                      <span style={{ fontSize: 13, fontWeight: selectedGroup === g.id ? 500 : 400 }}>{g.name}</span>
+                      <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 3, background: `${tierColors[g.tier] || "#999"}15`, color: tierColors[g.tier] || "#999" }}>{tierLabels[g.tier] || g.tier}</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ fontSize: 11, color: "#999" }}>{totalMembers(g)}</span>
+                      <span onClick={(e) => { e.stopPropagation(); handleDelete(g.id); }} style={{ fontSize: 14, color: "#CCC", cursor: "pointer" }}>&times;</span>
+                    </div>
+                  </div>,
+                  ...children.flatMap(c => renderGroup(c, indent + 1)),
+                ];
+              };
+              return rootGroups.flatMap(g => renderGroup(g));
+            })()}
           </div>
         </div>
 
@@ -1175,11 +1585,22 @@ function GroupManager({ toast }) {
         <div style={{ flex: 1 }}>
           {groupDetail ? (
             <div style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: "20px 24px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
                 <div style={{ width: 14, height: 14, borderRadius: "50%", background: groupDetail.color || "#CCC" }} />
                 <h2 style={{ fontSize: 18, fontWeight: 500 }}>{groupDetail.name}</h2>
+                <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 3, background: `${tierColors[groupDetail.tier] || "#999"}15`, color: tierColors[groupDetail.tier] || "#999" }}>{tierLabels[groupDetail.tier] || groupDetail.tier}</span>
                 <span style={{ fontSize: 12, color: "#999" }}>{groupDetail.members.length} members</span>
               </div>
+              {groupDetail.parent && (
+                <div style={{ fontSize: 12, color: "#999", marginBottom: 12 }}>Parent: <strong onClick={() => openGroup(groupDetail.parent.id)} style={{ cursor: "pointer", color: red }}>{groupDetail.parent.name}</strong></div>
+              )}
+              {groupDetail.children && groupDetail.children.length > 0 && (
+                <div style={{ fontSize: 12, color: "#999", marginBottom: 16 }}>
+                  Sub-groups: {groupDetail.children.map((c, i) => (
+                    <span key={c.id}><strong onClick={() => openGroup(c.id)} style={{ cursor: "pointer", color: red }}>{c.name}</strong> ({c.memberCount}){i < groupDetail.children.length - 1 ? ", " : ""}</span>
+                  ))}
+                </div>
+              )}
 
               {/* Add member search */}
               <div style={{ position: "relative", marginBottom: 16 }}>

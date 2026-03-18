@@ -189,4 +189,126 @@ router.post("/recalculate/:projectId", requireRole("ADMIN", "GP"), async (req, r
   }
 });
 
+// ─── POST /model-scenario — Full financial scenario modeling ───
+router.post("/model-scenario", async (req, res) => {
+  try {
+    const { projectId, scenario } = req.body;
+    if (!scenario) return res.status(400).json({ error: "scenario is required" });
+
+    const {
+      totalInvestment = 0,
+      holdPeriodYears = 5,
+      exitValue = 0,
+      annualCashFlow = 0,
+      prefReturnPct = 8,
+      gpCatchupPct = 100,
+      carryPct = 20,
+    } = scenario;
+
+    // Calculate total distributable: exit value + cumulative cash flows
+    const totalCashFlows = annualCashFlow * holdPeriodYears;
+    const totalDistributable = exitValue + totalCashFlows;
+
+    // Run waterfall calculation
+    const waterfallResult = calculateWaterfall(totalDistributable, {
+      prefReturnPct, gpCatchupPct, carryPct,
+      lpCapital: totalInvestment,
+      holdPeriodYears,
+    });
+
+    const lpReturn = waterfallResult.lpTotal;
+    const gpReturn = waterfallResult.gpTotal;
+    const totalReturn = lpReturn + gpReturn;
+    const lpProfit = lpReturn - totalInvestment;
+    const lpMOIC = totalInvestment > 0 ? Math.round((lpReturn / totalInvestment) * 100) / 100 : 0;
+    const equityMultiple = lpMOIC;
+    const cashOnCash = totalInvestment > 0 ? Math.round((totalCashFlows / totalInvestment) * 10000) / 100 : 0;
+
+    // LP IRR calculation using XIRR
+    const xirrFlows = [{ date: new Date("2023-01-01"), amount: -totalInvestment }];
+    // Add annual cash flows
+    for (let y = 1; y <= holdPeriodYears; y++) {
+      const dt = new Date("2023-01-01");
+      dt.setFullYear(dt.getFullYear() + y);
+      if (y < holdPeriodYears) {
+        // Annual operating cash flow goes to LP (before exit, assume LP gets all operating income)
+        xirrFlows.push({ date: dt, amount: annualCashFlow });
+      } else {
+        // Final year: operating cash flow + LP share of exit
+        xirrFlows.push({ date: dt, amount: annualCashFlow + lpReturn - totalCashFlows * ((100 - carryPct) / 100) });
+      }
+    }
+    // Simplify: just use two-flow model for clean IRR
+    const lpIRRFlows = [
+      { date: new Date("2023-01-01"), amount: -totalInvestment },
+    ];
+    for (let y = 1; y <= holdPeriodYears; y++) {
+      const dt = new Date("2023-01-01");
+      dt.setFullYear(dt.getFullYear() + y);
+      if (y < holdPeriodYears) {
+        lpIRRFlows.push({ date: dt, amount: annualCashFlow });
+      } else {
+        lpIRRFlows.push({ date: dt, amount: annualCashFlow + (lpReturn - totalCashFlows) });
+      }
+    }
+    const lpIRR = calculateXIRR(lpIRRFlows);
+
+    // GP IRR (GP only gets money at exit through waterfall)
+    const gpIRR = holdPeriodYears > 0 && gpReturn > 0
+      ? Math.round((Math.pow(gpReturn / 1, 1 / holdPeriodYears) - 1) * 10000) / 10000
+      : null;
+
+    // Year-by-year cash flow table
+    const yearByYear = [];
+    let cumulativeCashFlow = -totalInvestment;
+    yearByYear.push({ year: 0, cashFlow: -totalInvestment, cumulativeCashFlow, balance: totalInvestment });
+    for (let y = 1; y <= holdPeriodYears; y++) {
+      const cf = y < holdPeriodYears ? annualCashFlow : annualCashFlow + (exitValue - totalInvestment);
+      cumulativeCashFlow += (y < holdPeriodYears ? annualCashFlow : annualCashFlow + exitValue);
+      yearByYear.push({
+        year: y,
+        cashFlow: y < holdPeriodYears ? annualCashFlow : annualCashFlow + exitValue,
+        cumulativeCashFlow,
+        balance: y < holdPeriodYears ? totalInvestment : 0,
+      });
+    }
+
+    // Sensitivity table: IRR at different exit values
+    const sensitivityMultiples = [0.8, 0.9, 1.0, 1.1, 1.2];
+    const sensitivity = sensitivityMultiples.map(mult => {
+      const adjExitValue = Math.round(exitValue * mult);
+      const adjTotal = adjExitValue + totalCashFlows;
+      const adjWaterfall = calculateWaterfall(adjTotal, { prefReturnPct, gpCatchupPct, carryPct, lpCapital: totalInvestment, holdPeriodYears });
+      const adjFlows = [
+        { date: new Date("2023-01-01"), amount: -totalInvestment },
+        { date: new Date(new Date("2023-01-01").getTime() + holdPeriodYears * 365.25 * 24 * 60 * 60 * 1000), amount: adjWaterfall.lpTotal },
+      ];
+      const adjIRR = calculateXIRR(adjFlows);
+      return {
+        label: `${mult >= 1 ? "+" : ""}${Math.round((mult - 1) * 100)}%`,
+        exitValue: adjExitValue,
+        lpReturn: adjWaterfall.lpTotal,
+        lpIRR: adjIRR,
+        lpMOIC: totalInvestment > 0 ? Math.round((adjWaterfall.lpTotal / totalInvestment) * 100) / 100 : 0,
+      };
+    });
+
+    res.json({
+      totalReturn,
+      lpReturn: Math.round(lpReturn * 100) / 100,
+      gpReturn: Math.round(gpReturn * 100) / 100,
+      lpIRR,
+      gpIRR,
+      lpMOIC,
+      equityMultiple,
+      cashOnCash,
+      yearByYear,
+      waterfallBreakdown: waterfallResult.tiers,
+      sensitivity,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
