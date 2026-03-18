@@ -263,10 +263,11 @@ model ThreadMessage {
 }
 
 model ThreadRecipient {
-  id       Int     @id @default(autoincrement())
-  threadId Int     @map("thread_id")
-  userId   Int     @map("user_id")
-  unread   Boolean @default(true)
+  id       Int       @id @default(autoincrement())
+  threadId Int       @map("thread_id")
+  userId   Int       @map("user_id")
+  unread   Boolean   @default(true)
+  readAt   DateTime? @map("read_at")
 
   thread MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
   user   User          @relation("threadRecipient", fields: [userId], references: [id])

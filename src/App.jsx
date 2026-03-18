@@ -1398,6 +1398,26 @@ function MessagesPage({ toast, investor }) {
           })}
         </div>
 
+        {/* Read receipts */}
+        {threadDetail.readReceipts && threadDetail.readReceipts.length > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, fontSize: 11, color: t3 }}>
+            <span style={{ color: green }}>✓✓</span>
+            <span>Read by </span>
+            {threadDetail.readReceipts.filter(r => !r.unread).map((r, i, arr) => (
+              <span key={r.userId}>
+                <span style={{ fontWeight: 500, color: t2 }}>{r.name}</span>
+                {r.readAt && <span> ({new Date(r.readAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })})</span>}
+                {i < arr.length - 1 && ", "}
+              </span>
+            ))}
+            {threadDetail.readReceipts.some(r => r.unread) && (
+              <span style={{ marginLeft: 8, color: t3 }}>
+                · Unread: {threadDetail.readReceipts.filter(r => r.unread).map(r => r.name).join(", ")}
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Reply box */}
         <div style={{ borderRadius: 12, padding: "16px 20px", background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
           <textarea value={reply} onChange={e => setReply(e.target.value)} placeholder="Write a reply..."

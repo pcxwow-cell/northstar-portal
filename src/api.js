@@ -292,7 +292,10 @@ export async function fetchThread(id) {
   if (_demoMode) {
     const t = _demoThreads.find(t => t.id === id);
     const msg = demoMessages[id - 1];
-    return { ...t, messages: [{ id: 1, body: msg?.preview || "", sender: t.creator, createdAt: new Date().toISOString() }] };
+    return { ...t, messages: [{ id: 1, body: msg?.preview || "", sender: t.creator, createdAt: new Date().toISOString() }], readReceipts: [
+      { userId: 2, name: "Gord Wylie", initials: "GW", unread: false, readAt: new Date(Date.now() - 3600000).toISOString() },
+      { userId: 1, name: "James Chen", initials: "JC", unread: false, readAt: new Date().toISOString() },
+    ] };
   }
   return apiFetch(`/threads/${id}`);
 }

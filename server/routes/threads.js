@@ -6,7 +6,7 @@ const router = Router();
 
 const threadIncludes = {
   messages: { include: { sender: { select: { id: true, name: true, initials: true, role: true } } }, orderBy: { createdAt: "asc" } },
-  recipients: { select: { userId: true, unread: true } },
+  recipients: { select: { userId: true, unread: true, readAt: true }, include: { user: { select: { id: true, name: true, initials: true } } } },
   creator: { select: { id: true, name: true, initials: true, role: true } },
   targetProject: { select: { id: true, name: true } },
 };
@@ -35,6 +35,13 @@ function formatThreadDetail(t, userId) {
     messages: t.messages.map(m => ({
       id: m.id, body: m.body, createdAt: m.createdAt,
       sender: m.sender,
+    })),
+    readReceipts: t.recipients.map(r => ({
+      userId: r.userId,
+      name: r.user?.name || "Unknown",
+      initials: r.user?.initials || "?",
+      unread: r.unread,
+      readAt: r.readAt,
     })),
     createdAt: t.createdAt,
   };
@@ -110,10 +117,10 @@ router.get("/:id", async (req, res, next) => {
       return res.status(403).json({ error: "Access denied" });
     }
 
-    // Mark as read for this user
+    // Mark as read for this user + record read timestamp
     await prisma.threadRecipient.updateMany({
-      where: { threadId: thread.id, userId: req.user.id },
-      data: { unread: false },
+      where: { threadId: thread.id, userId: req.user.id, unread: true },
+      data: { unread: false, readAt: new Date() },
     });
 
     res.json(formatThreadDetail(thread, req.user.id));
