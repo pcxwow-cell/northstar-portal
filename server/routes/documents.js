@@ -4,6 +4,7 @@ const path = require("path");
 const prisma = require("../prisma");
 const storage = require("../storage");
 const { requireRole } = require("../middleware/auth");
+const { notifyMany } = require("../services/notifications");
 const router = Router();
 
 // Multer config — store in memory, then pass to storage adapter
@@ -135,6 +136,32 @@ router.post("/upload", requireRole("ADMIN", "GP"), upload.single("file"), async 
         storageKey,
       },
     });
+
+    // Notify investors about new document
+    try {
+      let investorIds = [];
+      if (projectId) {
+        // Notify investors in the project
+        const projectInvestors = await prisma.investorProject.findMany({
+          where: { projectId: parseInt(projectId) },
+          select: { userId: true },
+        });
+        investorIds = projectInvestors.map(ip => ip.userId);
+      } else {
+        // General doc: notify all active investors
+        const allInvestors = await prisma.user.findMany({
+          where: { role: "INVESTOR", status: "ACTIVE" },
+          select: { id: true },
+        });
+        investorIds = allInvestors.map(u => u.id);
+      }
+      if (investorIds.length > 0) {
+        const project = projectId ? await prisma.project.findUnique({ where: { id: parseInt(projectId) }, select: { name: true } }) : null;
+        notifyMany(investorIds, "document_uploaded", { docName: name, projectName: project?.name || null }).catch(err => console.error("Notification error:", err));
+      }
+    } catch (notifyErr) {
+      console.error("Failed to send document notifications:", notifyErr);
+    }
 
     res.status(201).json({
       id: doc.id,

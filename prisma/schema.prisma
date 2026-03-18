@@ -27,6 +27,10 @@ model User {
   threadMessages      ThreadMessage[] @relation("threadMessageSender")
   threadRecipients    ThreadRecipient[] @relation("threadRecipient")
   groupMemberships    GroupMember[]
+  signatureRequests    SignatureRequest[] @relation("signatureCreator")
+  signerRecords        SignatureSigner[]  @relation("signerUser")
+  notificationLogs     NotificationLog[]
+  notificationPrefs    NotificationPreference?
 
   @@map("users")
 }
@@ -140,6 +144,7 @@ model Document {
 
   project     Project?             @relation(fields: [projectId], references: [id])
   assignments DocumentAssignment[]
+  signatureRequests    SignatureRequest[]
 
   @@map("documents")
 }
@@ -288,4 +293,72 @@ model GroupMember {
 
   @@unique([groupId, userId])
   @@map("group_members")
+}
+
+// ─── E-SIGNATURE ────────────────────────────────────────
+
+model SignatureRequest {
+  id             Int       @id @default(autoincrement())
+  documentId     Int       @map("document_id")
+  requestId      String    @unique @map("request_id") // external provider ID
+  status         String    @default("pending") // pending | signed | declined | expired | cancelled
+  subject        String?
+  message        String?
+  createdById    Int       @map("created_by_id")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  completedAt    DateTime? @map("completed_at")
+
+  document    Document @relation(fields: [documentId], references: [id])
+  createdBy   User     @relation("signatureCreator", fields: [createdById], references: [id])
+  signers     SignatureSigner[]
+
+  @@map("signature_requests")
+}
+
+model SignatureSigner {
+  id          Int       @id @default(autoincrement())
+  requestId   Int       @map("request_id")
+  userId      Int?      @map("user_id") // null if external signer
+  name        String
+  email       String
+  status      String    @default("pending") // pending | signed | declined
+  signedAt    DateTime? @map("signed_at")
+  signUrl     String?   @map("sign_url")
+
+  request     SignatureRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  user        User?            @relation("signerUser", fields: [userId], references: [id])
+
+  @@map("signature_signers")
+}
+
+// ─── NOTIFICATIONS ──────────────────────────────────────
+
+model NotificationLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  type       String   // document_uploaded | signature_required | signature_completed | distribution_paid | new_message | capital_call
+  subject    String
+  channel    String   @default("email") // email | in_app
+  status     String   @default("sent") // sent | failed | pending
+  metadata   String?  // JSON blob with extra context
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("notification_logs")
+}
+
+model NotificationPreference {
+  id                   Int     @id @default(autoincrement())
+  userId               Int     @unique @map("user_id")
+  emailDocuments       Boolean @default(true) @map("email_documents")
+  emailSignatures      Boolean @default(true) @map("email_signatures")
+  emailDistributions   Boolean @default(true) @map("email_distributions")
+  emailMessages        Boolean @default(true) @map("email_messages")
+  emailCapitalCalls    Boolean @default(true) @map("email_capital_calls")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("notification_preferences")
 }

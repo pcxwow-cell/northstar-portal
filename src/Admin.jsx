@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchDashboard, fetchAdminProjects, updateProject, postUpdate, fetchAdminInvestors, sendMessage, uploadDocument, inviteInvestor, updateInvestor, approveInvestor, deactivateInvestor, resetInvestorPassword, assignInvestorProject, updateInvestorKPI, fetchThreads, fetchThread, createThread, replyToThread, fetchInvestorProfile, fetchGroups, createGroup, updateGroup, deleteGroup, fetchGroupDetail, addGroupMembers, removeGroupMember, fetchStaff, createStaff, updateStaff, fetchAdminDocuments, fetchAdminDocumentDetail, fetchAdminProjectDetail, updateWaterfall, fmt, fmtCurrency } from "./api.js";
+import { fetchDashboard, fetchAdminProjects, updateProject, postUpdate, fetchAdminInvestors, sendMessage, uploadDocument, inviteInvestor, updateInvestor, approveInvestor, deactivateInvestor, resetInvestorPassword, assignInvestorProject, updateInvestorKPI, fetchThreads, fetchThread, createThread, replyToThread, fetchInvestorProfile, fetchGroups, createGroup, updateGroup, deleteGroup, fetchGroupDetail, addGroupMembers, removeGroupMember, fetchStaff, createStaff, updateStaff, fetchAdminDocuments, fetchAdminDocumentDetail, fetchAdminProjectDetail, updateWaterfall, fetchSignatureRequests, createSignatureRequest, cancelSignatureRequest, fmt, fmtCurrency } from "./api.js";
 
 const sans = "'DM Sans', -apple-system, sans-serif";
 const red = "#EA2028";
@@ -19,6 +19,7 @@ export default function AdminPanel({ user, onLogout }) {
     { id: "projects", label: "Projects" },
     { id: "investors", label: "Investors" },
     { id: "documents", label: "Documents" },
+    { id: "signatures", label: "Signatures" },
     { id: "groups", label: "Groups" },
     { id: "staff", label: "Staff" },
     { id: "inbox", label: "Inbox" },
@@ -37,6 +38,7 @@ export default function AdminPanel({ user, onLogout }) {
       ? <InvestorProfile investorId={profileId} onBack={() => setProfileId(null)} toast={showToast} />
       : <InvestorManager toast={showToast} onViewProfile={(id) => setProfileId(id)} />,
     documents: <DocumentManager toast={showToast} />,
+    signatures: <SignatureManager toast={showToast} />,
     groups: <GroupManager toast={showToast} />,
     staff: <StaffManager toast={showToast} />,
     inbox: <AdminInbox user={user} toast={showToast} />,
@@ -584,6 +586,11 @@ function DocumentManager({ toast }) {
   const [docDetail, setDocDetail] = useState(null);
   const [showUpload, setShowUpload] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showSignModal, setShowSignModal] = useState(false);
+  const [sigInvestors, setSigInvestors] = useState([]);
+  const [sigSelectedIds, setSigSelectedIds] = useState([]);
+  const [sigSubject, setSigSubject] = useState("");
+  const [sigSending, setSigSending] = useState(false);
 
   // Upload state
   const [uploadName, setUploadName] = useState("");
@@ -632,18 +639,84 @@ function DocumentManager({ toast }) {
 
   const categories = ["Reporting", "Property Update", "Offering", "Capital Call", "Legal", "Tax", "Distribution"];
 
+  async function openSignModal() {
+    setShowSignModal(true);
+    setSigSubject(`Please sign: ${docDetail.name}`);
+    setSigSelectedIds([]);
+    try {
+      const investors = await fetchAdminInvestors();
+      setSigInvestors(investors);
+    } catch (e) { console.error(e); }
+  }
+
+  async function handleSendSignature() {
+    if (!sigSelectedIds.length) return toast("Select at least one signer", "error");
+    setSigSending(true);
+    try {
+      await createSignatureRequest({
+        documentId: docDetail.id,
+        signerIds: sigSelectedIds,
+        subject: sigSubject,
+      });
+      toast("Signature request sent");
+      setShowSignModal(false);
+      // Refresh detail
+      const detail = await fetchAdminDocumentDetail(docDetail.id);
+      setDocDetail(detail);
+    } catch (e) { toast(e.message, "error"); }
+    finally { setSigSending(false); }
+  }
+
   // Document detail view
   if (docDetail) {
     return (
       <>
         <p style={{ fontSize: 12, color: red, cursor: "pointer", marginBottom: 24 }} onClick={() => { setSelectedDoc(null); setDocDetail(null); }}>← Back to documents</p>
-        <div style={{ marginBottom: 24 }}>
-          <h2 style={{ fontSize: 22, fontWeight: 400, marginBottom: 6 }}>{docDetail.name}</h2>
-          <div style={{ fontSize: 12, color: "#999" }}>
-            {docDetail.project?.name || "General"} · {docDetail.category} · {docDetail.date} · {docDetail.size}
-            <span style={{ marginLeft: 8, padding: "2px 8px", borderRadius: 3, fontSize: 10, background: docDetail.status === "published" ? "#EFE" : "#FFF8E1", color: docDetail.status === "published" ? green : "#B8860B" }}>{docDetail.status}</span>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
+          <div>
+            <h2 style={{ fontSize: 22, fontWeight: 400, marginBottom: 6 }}>{docDetail.name}</h2>
+            <div style={{ fontSize: 12, color: "#999" }}>
+              {docDetail.project?.name || "General"} · {docDetail.category} · {docDetail.date} · {docDetail.size}
+              <span style={{ marginLeft: 8, padding: "2px 8px", borderRadius: 3, fontSize: 10, background: docDetail.status === "published" ? "#EFE" : "#FFF8E1", color: docDetail.status === "published" ? green : "#B8860B" }}>{docDetail.status}</span>
+            </div>
           </div>
+          <button onClick={openSignModal} style={{ ...btnStyle, fontSize: 12 }}>Request Signature</button>
         </div>
+
+        {/* Signature Request Modal */}
+        {showSignModal && (
+          <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,.4)", display: "flex", alignItems: "center", justifyContent: "center" }}
+            onClick={() => setShowSignModal(false)}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 6, padding: "28px 24px", maxWidth: 480, width: "90%", maxHeight: "70vh", overflow: "auto" }}>
+              <h3 style={{ fontSize: 18, fontWeight: 400, marginBottom: 20 }}>Request Signature</h3>
+              <p style={{ fontSize: 13, color: "#666", marginBottom: 16 }}>Select investors to sign <strong>{docDetail.name}</strong></p>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Subject</label>
+                <input value={sigSubject} onChange={e => setSigSubject(e.target.value)} style={inputStyle} />
+              </div>
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Signers</label>
+                <div style={{ border: "1px solid #DDD", borderRadius: 4, maxHeight: 200, overflow: "auto" }}>
+                  {sigInvestors.map(inv => (
+                    <label key={inv.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderBottom: "1px solid #F0EDE8", cursor: "pointer", fontSize: 13 }}>
+                      <input type="checkbox" checked={sigSelectedIds.includes(inv.id)}
+                        onChange={e => setSigSelectedIds(prev => e.target.checked ? [...prev, inv.id] : prev.filter(id => id !== inv.id))} />
+                      <span style={{ fontWeight: 500 }}>{inv.name}</span>
+                      <span style={{ color: "#999" }}>{inv.email}</span>
+                    </label>
+                  ))}
+                  {sigInvestors.length === 0 && <div style={{ padding: 14, color: "#999", fontSize: 12 }}>Loading investors...</div>}
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+                <button onClick={() => setShowSignModal(false)} style={btnOutline}>Cancel</button>
+                <button onClick={handleSendSignature} disabled={sigSending} style={{ ...btnStyle, opacity: sigSending ? 0.5 : 1 }}>
+                  {sigSending ? "Sending..." : "Send Request"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Access audit table */}
         <div style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, overflow: "hidden" }}>
@@ -1053,6 +1126,71 @@ function StaffManager({ toast }) {
 }
 
 // ─── ADMIN INBOX (threads + compose with searchable recipient picker) ───
+function SignatureManager({ toast }) {
+  const [sigs, setSigs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => { loadSigs(); }, []);
+  async function loadSigs() {
+    setLoading(true);
+    try { const data = await fetchSignatureRequests(); setSigs(data); }
+    catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  }
+
+  async function handleCancel(id) {
+    try { await cancelSignatureRequest(id); toast("Signature request cancelled"); loadSigs(); }
+    catch (e) { toast(e.message, "error"); }
+  }
+
+  const statusColor = (s) => s === "signed" ? green : s === "pending" ? "#B8860B" : s === "cancelled" ? "#999" : red;
+  const statusBg = (s) => s === "signed" ? "#EFE" : s === "pending" ? "#FFF8E1" : s === "cancelled" ? "#F5F5F5" : "#FEE";
+
+  return (
+    <>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <div>
+          <h1 style={{ fontSize: 28, fontWeight: 300 }}>Signatures</h1>
+          <p style={{ fontSize: 13, color: "#999", marginTop: 4 }}>{sigs.length} signature requests</p>
+        </div>
+      </div>
+      {loading ? <p style={{ color: "#999" }}>Loading...</p> : sigs.length === 0 ? (
+        <div style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: 40, textAlign: "center", color: "#999", fontSize: 13 }}>
+          No signature requests yet. Use the Documents section to request signatures.
+        </div>
+      ) : (
+        <div style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, overflow: "hidden" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 120px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: "#999", textTransform: "uppercase", letterSpacing: ".06em" }}>
+            <span>Document</span><span>Created By</span><span>Signers</span><span>Status</span><span>Actions</span>
+          </div>
+          {sigs.map((sig, i) => (
+            <div key={sig.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 120px", padding: "14px 20px", borderBottom: i < sigs.length - 1 ? "1px solid #F0EDE8" : "none", fontSize: 13, alignItems: "center" }}>
+              <div>
+                <div style={{ fontWeight: 500 }}>{sig.document?.name || sig.subject}</div>
+                <div style={{ fontSize: 11, color: "#999", marginTop: 2 }}>{sig.subject}</div>
+              </div>
+              <span style={{ color: "#666" }}>{sig.createdBy?.name}</span>
+              <div>
+                {sig.signers?.map(s => (
+                  <div key={s.id} style={{ fontSize: 12, marginBottom: 2 }}>
+                    {s.name} <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 3, background: statusBg(s.status), color: statusColor(s.status) }}>{s.status}</span>
+                  </div>
+                ))}
+              </div>
+              <span style={{ padding: "2px 10px", borderRadius: 3, fontSize: 11, background: statusBg(sig.status), color: statusColor(sig.status), display: "inline-block", width: "fit-content" }}>{sig.status}</span>
+              <div>
+                {sig.status === "pending" && (
+                  <button onClick={() => handleCancel(sig.id)} style={{ ...btnOutline, fontSize: 11, padding: "4px 12px", color: red, borderColor: red }}>Cancel</button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
 function AdminInbox({ user, toast }) {
   const [threads, setThreads] = useState([]);
   const [selectedThread, setSelectedThread] = useState(null);

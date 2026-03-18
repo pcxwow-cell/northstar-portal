@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef, createContext, useContext } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-import { login as apiLogin, logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, downloadDocument, fetchThreads, fetchThread, createThread, replyToThread, updateProfile, fmt, fmtCurrency } from "./api.js";
+import { login as apiLogin, logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, downloadDocument, fetchThreads, fetchThread, createThread, replyToThread, updateProfile, fetchSignatureRequests, signDocument, fetchNotificationPreferences, updateNotificationPreferences, fmt, fmtCurrency } from "./api.js";
 import AdminPanel from "./Admin.jsx";
 
 // ─── THEME ───────────────────────────────────────────────
@@ -557,6 +557,28 @@ function DocumentsPage({ toast, allDocuments, myProjects, investor }) {
   const [signModal, setSignModal] = useState(null);
   const [reviewDoc, setReviewDoc] = useState(null);
   const [signedDocs, setSignedDocs] = useState({});
+  const [pendingSigs, setPendingSigs] = useState([]);
+  const [signingId, setSigningId] = useState(null);
+
+  useEffect(() => {
+    fetchSignatureRequests().then(sigs => {
+      const pending = sigs.filter(s => s.status === "pending" && s.signers?.some(sg => sg.userId === investor.id && sg.status === "pending"));
+      setPendingSigs(pending);
+    }).catch(() => {});
+  }, [investor.id]);
+
+  async function handleSignNow(sig) {
+    const mySigner = sig.signers.find(s => s.userId === investor.id);
+    if (!mySigner) return;
+    setSigningId(mySigner.id);
+    try {
+      await signDocument(mySigner.id);
+      toast.add(`Signature submitted for ${sig.document?.name || sig.subject}`, "success");
+      setPendingSigs(prev => prev.filter(s => s.id !== sig.id));
+    } catch (err) {
+      toast.add(err.message || "Signing failed", "error");
+    } finally { setSigningId(null); }
+  }
   const categories = ["All", ...new Set(allDocuments.map(d => d.category))];
   const projectNames = ["All", ...new Set(allDocuments.map(d => d.project))];
   const filtered = allDocuments.filter(d =>
@@ -598,6 +620,27 @@ function DocumentsPage({ toast, allDocuments, myProjects, investor }) {
         <h1 style={{ fontFamily: serif, fontSize: 36, fontWeight: 300 }}>Documents</h1>
         <p style={{ fontSize: 14, color: t2, marginTop: 6 }}>{allDocuments.length} documents · {allDocuments.filter(d => d.status !== "published" && !signedDocs[d.id]).length} requiring action</p>
       </div>
+
+      {/* Pending Signatures */}
+      {pendingSigs.length > 0 && (
+        <div style={{ marginBottom: 28, border: `1px solid ${red}33`, borderRadius: 4, background: `${red}08`, padding: "20px 24px" }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: red, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 14 }}>Pending Signatures</div>
+          {pendingSigs.map(sig => (
+            <div key={sig.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${line}` }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 500, color: t1 }}>{sig.document?.name || sig.subject}</div>
+                <div style={{ fontSize: 12, color: t3, marginTop: 2 }}>{sig.subject}</div>
+              </div>
+              <button onClick={() => handleSignNow(sig)} disabled={signingId !== null} style={{
+                padding: "8px 20px", background: red, color: "#fff", border: "none", borderRadius: 4,
+                fontSize: 13, fontFamily: sans, cursor: signingId ? "default" : "pointer", opacity: signingId === sig.id ? 0.5 : 1,
+              }}>
+                {signingId === sig.id ? "Signing..." : "Sign Now"}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Project filter */}
       <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
@@ -938,6 +981,24 @@ function ProfilePage({ investor, toast, onUpdate }) {
   const [email, setEmail] = useState(investor.email);
   const [initials, setInitials] = useState(investor.initials || "");
   const [saving, setSaving] = useState(false);
+  const [notifPrefs, setNotifPrefs] = useState(null);
+  const [savingPrefs, setSavingPrefs] = useState(false);
+
+  useEffect(() => {
+    fetchNotificationPreferences().then(p => setNotifPrefs(p)).catch(() => {});
+  }, []);
+
+  async function handlePrefToggle(key) {
+    const updated = { ...notifPrefs, [key]: !notifPrefs[key] };
+    setNotifPrefs(updated);
+    setSavingPrefs(true);
+    try {
+      await updateNotificationPreferences({ [key]: updated[key] });
+    } catch (err) {
+      toast.add("Failed to update preferences", "error");
+      setNotifPrefs(prev => ({ ...prev, [key]: !prev[key] }));
+    } finally { setSavingPrefs(false); }
+  }
 
   async function handleSave(e) {
     e.preventDefault();
@@ -1014,6 +1075,42 @@ function ProfilePage({ investor, toast, onUpdate }) {
           </div>
         </div>
       </div>
+
+      {/* Notification Preferences */}
+      {notifPrefs && (
+        <div style={{ marginTop: 40 }}>
+          <h2 style={{ fontFamily: serif, fontSize: 24, fontWeight: 300, marginBottom: 20 }}>Notification Preferences</h2>
+          <div style={{ border: `1px solid ${line}`, borderRadius: 4, padding: "28px 24px", background: surface, maxWidth: 520 }}>
+            <p style={{ fontSize: 13, color: t3, marginBottom: 20 }}>Choose which email notifications you receive.</p>
+            {[
+              { key: "emailDocuments", label: "New Documents", desc: "When a new document is uploaded to your portal" },
+              { key: "emailSignatures", label: "Signature Requests", desc: "When your signature is required on a document" },
+              { key: "emailDistributions", label: "Distributions", desc: "When a distribution payment is processed" },
+              { key: "emailMessages", label: "Messages", desc: "When you receive a new message from Northstar" },
+              { key: "emailCapitalCalls", label: "Capital Calls", desc: "When a capital call notice is issued" },
+            ].map(item => (
+              <div key={item.key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: `1px solid ${line}` }}>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: t1 }}>{item.label}</div>
+                  <div style={{ fontSize: 12, color: t3, marginTop: 2 }}>{item.desc}</div>
+                </div>
+                <div onClick={() => handlePrefToggle(item.key)} style={{
+                  width: 44, height: 24, borderRadius: 12, cursor: "pointer",
+                  background: notifPrefs[item.key] ? red : `${t3}44`,
+                  position: "relative", transition: "background .2s",
+                }}>
+                  <div style={{
+                    width: 20, height: 20, borderRadius: "50%", background: "#fff",
+                    position: "absolute", top: 2,
+                    left: notifPrefs[item.key] ? 22 : 2,
+                    transition: "left .2s", boxShadow: "0 1px 3px rgba(0,0,0,.2)",
+                  }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </>
   );
 }

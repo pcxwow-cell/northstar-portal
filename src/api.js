@@ -362,6 +362,77 @@ export async function uploadDocument(formData) {
   return res.json();
 }
 
+// ─── Signatures ───
+const _demoSignatures = [];
+
+export async function fetchSignatureRequests() {
+  if (_demoMode) return _demoSignatures;
+  return apiFetch("/signatures");
+}
+
+export async function fetchSignatureRequest(id) {
+  if (_demoMode) return _demoSignatures.find(s => s.id === id) || null;
+  return apiFetch(`/signatures/${id}`);
+}
+
+export async function createSignatureRequest(data) {
+  if (_demoMode) {
+    const req = {
+      id: Date.now(), requestId: "demo_" + Date.now(), status: "pending",
+      subject: data.subject || "Signature requested", document: { id: data.documentId, name: "Document" },
+      createdBy: { id: 2, name: "Northstar Admin" }, createdAt: new Date().toISOString(),
+      signers: (data.signerIds || []).map((id, i) => ({ id: Date.now() + i, name: `Signer ${i + 1}`, email: "", status: "pending", userId: id })),
+    };
+    _demoSignatures.unshift(req);
+    return req;
+  }
+  return apiFetch("/signatures/request", { method: "POST", body: JSON.stringify(data) });
+}
+
+export async function signDocument(signerId) {
+  if (_demoMode) {
+    // Find and update signer status in demo data
+    for (const req of _demoSignatures) {
+      const signer = req.signers.find(s => s.id === signerId);
+      if (signer) {
+        signer.status = "signed";
+        if (req.signers.every(s => s.status === "signed")) req.status = "signed";
+        return { ok: true, status: "signed", allSigned: req.status === "signed" };
+      }
+    }
+    return { ok: true, status: "signed", allSigned: true };
+  }
+  return apiFetch(`/signatures/${signerId}/sign`, { method: "POST" });
+}
+
+export async function cancelSignatureRequest(id) {
+  if (_demoMode) {
+    const req = _demoSignatures.find(s => s.id === id);
+    if (req) req.status = "cancelled";
+    return { ok: true };
+  }
+  return apiFetch(`/signatures/${id}/cancel`, { method: "POST" });
+}
+
+// ─── Notifications ───
+export async function fetchNotifications() {
+  if (_demoMode) return [];
+  return apiFetch("/notifications");
+}
+
+export async function fetchNotificationPreferences() {
+  if (_demoMode) return {
+    emailDocuments: true, emailSignatures: true, emailDistributions: true,
+    emailMessages: true, emailCapitalCalls: true,
+  };
+  return apiFetch("/notifications/preferences");
+}
+
+export async function updateNotificationPreferences(data) {
+  if (_demoMode) return { ...data };
+  return apiFetch("/notifications/preferences", { method: "PUT", body: JSON.stringify(data) });
+}
+
 // ─── Utility (kept from data.js) ───
 export const fmt = (n) => {
   if (typeof n !== "number") return n;

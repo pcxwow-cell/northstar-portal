@@ -1,5 +1,6 @@
 const { Router } = require("express");
 const prisma = require("../prisma");
+const { notifyMany } = require("../services/notifications");
 const router = Router();
 
 const threadIncludes = {
@@ -181,6 +182,23 @@ router.post("/:id/reply", async (req, res, next) => {
       create: { threadId, userId: req.user.id, unread: false },
       update: { unread: false },
     });
+
+    // Notify other recipients of new message
+    try {
+      const recipients = await prisma.threadRecipient.findMany({
+        where: { threadId, userId: { not: req.user.id } },
+        select: { userId: true },
+      });
+      const recipientIds = recipients.map(r => r.userId);
+      if (recipientIds.length > 0) {
+        notifyMany(recipientIds, "new_message", {
+          senderName: req.user.name,
+          messageSubject: thread.subject,
+        }).catch(err => console.error("Thread notification error:", err));
+      }
+    } catch (notifyErr) {
+      console.error("Failed to send thread notifications:", notifyErr);
+    }
 
     res.status(201).json({ id: msg.id, body: msg.body, sender: msg.sender, createdAt: msg.createdAt });
   } catch (err) { next(err); }

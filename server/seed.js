@@ -6,6 +6,10 @@ async function main() {
   console.log("Seeding database...");
 
   // Clear all tables (reverse dependency order)
+  await prisma.notificationLog.deleteMany();
+  await prisma.notificationPreference.deleteMany();
+  await prisma.signatureSigner.deleteMany();
+  await prisma.signatureRequest.deleteMany();
   await prisma.threadRecipient.deleteMany();
   await prisma.threadMessage.deleteMany();
   await prisma.messageThread.deleteMany();
@@ -291,6 +295,77 @@ async function main() {
     });
   }
   console.log("  MessageThreads: " + threadsData.length);
+
+  // ─── Signature Requests ───
+  // Completed signature request (Subscription Agreement — Livy)
+  const sigReq1 = await prisma.signatureRequest.create({
+    data: {
+      documentId: 5, // Subscription Agreement — Livy
+      requestId: "demo_sig_completed_001",
+      status: "signed",
+      subject: "Please sign: Subscription Agreement — Livy",
+      message: "Please review and sign the subscription agreement for the Livy development.",
+      createdById: 2,
+      completedAt: new Date("2025-06-15T10:30:00Z"),
+      signers: {
+        create: [
+          { userId: 1, name: "James Chen", email: "j.chen@pacificventures.ca", status: "signed", signedAt: new Date("2025-06-15T10:30:00Z") },
+        ],
+      },
+    },
+  });
+
+  // Pending signature request (K-1 Tax Package)
+  const sigReq2 = await prisma.signatureRequest.create({
+    data: {
+      documentId: 2, // K-1 Tax Package
+      requestId: "demo_sig_pending_002",
+      status: "pending",
+      subject: "Please sign: K-1 Tax Package — FY 2024",
+      message: "Please review and sign the K-1 tax acknowledgment.",
+      createdById: 2,
+      signers: {
+        create: [
+          { userId: 1, name: "James Chen", email: "j.chen@pacificventures.ca", status: "pending", signUrl: "/api/v1/signatures/2/sign" },
+        ],
+      },
+    },
+  });
+  console.log("  SignatureRequests: 2");
+
+  // ─── Notification Preferences ───
+  await prisma.notificationPreference.create({
+    data: {
+      userId: 1,
+      emailDocuments: true,
+      emailSignatures: true,
+      emailDistributions: true,
+      emailMessages: true,
+      emailCapitalCalls: true,
+    },
+  });
+  await prisma.notificationPreference.create({
+    data: {
+      userId: 2,
+      emailDocuments: true,
+      emailSignatures: true,
+      emailDistributions: false,
+      emailMessages: true,
+      emailCapitalCalls: true,
+    },
+  });
+  console.log("  NotificationPreferences: 2");
+
+  // ─── Notification Logs ───
+  const notifLogs = [
+    { userId: 1, type: "document_uploaded", subject: "New Document: Q2 2025 — Porthaven Quarterly Report", channel: "email", status: "sent", metadata: JSON.stringify({ docName: "Q2 2025 — Porthaven Quarterly Report", projectName: "Porthaven" }) },
+    { userId: 1, type: "signature_required", subject: "Signature Required: K-1 Tax Package — FY 2024", channel: "email", status: "sent", metadata: JSON.stringify({ docName: "K-1 Tax Package — FY 2024" }) },
+    { userId: 1, type: "distribution_paid", subject: "Distribution Payment: $7,500 - Porthaven", channel: "email", status: "sent", metadata: JSON.stringify({ amount: 7500, projectName: "Porthaven", quarter: "Q2 2025" }) },
+    { userId: 2, type: "signature_completed", subject: "Signature Completed: Subscription Agreement — Livy", channel: "email", status: "sent", metadata: JSON.stringify({ investorName: "James Chen", docName: "Subscription Agreement — Livy" }) },
+    { userId: 1, type: "new_message", subject: "New Message from Gord Wylie: Porthaven Q2 Update", channel: "email", status: "sent", metadata: JSON.stringify({ senderName: "Gord Wylie", messageSubject: "Porthaven Q2 Update" }) },
+  ];
+  await prisma.notificationLog.createMany({ data: notifLogs });
+  console.log("  NotificationLogs: " + notifLogs.length);
 
   console.log("\nSeed complete!");
 }
