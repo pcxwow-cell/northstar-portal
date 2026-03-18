@@ -6,7 +6,7 @@ const router = Router();
 
 const threadIncludes = {
   messages: { include: { sender: { select: { id: true, name: true, initials: true, role: true } } }, orderBy: { createdAt: "asc" } },
-  recipients: { select: { userId: true, unread: true, readAt: true }, include: { user: { select: { id: true, name: true, initials: true } } } },
+  recipients: { include: { user: { select: { id: true, name: true, initials: true } } } },
   creator: { select: { id: true, name: true, initials: true, role: true } },
   targetProject: { select: { id: true, name: true } },
 };
