@@ -723,9 +723,10 @@ router.put("/staff/:id", async (req, res, next) => {
 // ─── AUDIT LOG ───
 router.get("/audit-log", async (req, res, next) => {
   try {
-    const { action, limit = 100 } = req.query;
+    const { action, limit = 100, userId } = req.query;
     const where = {};
     if (action && action !== "all") where.action = action;
+    if (userId) where.userId = parseInt(userId);
 
     const logs = await prisma.auditLog.findMany({
       where,

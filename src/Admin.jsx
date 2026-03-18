@@ -1585,7 +1585,63 @@ function InvestorProfile({ investorId, onBack, toast }) {
           </div>
         )) : <span style={{ fontSize: 12, color: "#BBB", fontStyle: "italic" }}>No messages</span>}
       </div>
+
+      {/* Activity Timeline */}
+      <ActivityTimeline userId={investorId} />
     </>
+  );
+}
+
+// ─── ACTIVITY TIMELINE (audit log for a specific user) ───
+function ActivityTimeline({ userId }) {
+  const [activities, setActivities] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchAuditLog({ userId, limit: 20 }).then(setActivities).catch(() => setActivities([])).finally(() => setLoading(false));
+  }, [userId]);
+
+  const actionIcon = (a) => {
+    if (a === "login") return "🔑";
+    if (a.includes("download")) return "📥";
+    if (a.includes("upload")) return "📤";
+    if (a.includes("signature")) return "✍️";
+    if (a.includes("profile")) return "👤";
+    if (a.includes("message")) return "💬";
+    if (a === "logout") return "🚪";
+    return "•";
+  };
+
+  const section = { background: "#fff", borderRadius: 12, padding: "20px 24px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" };
+  const sectionTitle = { fontSize: 13, fontWeight: 600, color: "#666", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 14 };
+
+  return (
+    <div style={section}>
+      <div style={sectionTitle}>Activity Timeline</div>
+      {loading ? <p style={{ fontSize: 12, color: "#BBB" }}>Loading...</p> : activities.length === 0 ? (
+        <p style={{ fontSize: 12, color: "#BBB", fontStyle: "italic" }}>No recorded activity</p>
+      ) : (
+        <div style={{ position: "relative", paddingLeft: 24 }}>
+          <div style={{ position: "absolute", left: 8, top: 4, bottom: 4, width: 1, background: "#E8E5DE" }} />
+          {activities.map((a, i) => (
+            <div key={a.id} style={{ position: "relative", paddingBottom: i < activities.length - 1 ? 16 : 0, fontSize: 13 }}>
+              <div style={{ position: "absolute", left: -20, top: 2, width: 16, height: 16, borderRadius: "50%", background: "#F8F7F4", border: "1px solid #E8E5DE", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9 }}>
+                {actionIcon(a.action)}
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div>
+                  <span style={{ fontWeight: 500 }}>{a.action.replace(/_/g, " ")}</span>
+                  {a.resource && <span style={{ color: "#767168", marginLeft: 6 }}>{a.resource}</span>}
+                </div>
+                <span style={{ fontSize: 11, color: "#BBB", whiteSpace: "nowrap", marginLeft: 12 }}>
+                  {new Date(a.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
