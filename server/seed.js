@@ -538,6 +538,19 @@ async function main() {
     console.log(`  Recalculated: userId=${ip.userId} projectId=${ip.projectId} IRR=${irr != null ? (irr * 100).toFixed(1) + "%" : "N/A"} MOIC=${moic}x`);
   }
 
+  // Reset PostgreSQL sequences so auto-increment doesn't conflict with seeded IDs
+  const tables = ["users", "projects", "investor_projects", "documents", "document_assignments",
+    "distributions", "message_threads", "thread_messages", "thread_recipients",
+    "signature_requests", "signature_signers", "notification_logs", "notification_preferences",
+    "prospects", "audit_logs", "cash_flows", "login_history", "investor_entities",
+    "investor_groups", "group_members"];
+  for (const table of tables) {
+    try {
+      await prisma.$executeRawUnsafe(`SELECT setval(pg_get_serial_sequence('${table}', 'id'), COALESCE((SELECT MAX(id) FROM "${table}"), 0) + 1, false)`);
+    } catch (e) { /* table might not have id column or sequence */ }
+  }
+  console.log("  Reset ID sequences");
+
   console.log("\nSeed complete!");
 }
 
