@@ -1,0 +1,18 @@
+version: '3.8'
+services:
+  app:
+    build: .
+    ports:
+      - "3003:3003"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=file:../prisma/dev.db
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+      - API_PORT=3003
+    volumes:
+      - uploads:/app/uploads
+      - dbdata:/app/prisma
+
+volumes:
+  uploads:
+  dbdata:

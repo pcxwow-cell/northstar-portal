@@ -32,6 +32,7 @@ model User {
   notificationLogs     NotificationLog[]
   notificationPrefs    NotificationPreference?
   cashFlows            CashFlow[]
+  auditLogs            AuditLog[]
 
   @@map("users")
 }
@@ -385,6 +386,23 @@ model Prospect {
   interestedProject Project? @relation(fields: [interestedProjectId], references: [id])
 
   @@map("prospects")
+}
+
+// ─── AUDIT LOG ─────────────────────────────────────────────
+
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int?     @map("user_id")
+  action     String   // login | logout | document_download | document_upload | signature_request | signature_sign | profile_update | investor_invite | project_update | cash_flow_record | prospect_submit
+  resource   String?  // "document:15" | "project:2" | "user:5"
+  details    String?  // JSON blob with extra context
+  ipAddress  String?  @map("ip_address")
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
 }
 
 // ─── CASH FLOWS (financial engine) ────────────────────────

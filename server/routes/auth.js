@@ -2,6 +2,7 @@ const { Router } = require("express");
 const bcrypt = require("bcryptjs");
 const prisma = require("../prisma");
 const { signToken, authenticate } = require("../middleware/auth");
+const audit = require("../services/audit");
 const router = Router();
 
 // POST /api/v1/auth/login
@@ -23,6 +24,7 @@ router.post("/login", async (req, res, next) => {
     }
 
     const token = signToken(user);
+    audit.log(req, "login", `user:${user.id}`, { email: user.email, role: user.role });
     res.json({
       token,
       user: {
@@ -69,12 +71,14 @@ router.put("/profile", authenticate, async (req, res, next) => {
         ...(initials !== undefined && { initials }),
       },
     });
+    audit.log(req, "profile_update", `user:${user.id}`, { name: user.name, email: user.email });
     res.json({ id: user.id, name: user.name, email: user.email, initials: user.initials });
   } catch (err) { next(err); }
 });
 
 // POST /api/v1/auth/logout — client-side token deletion, server just acknowledges
 router.post("/logout", (req, res) => {
+  audit.log(req, "logout", null, null);
   res.json({ message: "Logged out" });
 });
 

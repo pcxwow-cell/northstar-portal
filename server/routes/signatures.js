@@ -3,6 +3,7 @@ const prisma = require("../prisma");
 const esign = require("../services/esign");
 const { requireRole } = require("../middleware/auth");
 const { notify } = require("../services/notifications");
+const audit = require("../services/audit");
 const router = Router();
 
 // POST /api/v1/signatures/request — create signature request (ADMIN/GP)
@@ -70,6 +71,8 @@ router.post("/request", requireRole("ADMIN", "GP"), async (req, res, next) => {
         });
       }
     }
+
+    audit.log(req, "signature_request", `document:${doc.id}`, { subject: sigRequest.subject, signerCount: signerUsers.length });
 
     res.status(201).json({
       id: sigRequest.id,
@@ -215,6 +218,8 @@ router.post("/:signerId/sign", async (req, res, next) => {
         docName: signer.request.document.name,
       });
     }
+
+    audit.log(req, "signature_sign", `document:${signer.request.documentId}`, { signerName: signer.name, allSigned });
 
     res.json({ ok: true, status: "signed", allSigned });
   } catch (err) { next(err); }

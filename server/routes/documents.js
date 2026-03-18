@@ -5,6 +5,7 @@ const prisma = require("../prisma");
 const storage = require("../storage");
 const { requireRole } = require("../middleware/auth");
 const { notifyMany } = require("../services/notifications");
+const audit = require("../services/audit");
 const router = Router();
 
 // Multer config — store in memory, then pass to storage adapter
@@ -81,6 +82,8 @@ router.get("/:id/download", async (req, res, next) => {
         update: { downloadedAt: new Date(), ...(!doc.viewedAt ? { viewedAt: new Date() } : {}) },
       });
     }
+
+    audit.log(req, "document_download", `document:${doc.id}`, { name: doc.name });
 
     // If doc has a storage key, serve from storage adapter
     if (doc.storageKey) {
@@ -162,6 +165,8 @@ router.post("/upload", requireRole("ADMIN", "GP"), upload.single("file"), async 
     } catch (notifyErr) {
       console.error("Failed to send document notifications:", notifyErr);
     }
+
+    audit.log(req, "document_upload", `document:${doc.id}`, { name: doc.name, category, projectId: projectId || null });
 
     res.status(201).json({
       id: doc.id,

@@ -3,6 +3,7 @@ const router = express.Router();
 const prisma = require("../prisma");
 const { requireRole } = require("../middleware/auth");
 const { calculateXIRR, calculateMOIC, calculateWaterfall, capitalAccountStatement } = require("../services/finance");
+const audit = require("../services/audit");
 
 // ─── POST /calculate-irr ────────────────────────────────
 // Body: { cashFlows: [{date, amount}] }
@@ -96,6 +97,8 @@ router.post("/record-cashflow", requireRole("ADMIN", "GP"), async (req, res) => 
         description: description || null,
       },
     });
+
+    audit.log(req, "cash_flow_record", `project:${projectId}`, { userId, amount, type });
 
     res.json(cashFlow);
   } catch (err) {

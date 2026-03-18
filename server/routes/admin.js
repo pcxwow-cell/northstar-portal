@@ -3,6 +3,7 @@ const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const prisma = require("../prisma");
 const { requireRole } = require("../middleware/auth");
+const audit = require("../services/audit");
 const router = Router();
 
 // All admin routes require ADMIN or GP role
@@ -100,6 +101,8 @@ router.put("/projects/:id", async (req, res, next) => {
         ...(totalRaise !== undefined && { totalRaise }),
       },
     });
+    audit.log(req, "project_update", `project:${project.id}`, { name: project.name });
+
     res.json({ id: project.id, name: project.name, status: project.status, completion: project.completionPct });
   } catch (err) { next(err); }
 });
@@ -285,6 +288,8 @@ router.post("/investors/invite", async (req, res, next) => {
         joined,
       },
     });
+
+    audit.log(req, "investor_invite", `user:${user.id}`, { name, email });
 
     res.status(201).json({
       id: user.id, name: user.name, email: user.email, status: user.status,
@@ -619,6 +624,34 @@ router.put("/staff/:id", async (req, res, next) => {
       data: { ...(name !== undefined && { name }), ...(email !== undefined && { email }), ...(role !== undefined && { role }), ...(status !== undefined && { status }) },
     });
     res.json({ id: user.id, name: user.name, email: user.email, role: user.role, status: user.status });
+  } catch (err) { next(err); }
+});
+
+// ─── AUDIT LOG ───
+router.get("/audit-log", async (req, res, next) => {
+  try {
+    const { action, limit = 100 } = req.query;
+    const where = {};
+    if (action && action !== "all") where.action = action;
+
+    const logs = await prisma.auditLog.findMany({
+      where,
+      include: { user: { select: { id: true, name: true, email: true } } },
+      orderBy: { createdAt: "desc" },
+      take: Math.min(parseInt(limit) || 100, 500),
+    });
+
+    res.json(logs.map(l => ({
+      id: l.id,
+      user: l.user ? l.user.name : "System",
+      userEmail: l.user?.email || null,
+      action: l.action,
+      resource: l.resource,
+      details: l.details,
+      ipAddress: l.ipAddress,
+      userAgent: l.userAgent,
+      createdAt: l.createdAt,
+    })));
   } catch (err) { next(err); }
 });
 

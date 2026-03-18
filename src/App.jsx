@@ -136,23 +136,55 @@ function SectionHeader({ title, right }) {
   );
 }
 
-function Table({ columns, rows, onRowClick }) {
+function Table({ columns, rows, onRowClick, sortable, sortKey: externalSortKey, sortDir: externalSortDir, onSort }) {
   const { bg, surface, line, t1, t2, t3, hover } = useTheme();
+  const [internalSortKey, setInternalSortKey] = useState(null);
+  const [internalSortDir, setInternalSortDir] = useState("asc");
+
+  const sortKey = externalSortKey !== undefined ? externalSortKey : internalSortKey;
+  const sortDir = externalSortDir !== undefined ? externalSortDir : internalSortDir;
+
+  function handleSort(key) {
+    if (!sortable) return;
+    if (onSort) { onSort(key); return; }
+    if (key === internalSortKey) setInternalSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setInternalSortKey(key); setInternalSortDir("asc"); }
+  }
+
+  let displayRows = rows;
+  if (sortable && sortKey && !onSort) {
+    displayRows = [...rows].sort((a, b) => {
+      let va = a[sortKey], vb = b[sortKey];
+      if (typeof va === "string") va = va.toLowerCase();
+      if (typeof vb === "string") vb = vb.toLowerCase();
+      if (va < vb) return sortDir === "asc" ? -1 : 1;
+      if (va > vb) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+  }
+
   return (
     <div style={{ border: `1px solid ${line}`, borderRadius: 2, overflow: "hidden" }}>
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
         <thead>
           <tr style={{ borderBottom: `1px solid ${line}`, background: surface }}>
             {columns.map(c => (
-              <th key={c.key} style={{ padding: "13px 16px", textAlign: c.align || "left", fontWeight: 400, fontSize: 10, letterSpacing: ".08em", textTransform: "uppercase", color: t3, width: c.width }}>
+              <th key={c.key} onClick={() => c.sortKey !== false && handleSort(c.key)} style={{
+                padding: "13px 16px", textAlign: c.align || "left", fontWeight: 400, fontSize: 10,
+                letterSpacing: ".08em", textTransform: "uppercase", color: t3, width: c.width,
+                cursor: sortable && c.sortKey !== false ? "pointer" : "default", userSelect: "none",
+              }}>
                 {c.label}
+                {sortable && sortKey === c.key && <span style={{ marginLeft: 4, fontSize: 9 }}>{sortDir === "asc" ? "\u25B2" : "\u25BC"}</span>}
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, i) => (
-            <tr key={i} onClick={() => onRowClick?.(row, i)} style={{ borderBottom: i < rows.length - 1 ? `1px solid ${line}` : "none", cursor: onRowClick ? "pointer" : "default", transition: "background .12s" }}
+          {displayRows.length === 0 ? (
+            <tr><td colSpan={columns.length} style={{ padding: "32px 16px", textAlign: "center", color: t3, fontSize: 13 }}>No data</td></tr>
+          ) : displayRows.map((row, i) => (
+            <tr key={i} onClick={() => onRowClick?.(row, i)} style={{ borderBottom: i < displayRows.length - 1 ? `1px solid ${line}` : "none", cursor: onRowClick ? "pointer" : "default", transition: "background .12s" }}
               onMouseEnter={e => e.currentTarget.style.background = hover}
               onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
               {columns.map(c => (
@@ -166,6 +198,77 @@ function Table({ columns, rows, onRowClick }) {
       </table>
     </div>
   );
+}
+
+// ─── LOADING SPINNER ─────────────────────────────────────
+function LoadingSpinner({ size = 24, color = red }) {
+  return (
+    <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+      <style>{`@keyframes northstarSpin { to { transform: rotate(360deg); } }`}</style>
+      <div style={{
+        width: size, height: size,
+        border: `2px solid ${color}22`,
+        borderTopColor: color,
+        borderRadius: "50%",
+        animation: "northstarSpin .7s linear infinite",
+      }} />
+    </div>
+  );
+}
+
+// ─── ERROR BANNER ────────────────────────────────────────
+function ErrorBanner({ message, onRetry }) {
+  const th = useTheme();
+  return (
+    <div style={{
+      padding: "14px 20px", borderRadius: 4,
+      background: `${red}10`, border: `1px solid ${red}30`,
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      fontFamily: sans, fontSize: 13, color: red,
+    }}>
+      <span>{message || "Something went wrong."}</span>
+      {onRetry && (
+        <span onClick={onRetry} style={{ fontSize: 12, padding: "5px 14px", borderRadius: 3, border: `1px solid ${red}44`, cursor: "pointer", marginLeft: 16, flexShrink: 0 }}>Retry</span>
+      )}
+    </div>
+  );
+}
+
+// ─── EMPTY STATE ─────────────────────────────────────────
+function EmptyState({ icon, title, subtitle }) {
+  const th = useTheme();
+  return (
+    <div style={{ textAlign: "center", padding: "60px 20px", fontFamily: sans }}>
+      {icon && <div style={{ fontSize: 36, marginBottom: 16, opacity: 0.3 }}>{icon}</div>}
+      <div style={{ fontSize: 16, fontWeight: 500, color: th.t2, marginBottom: 6 }}>{title}</div>
+      {subtitle && <div style={{ fontSize: 13, color: th.t3 }}>{subtitle}</div>}
+    </div>
+  );
+}
+
+// ─── LOADING PAGE (full-page loader for data fetch) ─────
+function LoadingPage() {
+  const th = useTheme();
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 20px", gap: 16 }}>
+      <LoadingSpinner size={32} />
+      <span style={{ fontSize: 13, color: th.t3 }}>Loading...</span>
+    </div>
+  );
+}
+
+// ─── CSV EXPORT UTILITY ─────────────────────────────────
+function exportCSV(headers, rows, filename) {
+  const escape = (v) => {
+    const s = String(v == null ? "" : v);
+    return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const csv = [headers.map(escape).join(","), ...rows.map(r => r.map(escape).join(","))].join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
 }
 
 function ProgressBar({ value, color }) {
@@ -305,6 +408,9 @@ function Overview({ onNavigate, investor, projects, myProjects, allDistributions
 
       {/* Recent messages preview */}
       <SectionHeader title="Recent Messages" right={<span style={{ color: red, cursor: "pointer" }} onClick={() => onNavigate("messages")}>All messages →</span>} />
+      {msgs.length === 0 ? (
+        <EmptyState title="No messages yet" subtitle="Start a conversation with Northstar." />
+      ) : (
       <div style={{ border: `1px solid ${line}`, borderRadius: 2, overflow: "hidden" }}>
         {msgs.slice(0, 3).map((m, i) => (
           <div key={m.id} style={{ display: "flex", gap: 16, padding: "16px 20px", borderBottom: i < 2 ? `1px solid ${line}` : "none", cursor: "pointer", transition: "background .12s" }}
@@ -322,6 +428,7 @@ function Overview({ onNavigate, investor, projects, myProjects, allDistributions
           </div>
         ))}
       </div>
+      )}
     </>
   );
 }
@@ -543,7 +650,17 @@ function CapTablePage({ myProjects, investor }) {
         ))}
       </div>
 
+      {/* Export CSV */}
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+        <span onClick={() => exportCSV(
+          ["Holder", "Class", "Committed", "Called", "Unfunded", "Ownership %"],
+          project.capTable.map(r => [r.holder, r.type, r.committed, r.called, r.unfunded, r.ownership]),
+          `northstar-captable-${project.name.toLowerCase().replace(/\s+/g, "-")}.csv`
+        )} style={{ fontSize: 11, padding: "5px 12px", borderRadius: 2, border: `1px solid ${line}`, color: t3, cursor: "pointer" }}>Export CSV</span>
+      </div>
+
       <Table
+        sortable
         columns={[
           { key: "holder", label: "Holder", render: r => <span style={{ fontWeight: r.holder === investor.name ? 500 : 400, color: r.holder === investor.name ? t1 : t2 }}>{r.holder}</span> },
           { key: "type", label: "Class", render: r => <span style={{ color: t3 }}>{r.type}</span> },
@@ -805,6 +922,18 @@ function DocumentsPage({ toast, allDocuments, myProjects, investor }) {
         ))}
       </div>
 
+      {/* Export CSV */}
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+        <span onClick={() => exportCSV(
+          ["Name", "Project", "Category", "Date", "Size", "Status"],
+          filtered.map(d => [d.name, d.project, d.category, d.date, d.size, d.status]),
+          "northstar-documents.csv"
+        )} style={{ fontSize: 11, padding: "5px 12px", borderRadius: 2, border: `1px solid ${line}`, color: t3, cursor: "pointer" }}>Export CSV</span>
+      </div>
+
+      {filtered.length === 0 ? (
+        <EmptyState icon="\uD83D\uDCC4" title="No documents available" subtitle="Documents will appear here when they are uploaded to your projects." />
+      ) : (
       <div style={{ border: `1px solid ${line}`, borderRadius: 2, overflow: "hidden" }}>
         {filtered.map((d, i) => (
           <div key={`${d.id}-${d.project}`} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: i < filtered.length - 1 ? `1px solid ${line}` : "none", cursor: "pointer", transition: "background .12s" }}
@@ -830,6 +959,7 @@ function DocumentsPage({ toast, allDocuments, myProjects, investor }) {
           </div>
         ))}
       </div>
+      )}
 
       {/* Sign Modal */}
       <Modal open={!!signModal} onClose={() => setSignModal(null)}>
@@ -908,18 +1038,30 @@ function DistributionsPage({ allDistributions, myProjects }) {
         ))}
       </div>
 
-      <SectionHeader title="Distribution History" />
-      <Table
-        columns={[
-          { key: "project", label: "Project", render: r => <span style={{ fontFamily: serif, fontWeight: 500 }}>{r.project}</span> },
-          { key: "quarter", label: "Period" },
-          { key: "date", label: "Payment Date", render: r => <span style={{ color: t2 }}>{r.date}</span> },
-          { key: "amount", label: "Amount", render: r => `$${fmt(r.amount)}` },
-          { key: "type", label: "Type", render: r => <span style={{ color: t3 }}>{r.type}</span> },
-          { key: "status", label: "Status", align: "right", render: () => <span style={{ fontSize: 11, color: green }}>Paid</span> },
-        ]}
-        rows={allDistributions}
-      />
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 20 }}>
+        <h2 style={{ fontFamily: serif, fontSize: 22, fontWeight: 400, color: t1 }}>Distribution History</h2>
+        <span onClick={() => exportCSV(
+          ["Project", "Period", "Payment Date", "Amount", "Type"],
+          allDistributions.map(d => [d.project, d.quarter, d.date, d.amount, d.type]),
+          "northstar-distributions.csv"
+        )} style={{ fontSize: 11, padding: "5px 12px", borderRadius: 2, border: `1px solid ${line}`, color: t3, cursor: "pointer" }}>Export CSV</span>
+      </div>
+      {allDistributions.length === 0 ? (
+        <EmptyState icon="$" title="No distributions have been made yet" subtitle="Distribution payments will appear here when they are processed." />
+      ) : (
+        <Table
+          sortable
+          columns={[
+            { key: "project", label: "Project", render: r => <span style={{ fontFamily: serif, fontWeight: 500 }}>{r.project}</span> },
+            { key: "quarter", label: "Period" },
+            { key: "date", label: "Payment Date", render: r => <span style={{ color: t2 }}>{r.date}</span> },
+            { key: "amount", label: "Amount", render: r => `$${fmt(r.amount)}` },
+            { key: "type", label: "Type", render: r => <span style={{ color: t3 }}>{r.type}</span> },
+            { key: "status", label: "Status", align: "right", sortKey: false, render: () => <span style={{ fontSize: 11, color: green }}>Paid</span> },
+          ]}
+          rows={allDistributions}
+        />
+      )}
     </>
   );
 }
@@ -1074,11 +1216,11 @@ function MessagesPage({ toast, investor }) {
         <span onClick={() => setComposing(true)} style={{ fontSize: 13, padding: "10px 20px", borderRadius: 4, cursor: "pointer", background: red, color: "#fff", fontWeight: 500 }}>New Message</span>
       </div>
       {loading ? (
-        <p style={{ color: t3 }}>Loading...</p>
+        <LoadingPage />
       ) : threads.length === 0 ? (
-        <div style={{ textAlign: "center", padding: 60, color: t3 }}>
-          <p style={{ fontSize: 15, marginBottom: 12 }}>No messages yet</p>
-          <span onClick={() => setComposing(true)} style={{ fontSize: 13, color: red, cursor: "pointer" }}>Send your first message →</span>
+        <div style={{ textAlign: "center", padding: 60 }}>
+          <EmptyState title="No messages yet" subtitle="Start a conversation with Northstar." />
+          <span onClick={() => setComposing(true)} style={{ fontSize: 13, color: red, cursor: "pointer", marginTop: 8, display: "inline-block" }}>Send your first message →</span>
         </div>
       ) : (
         <div style={{ border: `1px solid ${line}`, borderRadius: 4, overflow: "hidden" }}>
@@ -1438,6 +1580,71 @@ function LoginPage({ onLogin, onShowProspects }) {
   );
 }
 
+// ─── SESSION TIMEOUT HOOK ────────────────────────────────
+const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+const SESSION_WARNING = 25 * 60 * 1000; // 25 minutes — warn at 5 min remaining
+
+function useSessionTimeout(authed, onTimeout) {
+  const [showWarning, setShowWarning] = useState(false);
+  const lastActivity = useRef(Date.now());
+  const warningTimer = useRef(null);
+  const logoutTimer = useRef(null);
+
+  const resetTimers = useCallback(() => {
+    lastActivity.current = Date.now();
+    setShowWarning(false);
+    clearTimeout(warningTimer.current);
+    clearTimeout(logoutTimer.current);
+    if (authed) {
+      warningTimer.current = setTimeout(() => setShowWarning(true), SESSION_WARNING);
+      logoutTimer.current = setTimeout(() => onTimeout(), SESSION_TIMEOUT);
+    }
+  }, [authed, onTimeout]);
+
+  useEffect(() => {
+    if (!authed) { setShowWarning(false); return; }
+    const events = ["mousedown", "keydown", "scroll", "touchstart"];
+    const handler = () => resetTimers();
+    events.forEach(e => window.addEventListener(e, handler, { passive: true }));
+    resetTimers();
+    return () => {
+      events.forEach(e => window.removeEventListener(e, handler));
+      clearTimeout(warningTimer.current);
+      clearTimeout(logoutTimer.current);
+    };
+  }, [authed, resetTimers]);
+
+  return { showWarning, dismissWarning: () => setShowWarning(false) };
+}
+
+// ─── SESSION WARNING MODAL ──────────────────────────────
+function SessionWarningModal({ onDismiss, onLogout }) {
+  const th = useTheme();
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,.6)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      backdropFilter: "blur(4px)",
+    }}>
+      <div style={{
+        background: th.surface, border: `1px solid ${th.line}`, borderRadius: 6,
+        padding: "32px", maxWidth: 400, width: "90%", textAlign: "center",
+        boxShadow: "0 16px 48px rgba(0,0,0,.3)",
+      }}>
+        <div style={{ fontSize: 32, marginBottom: 16 }}>&#x23F0;</div>
+        <h3 style={{ fontFamily: sans, fontSize: 18, fontWeight: 500, color: th.t1, marginBottom: 8 }}>Session Expiring</h3>
+        <p style={{ fontSize: 13, color: th.t2, lineHeight: 1.6, marginBottom: 24 }}>
+          Your session will expire in 5 minutes due to inactivity. Click below to stay signed in.
+        </p>
+        <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+          <span onClick={onLogout} style={{ fontSize: 13, padding: "10px 20px", borderRadius: 4, border: `1px solid ${th.line}`, color: th.t3, cursor: "pointer" }}>Sign Out</span>
+          <span onClick={onDismiss} style={{ fontSize: 13, padding: "10px 24px", borderRadius: 4, background: red, color: "#fff", cursor: "pointer", fontWeight: 500 }}>Stay Signed In</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── APP ─────────────────────────────────────────────────
 export default function App() {
   const [authed, setAuthed] = useState(checkAuthed);
@@ -1518,6 +1725,8 @@ export default function App() {
     setView("overview");
   }
 
+  const { showWarning, dismissWarning } = useSessionTimeout(authed, handleLogout);
+
   async function handleLogin(u) {
     setUser(u);
     setAuthed(true);
@@ -1532,7 +1741,10 @@ export default function App() {
   if (!authed || (!appData && !user)) return (
     <ThemeContext.Provider value={th}>
       {loading ? (
-        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: th.bg, fontFamily: sans, color: th.t2 }}>Loading...</div>
+        <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: th.bg, fontFamily: sans, color: th.t2, gap: 16 }}>
+          <NorthstarIcon size={40} color={red} />
+          <LoadingSpinner size={28} />
+        </div>
       ) : showProspectPortal ? (
         <ProspectPortal onNavigateLogin={() => { setShowProspectPortal(false); window.location.hash = "#/login"; }} />
       ) : (
@@ -1548,7 +1760,10 @@ export default function App() {
 
   if (!appData) return (
     <ThemeContext.Provider value={th}>
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: th.bg, fontFamily: sans, color: th.t2 }}>Loading...</div>
+      <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: th.bg, fontFamily: sans, color: th.t2, gap: 16 }}>
+        <NorthstarIcon size={40} color={red} />
+        <LoadingSpinner size={28} />
+      </div>
     </ThemeContext.Provider>
   );
 
@@ -1695,6 +1910,7 @@ export default function App() {
       </footer>
 
       <ToastContainer toasts={toast.toasts} onDismiss={toast.dismiss} />
+      {showWarning && <SessionWarningModal onDismiss={dismissWarning} onLogout={handleLogout} />}
     </div>
     </ThemeContext.Provider>);
 }

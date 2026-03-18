@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
+const audit = require("../services/audit");
 
 // ─── POST /api/v1/prospects — PUBLIC (no auth) ───
 // Create a new prospect lead
@@ -52,6 +53,8 @@ router.post("/", async (req, res) => {
       console.error("Failed to create admin notification:", notifErr.message);
       // Don't fail the prospect creation if notification fails
     }
+
+    audit.log(req, "prospect_submit", `prospect:${prospect.id}`, { name, email, investmentRange: investmentRange || null });
 
     res.status(201).json(prospect);
   } catch (err) {

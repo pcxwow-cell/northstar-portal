@@ -546,6 +546,16 @@ export async function recalculateProject(projectId) {
   return apiFetch(`/finance/recalculate/${projectId}`, { method: "POST" });
 }
 
+// ─── Audit Log (admin) ───
+export async function fetchAuditLog(params = {}) {
+  if (_demoMode) return [
+    { id: 1, user: "Northstar Admin", action: "login", resource: "user:2", details: '{"email":"admin@northstardevelopment.ca"}', ipAddress: "127.0.0.1", createdAt: new Date().toISOString() },
+    { id: 2, user: "James Chen", action: "document_download", resource: "document:1", details: '{"name":"Q2 2025 Report"}', ipAddress: "127.0.0.1", createdAt: new Date(Date.now() - 3600000).toISOString() },
+  ];
+  const qs = new URLSearchParams(params).toString();
+  return apiFetch(`/admin/audit-log${qs ? "?" + qs : ""}`);
+}
+
 // ─── Utility (kept from data.js) ───
 export const fmt = (n) => {
   if (typeof n !== "number") return n;

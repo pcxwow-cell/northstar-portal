@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchDashboard, fetchAdminProjects, updateProject, postUpdate, fetchAdminInvestors, sendMessage, uploadDocument, inviteInvestor, updateInvestor, approveInvestor, deactivateInvestor, resetInvestorPassword, assignInvestorProject, updateInvestorKPI, fetchThreads, fetchThread, createThread, replyToThread, fetchInvestorProfile, fetchGroups, createGroup, updateGroup, deleteGroup, fetchGroupDetail, addGroupMembers, removeGroupMember, fetchStaff, createStaff, updateStaff, fetchAdminDocuments, fetchAdminDocumentDetail, fetchAdminProjectDetail, updateWaterfall, fetchSignatureRequests, createSignatureRequest, cancelSignatureRequest, fetchProspects, updateProspectStatus, fetchProspectStats, fetchCashFlows, recordCashFlow, recalculateProject, fmt, fmtCurrency } from "./api.js";
+import { fetchDashboard, fetchAdminProjects, updateProject, postUpdate, fetchAdminInvestors, sendMessage, uploadDocument, inviteInvestor, updateInvestor, approveInvestor, deactivateInvestor, resetInvestorPassword, assignInvestorProject, updateInvestorKPI, fetchThreads, fetchThread, createThread, replyToThread, fetchInvestorProfile, fetchGroups, createGroup, updateGroup, deleteGroup, fetchGroupDetail, addGroupMembers, removeGroupMember, fetchStaff, createStaff, updateStaff, fetchAdminDocuments, fetchAdminDocumentDetail, fetchAdminProjectDetail, updateWaterfall, fetchSignatureRequests, createSignatureRequest, cancelSignatureRequest, fetchProspects, updateProspectStatus, fetchProspectStats, fetchCashFlows, recordCashFlow, recalculateProject, fetchAuditLog, fmt, fmtCurrency } from "./api.js";
 
 const sans = "'DM Sans', -apple-system, sans-serif";
 const red = "#EA2028";
@@ -8,6 +8,37 @@ const darkText = "#231F20";
 const inputStyle = { width: "100%", padding: "10px 14px", border: "1px solid #DDD", borderRadius: 4, fontSize: 13, fontFamily: sans, boxSizing: "border-box" };
 const btnStyle = { padding: "8px 16px", background: red, color: "#fff", border: "none", borderRadius: 4, fontSize: 13, cursor: "pointer", fontFamily: sans };
 const btnOutline = { ...btnStyle, background: "#fff", color: darkText, border: "1px solid #DDD" };
+
+// ─── ADMIN LOADING SPINNER ───
+function AdminSpinner() {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "60px 20px", gap: 12 }}>
+      <style>{`@keyframes adminSpin { to { transform: rotate(360deg); } }`}</style>
+      <div style={{ width: 24, height: 24, border: `2px solid ${red}22`, borderTopColor: red, borderRadius: "50%", animation: "adminSpin .7s linear infinite" }} />
+      <span style={{ fontSize: 13, color: "#999" }}>Loading...</span>
+    </div>
+  );
+}
+
+// ─── ADMIN ERROR BANNER ───
+function AdminError({ message, onRetry }) {
+  return (
+    <div style={{ padding: "14px 20px", borderRadius: 4, background: "#FEE", border: `1px solid ${red}30`, display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 13, color: red }}>
+      <span>{message || "Something went wrong."}</span>
+      {onRetry && <span onClick={onRetry} style={{ ...btnOutline, fontSize: 12, color: red, borderColor: `${red}44`, cursor: "pointer" }}>Retry</span>}
+    </div>
+  );
+}
+
+// ─── ADMIN EMPTY STATE ───
+function AdminEmpty({ title, subtitle }) {
+  return (
+    <div style={{ textAlign: "center", padding: "48px 20px" }}>
+      <div style={{ fontSize: 15, fontWeight: 500, color: "#666", marginBottom: 6 }}>{title}</div>
+      {subtitle && <div style={{ fontSize: 13, color: "#999" }}>{subtitle}</div>}
+    </div>
+  );
+}
 
 export default function AdminPanel({ user, onLogout }) {
   const [view, setView] = useState("dashboard");
@@ -24,6 +55,7 @@ export default function AdminPanel({ user, onLogout }) {
     { id: "staff", label: "Staff" },
     { id: "prospects", label: "Prospects" },
     { id: "inbox", label: "Inbox" },
+    { id: "audit", label: "Audit Log" },
   ];
 
   // Sub-view navigation
@@ -44,6 +76,7 @@ export default function AdminPanel({ user, onLogout }) {
     staff: <StaffManager toast={showToast} />,
     prospects: <ProspectManager toast={showToast} />,
     inbox: <AdminInbox user={user} toast={showToast} />,
+    audit: <AuditLogViewer />,
   };
 
   return (
@@ -80,8 +113,10 @@ export default function AdminPanel({ user, onLogout }) {
 // ─── DASHBOARD ───
 function Dashboard() {
   const [data, setData] = useState(null);
-  useEffect(() => { fetchDashboard().then(setData); }, []);
-  if (!data) return <p style={{ color: "#999" }}>Loading...</p>;
+  const [error, setError] = useState(null);
+  useEffect(() => { fetchDashboard().then(setData).catch(e => setError(e.message)); }, []);
+  if (error) return <AdminError message={error} onRetry={() => { setError(null); fetchDashboard().then(setData).catch(e => setError(e.message)); }} />;
+  if (!data) return <AdminSpinner />;
   return (
     <>
       <h1 style={{ fontSize: 28, fontWeight: 300, marginBottom: 32 }}>Admin Dashboard</h1>
@@ -1766,6 +1801,83 @@ function AdminInbox({ user, toast }) {
               </div>
             </div>
           ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+// ─── AUDIT LOG VIEWER ───
+function AuditLogViewer() {
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [actionFilter, setActionFilter] = useState("all");
+
+  const actionTypes = ["all", "login", "logout", "document_download", "document_upload", "signature_request", "signature_sign", "profile_update", "investor_invite", "project_update", "cash_flow_record", "prospect_submit"];
+
+  function loadLogs() {
+    setLoading(true); setError(null);
+    const params = {};
+    if (actionFilter !== "all") params.action = actionFilter;
+    fetchAuditLog(params).then(setLogs).catch(e => setError(e.message)).finally(() => setLoading(false));
+  }
+
+  useEffect(() => { loadLogs(); }, [actionFilter]);
+
+  return (
+    <>
+      <h1 style={{ fontSize: 28, fontWeight: 300, marginBottom: 24 }}>Audit Log</h1>
+      <p style={{ fontSize: 13, color: "#999", marginBottom: 24 }}>Compliance log of key system actions. Last 100 entries shown.</p>
+
+      {/* Filter by action */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
+        {actionTypes.map(a => (
+          <span key={a} onClick={() => setActionFilter(a)} style={{
+            fontSize: 11, padding: "4px 10px", borderRadius: 3, cursor: "pointer",
+            border: `1px solid ${actionFilter === a ? red + "55" : "#DDD"}`,
+            color: actionFilter === a ? red : "#999",
+            background: actionFilter === a ? `${red}08` : "#fff",
+          }}>{a.replace(/_/g, " ")}</span>
+        ))}
+      </div>
+
+      {error && <AdminError message={error} onRetry={loadLogs} />}
+      {loading ? <AdminSpinner /> : logs.length === 0 ? (
+        <AdminEmpty title="No audit log entries" subtitle="Actions will appear here as users interact with the system." />
+      ) : (
+        <div style={{ border: "1px solid #E8E5DE", borderRadius: 6, overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+            <thead>
+              <tr style={{ background: "#FAFAF8", borderBottom: "1px solid #E8E5DE" }}>
+                <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 500, fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#999" }}>Timestamp</th>
+                <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 500, fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#999" }}>User</th>
+                <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 500, fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#999" }}>Action</th>
+                <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 500, fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#999" }}>Resource</th>
+                <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 500, fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#999" }}>IP</th>
+              </tr>
+            </thead>
+            <tbody>
+              {logs.map((log, i) => (
+                <tr key={log.id} style={{ borderBottom: i < logs.length - 1 ? "1px solid #E8E5DE" : "none" }}>
+                  <td style={{ padding: "10px 14px", color: "#999", whiteSpace: "nowrap" }}>
+                    {new Date(log.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                  </td>
+                  <td style={{ padding: "10px 14px", fontWeight: 500 }}>{log.user}</td>
+                  <td style={{ padding: "10px 14px" }}>
+                    <span style={{
+                      fontSize: 10, padding: "2px 8px", borderRadius: 3,
+                      background: log.action === "login" ? `${green}15` : log.action.includes("download") ? "#EEF" : `${red}08`,
+                      color: log.action === "login" ? green : log.action.includes("download") ? "#44A" : "#666",
+                      textTransform: "uppercase", letterSpacing: ".04em",
+                    }}>{log.action.replace(/_/g, " ")}</span>
+                  </td>
+                  <td style={{ padding: "10px 14px", color: "#999" }}>{log.resource || "\u2014"}</td>
+                  <td style={{ padding: "10px 14px", color: "#CCC", fontSize: 11 }}>{log.ipAddress || "\u2014"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </>
