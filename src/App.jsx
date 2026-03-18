@@ -465,54 +465,10 @@ function AnimatedNumber({ value, prefix = "", suffix = "", duration = 800 }) {
 }
 
 // ─── PAGE: OVERVIEW ──────────────────────────────────────
-// ─── ONBOARDING WIZARD ─────────────────────────────────
-function OnboardingWizard({ investor, onComplete }) {
-  const { bg, surface, line, t1, t2, t3 } = useTheme();
-  const [step, setStep] = useState(0);
-  const steps = [
-    { title: "Welcome to Northstar", desc: "Your investor portal gives you full transparency into your real estate investments. Let's take a quick tour.", icon: "\u{1F3E0}" },
-    { title: "Your Dashboard", desc: "See your portfolio at a glance — total contributed, current value, distributions, and IRR across all projects.", icon: "\u{1F4CA}" },
-    { title: "Documents & Signatures", desc: "Access investment documents, K-1s, and sign agreements electronically — all in one place.", icon: "\u{1F4C4}" },
-    { title: "Messaging", desc: "Communicate directly with Northstar staff through secure threaded messages. You'll get email notifications for new messages.", icon: "\u{2709}\u{FE0F}" },
-    { title: "You're All Set!", desc: "Explore your portal. You can update your profile, enable two-factor authentication, and set notification preferences in Settings.", icon: "\u{2705}" },
-  ];
-  const s = steps[step];
-  return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,.5)", backdropFilter: "blur(4px)" }}>
-      <div style={{ background: surface, borderRadius: 16, padding: "40px 36px", maxWidth: 440, width: "90%", boxShadow: "0 20px 60px rgba(0,0,0,.15)", textAlign: "center" }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>{s.icon}</div>
-        <h2 style={{ fontSize: 20, fontWeight: 500, color: t1, marginBottom: 8 }}>{s.title}</h2>
-        <p style={{ fontSize: 14, color: t2, lineHeight: 1.6, marginBottom: 32 }}>{s.desc}</p>
-        {/* Progress dots */}
-        <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 24 }}>
-          {steps.map((_, i) => (
-            <div key={i} style={{ width: i === step ? 20 : 6, height: 6, borderRadius: 3, background: i === step ? red : `${line}`, transition: "all .2s" }} />
-          ))}
-        </div>
-        <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
-          {step > 0 && (
-            <button onClick={() => setStep(step - 1)} style={{ padding: "10px 20px", border: `1px solid ${line}`, borderRadius: 6, background: "transparent", color: t2, fontSize: 13, cursor: "pointer" }}>Back</button>
-          )}
-          {step < steps.length - 1 ? (
-            <button onClick={() => setStep(step + 1)} style={{ padding: "10px 24px", border: "none", borderRadius: 6, background: red, color: "#fff", fontSize: 13, cursor: "pointer", fontWeight: 500 }}>Next</button>
-          ) : (
-            <button onClick={() => { localStorage.setItem("northstar_onboarded", "true"); onComplete(); }} style={{ padding: "10px 24px", border: "none", borderRadius: 6, background: red, color: "#fff", fontSize: 13, cursor: "pointer", fontWeight: 500 }}>Get Started</button>
-          )}
-          {step === 0 && (
-            <button onClick={() => { localStorage.setItem("northstar_onboarded", "true"); onComplete(); }} style={{ padding: "10px 16px", border: "none", borderRadius: 6, background: "transparent", color: t3, fontSize: 12, cursor: "pointer" }}>Skip tour</button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function Overview({ onNavigate, investor, projects, myProjects, allDistributions, msgs }) {
   const { bg, surface, line, t1, t2, t3, hover } = useTheme();
-  const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem("northstar_onboarded"));
   return (
     <>
-      {showOnboarding && <OnboardingWizard investor={investor} onComplete={() => setShowOnboarding(false)} />}
       {/* Hero */}
       <div style={{ marginBottom: 32 }}>
         <p style={{ fontSize: 11, letterSpacing: ".12em", textTransform: "uppercase", color: red, fontWeight: 600, marginBottom: 8 }}>
@@ -651,35 +607,6 @@ function Overview({ onNavigate, investor, projects, myProjects, allDistributions
           </div>
         </>
       )}
-
-      {/* Activity Feed */}
-      <SectionHeader title="Recent Activity" />
-      <div style={{ borderRadius: 12, background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", padding: "6px 0", marginBottom: 40 }}>
-        {(() => {
-          const activities = [];
-          // Build activity items from available data
-          allDistributions.slice(0, 2).forEach(d => {
-            activities.push({ icon: "$", color: green, text: `Distribution received: $${fmt(d.amount)}`, sub: `${d.project} · ${d.date}`, time: d.date });
-          });
-          allDocuments.slice(0, 2).forEach(d => {
-            activities.push({ icon: "\u{1F4C4}", color: "#5B8DEF", text: `Document available: ${d.name}`, sub: `${d.project || "General"} · ${d.category}`, time: d.date });
-          });
-          msgs.filter(m => m.unread).slice(0, 1).forEach(m => {
-            activities.push({ icon: "\u{2709}", color: red, text: `New message from ${m.from || "Northstar"}`, sub: m.subject, time: "New" });
-          });
-          if (activities.length === 0) return <div style={{ padding: "20px", textAlign: "center", fontSize: 13, color: t3 }}>No recent activity</div>;
-          return activities.slice(0, 5).map((a, i) => (
-            <div key={i} style={{ display: "flex", gap: 14, padding: "14px 20px", borderBottom: i < activities.length - 1 ? `1px solid ${line}` : "none", alignItems: "center" }}>
-              <div style={{ width: 32, height: 32, borderRadius: "50%", background: `${a.color}15`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>{a.icon}</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, color: t1 }}>{a.text}</div>
-                <div style={{ fontSize: 11, color: t3, marginTop: 2 }}>{a.sub}</div>
-              </div>
-              <div style={{ fontSize: 10, color: t3, flexShrink: 0 }}>{a.time}</div>
-            </div>
-          ));
-        })()}
-      </div>
 
       {/* Recent messages preview */}
       <SectionHeader title="Recent Messages" right={<span style={{ color: red, cursor: "pointer" }} onClick={() => onNavigate("messages")}>All messages →</span>} />
@@ -1332,11 +1259,11 @@ function DistributionsPage({ allDistributions, myProjects }) {
         <p style={{ fontSize: 14, color: t2, marginTop: 6 }}>${fmt(total)} total distributed · {allDistributions.length} payments</p>
       </div>
 
-      <div className="stat-grid-3" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, marginBottom: 40 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, marginBottom: 40 }}>
         {[
           { label: "Total Distributed", value: `$${fmt(total)}`, accent: red },
           { label: "Projects", value: [...new Set(allDistributions.map(d => d.project))].join(", ") || "—", accent: green },
-          { label: "Next Estimated", value: "Q2 2026", accent: "#5B8DEF" },
+          { label: "Next Estimated", value: "Oct 2025", accent: "#5B8DEF" },
         ].map((m, i) => (
           <div key={i} style={{ background: surface, padding: "24px", borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", borderLeft: `3px solid ${m.accent}` }}>
             <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: t3, marginBottom: 10, fontWeight: 500 }}>{m.label}</div>
@@ -2845,12 +2772,9 @@ export default function App() {
           .responsive-table table { display: none; }
           .responsive-table .mobile-cards { display: block; }
           .stat-grid-4 { grid-template-columns: repeat(2, 1fr) !important; }
-          .stat-grid-3 { grid-template-columns: 1fr !important; }
           .project-grid-2 { grid-template-columns: 1fr !important; }
           .chart-grid-2 { grid-template-columns: 1fr !important; }
           .profile-grid-2 { grid-template-columns: 1fr !important; }
-          .modeler-grid { grid-template-columns: 1fr !important; }
-          h1 { font-size: 28px !important; }
         }
         @media (min-width: 769px) {
           .responsive-table .mobile-cards { display: none; }
