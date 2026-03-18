@@ -42,7 +42,7 @@ const themes = {
   light: { bg: "#F8F7F4", surface: "#FFFFFF", line: "#ECEAE5", t1: "#1A1816", t2: "#5C5850", t3: "#767168", hover: "#F0EDE8", headerBg: "#FFFFFFFA", avatarGrad: "linear-gradient(135deg, #EA2028, #c41920)" },
 };
 
-const ThemeContext = createContext(themes.dark);
+const ThemeContext = createContext(themes.light);
 const useTheme = () => useContext(ThemeContext);
 
 const bg = "#060606", surface = "#0C0C0C", line = "#1A1A1A", t1 = "#E8E4DE", t2 = "#8C887F", t3 = "#4A4843";
