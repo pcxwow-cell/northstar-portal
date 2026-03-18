@@ -5,9 +5,9 @@ const sans = "'DM Sans', -apple-system, sans-serif";
 const red = "#EA2028";
 const green = "#3D7A54";
 const darkText = "#231F20";
-const inputStyle = { width: "100%", padding: "10px 14px", border: "1px solid #DDD", borderRadius: 4, fontSize: 13, fontFamily: sans, boxSizing: "border-box" };
-const btnStyle = { padding: "8px 16px", background: red, color: "#fff", border: "none", borderRadius: 4, fontSize: 13, cursor: "pointer", fontFamily: sans };
-const btnOutline = { ...btnStyle, background: "#fff", color: darkText, border: "1px solid #DDD" };
+const inputStyle = { width: "100%", padding: "10px 14px", border: "1px solid #DDD", borderRadius: 8, fontSize: 13, fontFamily: sans, boxSizing: "border-box" };
+const btnStyle = { padding: "8px 16px", background: red, color: "#fff", border: "none", borderRadius: 8, fontSize: 13, cursor: "pointer", fontFamily: sans, boxShadow: "0 1px 3px rgba(234,32,40,.3)" };
+const btnOutline = { ...btnStyle, background: "#fff", color: darkText, border: "1px solid #DDD", boxShadow: "none" };
 
 // ─── ADMIN LOADING SPINNER ───
 function AdminSpinner() {
@@ -23,7 +23,7 @@ function AdminSpinner() {
 // ─── ADMIN ERROR BANNER ───
 function AdminError({ message, onRetry }) {
   return (
-    <div style={{ padding: "14px 20px", borderRadius: 4, background: "#FEE", border: `1px solid ${red}30`, display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 13, color: red }}>
+    <div style={{ padding: "14px 20px", borderRadius: 10, background: "#FEE", border: `1px solid ${red}30`, display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 13, color: red }}>
       <span>{message || "Something went wrong."}</span>
       {onRetry && <span onClick={onRetry} style={{ ...btnOutline, fontSize: 12, color: red, borderColor: `${red}44`, cursor: "pointer" }}>Retry</span>}
     </div>
@@ -81,30 +81,34 @@ export default function AdminPanel({ user, onLogout }) {
 
   return (
     <div style={{ fontFamily: sans, color: darkText, minHeight: "100vh", background: "#F8F7F4" }}>
-      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px", height: 56, background: "#fff", borderBottom: "1px solid #E8E5DE" }}>
+      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px", height: 60, background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 24, height: 24, background: red, borderRadius: 2 }} />
-          <span style={{ fontSize: 15, fontWeight: 600, letterSpacing: ".02em" }}>NORTHSTAR</span>
-          <span style={{ fontSize: 11, padding: "2px 8px", background: "#FEE", borderRadius: 3, color: red, fontWeight: 500 }}>ADMIN</span>
+          <div style={{ width: 24, height: 24, background: red, borderRadius: 4 }} />
+          <span style={{ fontSize: 15, fontWeight: 600, letterSpacing: ".08em" }}>NORTHSTAR</span>
+          <span style={{ fontSize: 11, padding: "2px 8px", background: "#FEE", borderRadius: 20, color: red, fontWeight: 500 }}>ADMIN</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <span style={{ fontSize: 13, color: "#666" }}>{user.name}</span>
-          <button onClick={onLogout} style={{ ...btnOutline, fontSize: 12 }}>Sign Out</button>
+          <button onClick={onLogout} style={{ ...btnOutline, fontSize: 12, borderRadius: 6 }}>Sign Out</button>
         </div>
       </header>
-      <nav style={{ display: "flex", gap: 0, background: "#fff", borderBottom: "1px solid #E8E5DE", padding: "0 32px" }}>
+      <nav style={{ display: "flex", gap: 4, background: "#fff", borderBottom: "1px solid #ECEAE5", padding: "8px 32px" }}>
         {navItems.map(n => (
           <span key={n.id} onClick={() => setView(n.id)} style={{
-            fontSize: 13, padding: "12px 20px", cursor: "pointer",
-            color: view === n.id ? darkText : "#999",
-            borderBottom: view === n.id ? `2px solid ${red}` : "2px solid transparent",
+            fontSize: 13, padding: "8px 16px", cursor: "pointer",
+            color: view === n.id ? red : "#888",
+            background: view === n.id ? "#EA20280D" : "transparent",
+            borderRadius: 6,
             fontWeight: view === n.id ? 500 : 400,
-          }}>{n.label}</span>
+            transition: "all .15s",
+          }}
+            onMouseEnter={e => { if (view !== n.id) e.currentTarget.style.background = "#F0EDE8"; }}
+            onMouseLeave={e => { if (view !== n.id) e.currentTarget.style.background = "transparent"; }}>{n.label}</span>
         ))}
       </nav>
       <main style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 32px 80px" }}>{pages[view]}</main>
       {toast && (
-        <div style={{ position: "fixed", bottom: 24, right: 24, padding: "12px 20px", background: toast.type === "error" ? "#FEE" : "#EFE", border: `1px solid ${toast.type === "error" ? red : green}`, borderRadius: 4, fontSize: 13, color: toast.type === "error" ? red : green, zIndex: 100 }}>{toast.msg}</div>
+        <div style={{ position: "fixed", bottom: 24, right: 24, padding: "12px 20px", background: toast.type === "error" ? "#FEE" : "#EFE", border: `1px solid ${toast.type === "error" ? red : green}`, borderRadius: 10, fontSize: 13, color: toast.type === "error" ? red : green, zIndex: 100, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>{toast.msg}</div>
       )}
     </div>
   );
@@ -122,19 +126,21 @@ function Dashboard() {
       <h1 style={{ fontSize: 28, fontWeight: 300, marginBottom: 32 }}>Admin Dashboard</h1>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 40 }}>
         {[
-          { label: "Projects", value: data.projectCount },
-          { label: "Investors", value: data.investorCount },
-          { label: "Documents", value: data.docCount },
-          { label: "Unread Messages", value: data.unreadMessages },
+          { label: "Projects", value: data.projectCount, accent: red },
+          { label: "Investors", value: data.investorCount, accent: green },
+          { label: "Documents", value: data.docCount, accent: "#D4A574" },
+          { label: "Unread Messages", value: data.unreadMessages, accent: "#5B8DEF" },
         ].map((s, i) => (
-          <div key={i} style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: "20px 24px" }}>
+          <div key={i} style={{ background: "#fff", borderRadius: 10, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", borderLeft: `3px solid ${s.accent}`, transition: "transform .15s, box-shadow .15s" }}
+            onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,.08)"; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)"; }}>
             <div style={{ fontSize: 28, fontWeight: 300, marginBottom: 4 }}>{s.value}</div>
             <div style={{ fontSize: 11, color: "#999", textTransform: "uppercase", letterSpacing: ".08em" }}>{s.label}</div>
           </div>
         ))}
       </div>
       <h2 style={{ fontSize: 16, fontWeight: 500, marginBottom: 16 }}>Recent Documents</h2>
-      <div style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, overflow: "hidden" }}>
+      <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
         {data.recentDocs.map((d, i) => (
           <div key={d.id} style={{ padding: "12px 20px", borderBottom: i < data.recentDocs.length - 1 ? "1px solid #F0EDE8" : "none", display: "flex", justifyContent: "space-between", fontSize: 13 }}>
             <span>{d.name}</span>
@@ -193,7 +199,7 @@ function ProjectManager({ toast, onViewProject }) {
 
       {/* Create Project Form */}
       {showCreate && (
-        <form onSubmit={handleCreateProject} style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: "24px", marginBottom: 24 }}>
+        <form onSubmit={handleCreateProject} style={{ background: "#fff", borderRadius: 12, padding: "24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", marginBottom: 24 }}>
           <div style={{ fontSize: 16, fontWeight: 500, marginBottom: 16 }}>New Project</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
             <div>
@@ -265,7 +271,7 @@ function ProjectManager({ toast, onViewProject }) {
 
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {projects.map(p => (
-          <div key={p.id} style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: "20px 24px" }}>
+          <div key={p.id} style={{ background: "#fff", borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <div>
                 <div style={{ fontSize: 18, fontWeight: 500 }}>{p.name}</div>
@@ -364,7 +370,7 @@ function InvestorManager({ toast, onViewProfile }) {
 
       {/* Invite form */}
       {showInvite && (
-        <form onSubmit={handleInvite} style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: "20px 24px", marginBottom: 24, display: "flex", gap: 12, alignItems: "flex-end" }}>
+        <form onSubmit={handleInvite} style={{ background: "#fff", borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", marginBottom: 24, display: "flex", gap: 12, alignItems: "flex-end" }}>
           <div style={{ flex: 1 }}>
             <label style={{ display: "block", fontSize: 11, color: "#888", marginBottom: 4 }}>Full Name</label>
             <input value={inviteName} onChange={e => setInviteName(e.target.value)} required style={inputStyle} placeholder="James Chen" />
@@ -393,7 +399,7 @@ function InvestorManager({ toast, onViewProfile }) {
       </div>
 
       {/* Column headers */}
-      <div style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, overflow: "hidden" }}>
+      <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 100px 120px 120px 140px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: "#999", textTransform: "uppercase", letterSpacing: ".06em" }}>
           <span onClick={() => toggleSort("name")} style={{ cursor: "pointer" }}>Name {sortBy === "name" ? (sortDir === "asc" ? "↑" : "↓") : ""}</span>
           <span onClick={() => toggleSort("email")} style={{ cursor: "pointer" }}>Email {sortBy === "email" ? (sortDir === "asc" ? "↑" : "↓") : ""}</span>
@@ -606,7 +612,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
     } catch (e) { toast(e.message, "error"); }
   }
 
-  const section = { background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: "20px 24px", marginBottom: 16 };
+  const section = { background: "#fff", borderRadius: 12, padding: "20px 24px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" };
   const tabs = ["overview", "investors", "documents", "updates", "waterfall", "cashflows", "model"];
 
   return (
@@ -626,7 +632,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
           { label: "Investors", value: project.investors.length },
           { label: "Documents", value: project.documents.length },
         ].map((s, i) => (
-          <div key={i} style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: "16px 20px" }}>
+          <div key={i} style={{ background: "#fff", borderRadius: 10, padding: "16px 20px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
             <div style={{ fontSize: 22, fontWeight: 300, marginBottom: 2 }}>{s.value}</div>
             <div style={{ fontSize: 10, color: "#999", textTransform: "uppercase", letterSpacing: ".08em" }}>{s.label}</div>
           </div>
@@ -634,12 +640,15 @@ function ProjectDetail({ projectId, onBack, toast }) {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: "flex", gap: 0, borderBottom: "1px solid #E8E5DE", marginBottom: 20 }}>
+      <div style={{ display: "flex", gap: 4, marginBottom: 20, background: "#F5F3EF", borderRadius: 8, padding: 2, width: "fit-content" }}>
         {tabs.map(t => (
           <span key={t} onClick={() => setTab(t)} style={{
-            fontSize: 13, padding: "10px 20px", cursor: "pointer", textTransform: "capitalize",
-            color: tab === t ? darkText : "#999", fontWeight: tab === t ? 500 : 400,
-            borderBottom: tab === t ? `2px solid ${red}` : "2px solid transparent",
+            fontSize: 13, padding: "8px 16px", cursor: "pointer", textTransform: "capitalize",
+            color: tab === t ? darkText : "#888", fontWeight: tab === t ? 500 : 400,
+            background: tab === t ? "#fff" : "transparent",
+            borderRadius: 6,
+            boxShadow: tab === t ? "0 1px 3px rgba(0,0,0,.08)" : "none",
+            transition: "all .15s",
           }}>{t}</span>
         ))}
       </div>
@@ -679,8 +688,8 @@ function ProjectDetail({ projectId, onBack, toast }) {
                   <input type="number" defaultValue={project.unitsSold || 0} onBlur={e => handleSaveField("unitsSold", parseInt(e.target.value))} style={{ ...inputStyle, width: 80 }} />
                   <span style={{ fontSize: 12, color: "#999" }}>/ {project.units || 0} total</span>
                   {project.units > 0 && (
-                    <div style={{ flex: 1, height: 6, background: "#F0EDE8", borderRadius: 3, overflow: "hidden" }}>
-                      <div style={{ width: `${Math.min(100, ((project.unitsSold || 0) / project.units) * 100)}%`, height: "100%", background: green, borderRadius: 3 }} />
+                    <div style={{ flex: 1, height: 6, background: "#F0EDE8", borderRadius: 20, overflow: "hidden" }}>
+                      <div style={{ width: `${Math.min(100, ((project.unitsSold || 0) / project.units) * 100)}%`, height: "100%", background: green, borderRadius: 20 }} />
                     </div>
                   )}
                 </div>
@@ -1062,7 +1071,7 @@ function DocumentManager({ toast }) {
         {showSignModal && (
           <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,.4)", display: "flex", alignItems: "center", justifyContent: "center" }}
             onClick={() => setShowSignModal(false)}>
-            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 6, padding: "28px 24px", maxWidth: 480, width: "90%", maxHeight: "70vh", overflow: "auto" }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 12, padding: "28px 24px", maxWidth: 480, width: "90%", maxHeight: "70vh", overflow: "auto", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
               <h3 style={{ fontSize: 18, fontWeight: 400, marginBottom: 20 }}>Request Signature</h3>
               <p style={{ fontSize: 13, color: "#666", marginBottom: 16 }}>Select investors to sign <strong>{docDetail.name}</strong></p>
               <div style={{ marginBottom: 16 }}>
@@ -1094,7 +1103,7 @@ function DocumentManager({ toast }) {
         )}
 
         {/* Access audit table */}
-        <div style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, overflow: "hidden" }}>
+        <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 120px 120px 120px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: "#999", textTransform: "uppercase", letterSpacing: ".06em" }}>
             <span>Investor</span><span>Email</span><span>Viewed</span><span>Downloaded</span><span>Acknowledged</span>
           </div>
@@ -1123,7 +1132,7 @@ function DocumentManager({ toast }) {
       <>
         <p style={{ fontSize: 12, color: red, cursor: "pointer", marginBottom: 24 }} onClick={() => setShowUpload(false)}>← Back to documents</p>
         <h2 style={{ fontSize: 22, fontWeight: 400, marginBottom: 24 }}>Upload Document</h2>
-        <form onSubmit={handleUpload} style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: "28px 24px", maxWidth: 520 }}>
+        <form onSubmit={handleUpload} style={{ background: "#fff", borderRadius: 12, padding: "28px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", maxWidth: 520 }}>
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Document Name</label>
             <input value={uploadName} onChange={e => setUploadName(e.target.value)} placeholder="Q3 2025 — Porthaven Quarterly Report" style={inputStyle} required />
@@ -1184,7 +1193,7 @@ function DocumentManager({ toast }) {
 
       {/* Document table */}
       {loading ? <p style={{ color: "#999" }}>Loading...</p> : (
-        <div style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, overflow: "hidden" }}>
+        <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
           <div style={{ display: "grid", gridTemplateColumns: "2fr 100px 100px 80px 80px 80px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: "#999", textTransform: "uppercase", letterSpacing: ".06em" }}>
             <span>Document</span><span>Project</span><span>Category</span><span>Investors</span><span>Viewed</span><span>Downloaded</span>
           </div>
@@ -1242,7 +1251,7 @@ function InvestorProfile({ investorId, onBack, toast }) {
 
   if (!profile) return <p style={{ color: "#999" }}>Loading...</p>;
 
-  const section = { background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: "20px 24px", marginBottom: 16 };
+  const section = { background: "#fff", borderRadius: 12, padding: "20px 24px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" };
   const sectionTitle = { fontSize: 13, fontWeight: 600, color: "#666", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 14 };
 
   return (
@@ -1411,7 +1420,7 @@ function ProjectUpdatesTab({ project, updateText, setUpdateText, handlePostUpdat
       </div>
 
       {compareMode && updates.length >= 2 ? (
-        <div style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: "20px 24px", marginBottom: 16 }}>
+        <div style={{ background: "#fff", borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", marginBottom: 16 }}>
           <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
             <div style={{ flex: 1 }}>
               <label style={{ fontSize: 11, color: "#888" }}>Earlier Update</label>
@@ -1716,7 +1725,7 @@ function InvestorCashFlowsSection({ investorId, investorName, projects, toast })
   const totalContributed = cashFlows.filter(cf => cf.amount < 0).reduce((s, cf) => s + Math.abs(cf.amount), 0);
   const totalDistributed = cashFlows.filter(cf => cf.amount > 0).reduce((s, cf) => s + cf.amount, 0);
 
-  const section = { background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: "20px 24px", marginBottom: 16 };
+  const section = { background: "#fff", borderRadius: 12, padding: "20px 24px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" };
   const sectionTitle = { fontSize: 13, fontWeight: 600, color: "#666", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 14 };
 
   if (loading) return <div style={section}><div style={sectionTitle}>Cash Flows</div><p style={{ color: "#BBB", fontSize: 13 }}>Loading...</p></div>;
@@ -1859,7 +1868,7 @@ function GroupManager({ toast }) {
       <div style={{ display: "flex", gap: 20 }}>
         {/* Group list */}
         <div style={{ width: 300, flexShrink: 0 }}>
-          <div style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, overflow: "hidden" }}>
+          <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
             {groups.length === 0 ? <div style={{ padding: 20, color: "#999", textAlign: "center", fontSize: 13 }}>No groups yet</div> : (() => {
               const renderGroup = (g, indent = 0) => {
                 const children = childGroupsOf(g.id);
@@ -1891,7 +1900,7 @@ function GroupManager({ toast }) {
         {/* Group detail */}
         <div style={{ flex: 1 }}>
           {groupDetail ? (
-            <div style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: "20px 24px" }}>
+            <div style={{ background: "#fff", borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
                 <div style={{ width: 14, height: 14, borderRadius: "50%", background: groupDetail.color || "#CCC" }} />
                 <h2 style={{ fontSize: 18, fontWeight: 500 }}>{groupDetail.name}</h2>
@@ -1977,7 +1986,7 @@ function StaffManager({ toast }) {
       </div>
 
       {showAdd && (
-        <form onSubmit={handleAdd} style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: "20px 24px", marginBottom: 24, display: "flex", gap: 12, alignItems: "flex-end" }}>
+        <form onSubmit={handleAdd} style={{ background: "#fff", borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", marginBottom: 24, display: "flex", gap: 12, alignItems: "flex-end" }}>
           <div style={{ flex: 1 }}>
             <label style={{ fontSize: 11, color: "#888" }}>Full Name</label>
             <input value={name} onChange={e => setName(e.target.value)} required style={inputStyle} placeholder="Jane Smith" />
@@ -1997,7 +2006,7 @@ function StaffManager({ toast }) {
         </form>
       )}
 
-      <div style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, overflow: "hidden" }}>
+      <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 120px 100px 120px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: "#999", textTransform: "uppercase", letterSpacing: ".06em" }}>
           <span>Name</span><span>Email</span><span>Role</span><span>Status</span><span>Actions</span>
         </div>
@@ -2051,11 +2060,11 @@ function SignatureManager({ toast }) {
         </div>
       </div>
       {loading ? <p style={{ color: "#999" }}>Loading...</p> : sigs.length === 0 ? (
-        <div style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: 40, textAlign: "center", color: "#999", fontSize: 13 }}>
+        <div style={{ background: "#fff", borderRadius: 12, padding: 40, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", textAlign: "center", color: "#999", fontSize: 13 }}>
           No signature requests yet. Use the Documents section to request signatures.
         </div>
       ) : (
-        <div style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, overflow: "hidden" }}>
+        <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 120px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: "#999", textTransform: "uppercase", letterSpacing: ".06em" }}>
             <span>Document</span><span>Created By</span><span>Signers</span><span>Status</span><span>Actions</span>
           </div>
@@ -2166,7 +2175,7 @@ function ProspectManager({ toast }) {
       )}
 
       {/* Table */}
-      <div style={{ border: "1px solid #E8E5DE", borderRadius: 6, overflow: "hidden", background: "#fff" }}>
+      <div style={{ borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", background: "#fff" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr style={{ background: "#FAFAF8", borderBottom: "1px solid #E8E5DE" }}>
@@ -2335,7 +2344,7 @@ function AdminInbox({ user, toast }) {
           {threadDetail.messages.map((m) => {
             const isInvestor = m.sender.role === "INVESTOR";
             return (
-              <div key={m.id} style={{ background: "#fff", border: `1px solid ${isInvestor ? "#E8E5DE" : "#DDE8DD"}`, borderRadius: 6, padding: "16px 20px", marginLeft: isInvestor ? 0 : 40, marginRight: isInvestor ? 40 : 0 }}>
+              <div key={m.id} style={{ background: "#fff", border: `1px solid ${isInvestor ? "#ECEAE5" : "#DDE8DD"}`, borderRadius: 12, padding: "16px 20px", boxShadow: "0 1px 4px rgba(0,0,0,.03)", marginLeft: isInvestor ? 0 : 40, marginRight: isInvestor ? 40 : 0 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <div style={{ width: 26, height: 26, borderRadius: "50%", background: isInvestor ? "#F0EDE8" : `${green}22`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 600, color: isInvestor ? "#666" : green }}>
@@ -2351,7 +2360,7 @@ function AdminInbox({ user, toast }) {
             );
           })}
         </div>
-        <div style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: "16px 20px" }}>
+        <div style={{ background: "#fff", borderRadius: 10, padding: "16px 20px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
           <textarea value={reply} onChange={e => setReply(e.target.value)} placeholder="Write a reply..." rows={3}
             style={{ ...inputStyle, border: "none", padding: 0, resize: "vertical" }} />
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
@@ -2370,7 +2379,7 @@ function AdminInbox({ user, toast }) {
       <>
         <p style={{ fontSize: 12, color: red, cursor: "pointer", marginBottom: 24 }} onClick={() => setComposing(false)}>← Back to inbox</p>
         <h2 style={{ fontSize: 22, fontWeight: 400, marginBottom: 24 }}>New Message</h2>
-        <form onSubmit={handleCompose} style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: "28px 24px" }}>
+        <form onSubmit={handleCompose} style={{ background: "#fff", borderRadius: 12, padding: "28px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
           {/* Target type */}
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Send To</label>
@@ -2496,7 +2505,7 @@ function AdminInbox({ user, toast }) {
       </div>
 
       {loading ? <p style={{ color: "#999" }}>Loading...</p> : (
-        <div style={{ background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, overflow: "hidden" }}>
+        <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
           {filtered.length === 0 ? (
             <div style={{ padding: 40, textAlign: "center", color: "#999" }}>No messages</div>
           ) : filtered.map((t, i) => (
@@ -2574,7 +2583,7 @@ function AuditLogViewer() {
       {loading ? <AdminSpinner /> : logs.length === 0 ? (
         <AdminEmpty title="No audit log entries" subtitle="Actions will appear here as users interact with the system." />
       ) : (
-        <div style={{ border: "1px solid #E8E5DE", borderRadius: 6, overflow: "hidden" }}>
+        <div style={{ borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
             <thead>
               <tr style={{ background: "#FAFAF8", borderBottom: "1px solid #E8E5DE" }}>

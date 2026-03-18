@@ -104,7 +104,7 @@ function InterestFormModal({ open, onClose, projectId, projectName }) {
   if (!open) return null;
 
   const inputStyle = {
-    width: "100%", padding: "12px 14px", border: "1px solid #E0DDD8", borderRadius: 4,
+    width: "100%", padding: "12px 14px", border: "1px solid #E0DDD8", borderRadius: 8,
     fontSize: 14, fontFamily: sans, outline: "none", boxSizing: "border-box",
     transition: "border-color .15s", background: "#FAFAFA",
   };
@@ -118,8 +118,8 @@ function InterestFormModal({ open, onClose, projectId, projectName }) {
       backdropFilter: "blur(4px)", animation: "fadeIn .15s ease",
     }}>
       <div onClick={e => e.stopPropagation()} style={{
-        background: "#fff", borderRadius: 8, padding: 0, maxWidth: 520, width: "90%",
-        maxHeight: "90vh", overflow: "auto", boxShadow: "0 24px 80px rgba(0,0,0,.15)",
+        background: "#fff", borderRadius: 12, padding: 0, maxWidth: 520, width: "90%",
+        maxHeight: "90vh", overflow: "auto", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)",
       }}>
         {submitted ? (
           <div style={{ padding: "60px 40px", textAlign: "center" }}>
@@ -201,8 +201,8 @@ function InterestFormModal({ open, onClose, projectId, projectName }) {
               </div>
               <button type="submit" disabled={submitting} style={{
                 width: "100%", padding: "13px", background: submitting ? `${red}AA` : red, color: "#fff",
-                border: "none", borderRadius: 4, fontSize: 14, cursor: submitting ? "default" : "pointer",
-                fontFamily: sans, fontWeight: 500, letterSpacing: ".02em",
+                border: "none", borderRadius: 8, fontSize: 14, cursor: submitting ? "default" : "pointer",
+                fontFamily: sans, fontWeight: 500, letterSpacing: ".02em", boxShadow: "0 1px 3px rgba(234,32,40,.3)",
               }}>
                 {submitting ? "Submitting..." : "Submit Interest"}
               </button>
@@ -225,13 +225,13 @@ function ProjectDetailPage({ project, onBack, onOpenInterest }) {
     <div style={{ animation: "fadeIn .4s ease" }}>
       {/* Hero */}
       <div style={{
-        position: "relative", height: 360, borderRadius: 8, overflow: "hidden", marginBottom: 40,
+        position: "relative", height: 360, borderRadius: 12, overflow: "hidden", marginBottom: 40,
         backgroundImage: `url(${img})`, backgroundSize: "cover", backgroundPosition: "center",
       }}>
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(0deg, rgba(0,0,0,.65) 0%, rgba(0,0,0,.1) 50%, transparent 100%)" }} />
         <button onClick={onBack} style={{
           position: "absolute", top: 20, left: 20, padding: "8px 16px", background: "rgba(255,255,255,.9)",
-          border: "none", borderRadius: 4, fontSize: 13, cursor: "pointer", fontFamily: sans, color: darkText,
+          border: "none", borderRadius: 8, fontSize: 13, cursor: "pointer", fontFamily: sans, color: darkText,
           backdropFilter: "blur(4px)",
         }}>&#8592; Back to Opportunities</button>
         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "32px 40px" }}>
@@ -258,7 +258,7 @@ function ProjectDetailPage({ project, onBack, onOpenInterest }) {
               { label: "Hold Period", value: project.holdPeriod },
               { label: "Property Type", value: project.propertyType },
             ].map((m, i) => (
-              <div key={i} style={{ padding: "20px", background: "#FAFAF8", borderRadius: 6, border: "1px solid #ECEAE5" }}>
+              <div key={i} style={{ padding: "20px", background: "#fff", borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
                 <div style={{ fontSize: 10, color: "#999", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 6 }}>{m.label}</div>
                 <div style={{ fontSize: 20, fontWeight: 400, color: darkText }}>{m.value}</div>
               </div>
@@ -284,7 +284,7 @@ function ProjectDetailPage({ project, onBack, onOpenInterest }) {
           {/* Investment Structure */}
           <div style={{ marginBottom: 40 }}>
             <h3 style={{ fontSize: 14, fontWeight: 600, color: darkText, marginBottom: 12, textTransform: "uppercase", letterSpacing: ".06em" }}>Investment Structure</h3>
-            <div style={{ border: "1px solid #ECEAE5", borderRadius: 6, overflow: "hidden" }}>
+            <div style={{ borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", background: "#fff" }}>
               {[
                 { label: "Preferred Return", value: project.prefReturn },
                 { label: "GP Catch-Up", value: project.gpCatchup },
@@ -305,8 +305,8 @@ function ProjectDetailPage({ project, onBack, onOpenInterest }) {
           {project.status === "Under Construction" && (
             <div style={{ marginBottom: 40 }}>
               <h3 style={{ fontSize: 14, fontWeight: 600, color: darkText, marginBottom: 12, textTransform: "uppercase", letterSpacing: ".06em" }}>Construction Progress</h3>
-              <div style={{ background: "#F0EDEA", borderRadius: 4, height: 8, overflow: "hidden", marginBottom: 8 }}>
-                <div style={{ width: `${project.completionPct}%`, height: "100%", background: green, borderRadius: 4, transition: "width .6s ease" }} />
+              <div style={{ background: "#F0EDE8", borderRadius: 20, height: 6, overflow: "hidden", marginBottom: 8 }}>
+                <div style={{ width: `${project.completionPct}%`, height: "100%", background: "linear-gradient(90deg, #EA2028, #ff4a4a)", borderRadius: 20, transition: "width .6s ease" }} />
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#999" }}>
                 <span>Progress</span>
@@ -318,21 +318,21 @@ function ProjectDetailPage({ project, onBack, onOpenInterest }) {
 
         {/* Right column — CTA */}
         <div style={{ position: "sticky", top: 100 }}>
-          <div style={{ padding: "32px", background: "#fff", border: "1px solid #ECEAE5", borderRadius: 8, boxShadow: "0 4px 24px rgba(0,0,0,.04)" }}>
+          <div style={{ padding: "32px", background: "#fff", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
             <h3 style={{ fontSize: 16, fontWeight: 500, color: darkText, marginBottom: 16, fontFamily: sans }}>Interested in {project.name}?</h3>
             <p style={{ fontSize: 13, color: "#777", lineHeight: 1.7, marginBottom: 24 }}>
               Request access to the full data room including financial projections, legal documents, and detailed project timelines.
             </p>
             <button onClick={() => onOpenInterest(project.id, project.name)} style={{
               width: "100%", padding: "14px", background: red, color: "#fff", border: "none",
-              borderRadius: 4, fontSize: 14, cursor: "pointer", fontFamily: sans, fontWeight: 500,
-              letterSpacing: ".02em", marginBottom: 16,
+              borderRadius: 8, fontSize: 14, cursor: "pointer", fontFamily: sans, fontWeight: 500,
+              letterSpacing: ".02em", marginBottom: 16, boxShadow: "0 1px 3px rgba(234,32,40,.3)",
             }}>Request Access to Data Room</button>
             <div style={{ fontSize: 12, color: "#BBB", textAlign: "center" }}>Accredited investors only</div>
           </div>
 
           {/* Document teasers */}
-          <div style={{ marginTop: 24, padding: "24px", background: "#FAFAF8", border: "1px solid #ECEAE5", borderRadius: 8 }}>
+          <div style={{ marginTop: 24, padding: "24px", background: "#fff", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
             <h4 style={{ fontSize: 12, fontWeight: 600, color: darkText, marginBottom: 16, textTransform: "uppercase", letterSpacing: ".06em" }}>Available Documents</h4>
             {project.documents.map((doc, i) => (
               <div key={i} style={{
@@ -379,9 +379,9 @@ export default function ProspectPortal({ onNavigateLogin }) {
   const nav = (
     <header style={{
       display: "flex", justifyContent: "space-between", alignItems: "center",
-      padding: "0 48px", height: 64, background: "#fff", borderBottom: "1px solid #ECEAE5",
+      padding: "0 48px", height: 64, background: "#fff",
       position: "sticky", top: 0, zIndex: 100, backdropFilter: "blur(8px)",
-      backgroundColor: "rgba(255,255,255,.95)",
+      backgroundColor: "rgba(255,255,255,.95)", boxShadow: "0 1px 3px rgba(0,0,0,.04)",
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }} onClick={() => { setPage("home"); setSelectedProject(null); }}>
         <NorthstarIcon size={26} color={red} />
@@ -404,7 +404,7 @@ export default function ProspectPortal({ onNavigateLogin }) {
         }}>Contact</span>
         <button onClick={onNavigateLogin} style={{
           padding: "8px 20px", background: "transparent", border: `1px solid ${red}`,
-          borderRadius: 4, fontSize: 13, color: red, cursor: "pointer", fontFamily: sans,
+          borderRadius: 8, fontSize: 13, color: red, cursor: "pointer", fontFamily: sans,
           fontWeight: 500, transition: "all .15s",
         }}>Login</button>
       </nav>
@@ -455,11 +455,11 @@ export default function ProspectPortal({ onNavigateLogin }) {
         <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
           <button onClick={() => setPage("opportunities")} style={{
             padding: "14px 32px", background: red, color: "#fff", border: "none",
-            borderRadius: 4, fontSize: 14, cursor: "pointer", fontFamily: sans, fontWeight: 500,
+            borderRadius: 8, fontSize: 14, cursor: "pointer", fontFamily: sans, fontWeight: 500, boxShadow: "0 1px 3px rgba(234,32,40,.3)",
           }}>View Opportunities</button>
           <button onClick={() => openInterest(null, null)} style={{
             padding: "14px 32px", background: "transparent", color: darkText, border: "1px solid #DDD",
-            borderRadius: 4, fontSize: 14, cursor: "pointer", fontFamily: sans, fontWeight: 500,
+            borderRadius: 8, fontSize: 14, cursor: "pointer", fontFamily: sans, fontWeight: 500,
           }}>Get in Touch</button>
         </div>
       </section>
@@ -497,7 +497,7 @@ export default function ProspectPortal({ onNavigateLogin }) {
             { icon: "&#9670;", title: "Transparent Structure", desc: "Each project has its own cap table, waterfall, and reporting. Real-time visibility through your investor portal." },
             { icon: "&#9670;", title: "Aligned Incentives", desc: "GP co-invests alongside LPs with preferred return hurdles ensuring alignment of interests on every project." },
           ].map((item, i) => (
-            <div key={i} style={{ padding: "32px 24px", border: "1px solid #ECEAE5", borderRadius: 8, textAlign: "center" }}>
+            <div key={i} style={{ padding: "32px 24px", borderRadius: 12, textAlign: "center", background: "#fff", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
               <div style={{ fontSize: 20, color: red, marginBottom: 16 }} dangerouslySetInnerHTML={{ __html: item.icon }} />
               <h4 style={{ fontSize: 14, fontWeight: 600, color: darkText, marginBottom: 10 }}>{item.title}</h4>
               <p style={{ fontSize: 13, color: "#888", lineHeight: 1.6 }}>{item.desc}</p>
@@ -516,10 +516,10 @@ export default function ProspectPortal({ onNavigateLogin }) {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 20 }}>
             {prospectProjects.filter(p => p.status !== "Completed").map(p => (
               <div key={p.id} onClick={() => openProject(p)} style={{
-                borderRadius: 8, overflow: "hidden", cursor: "pointer", background: "#fff",
-                border: "1px solid #ECEAE5", transition: "box-shadow .2s",
-              }} onMouseEnter={e => e.currentTarget.style.boxShadow = "0 8px 32px rgba(0,0,0,.08)"}
-                 onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}>
+                borderRadius: 12, overflow: "hidden", cursor: "pointer", background: "#fff",
+                boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", transition: "transform .15s, box-shadow .2s",
+              }} onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = "0 8px 32px rgba(0,0,0,.1)"; }}
+                 onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)"; }}>
                 <div style={{
                   height: 200, backgroundImage: `url(${projectImages[p.id]})`,
                   backgroundSize: "cover", backgroundPosition: "center", position: "relative",
@@ -527,7 +527,7 @@ export default function ProspectPortal({ onNavigateLogin }) {
                   <div style={{ position: "absolute", inset: 0, background: "linear-gradient(0deg, rgba(0,0,0,.5) 0%, transparent 60%)" }} />
                   <span style={{
                     position: "absolute", top: 12, right: 12, fontSize: 9, padding: "4px 10px",
-                    borderRadius: 2, background: p.status === "Under Construction" ? "rgba(139,113,40,.9)" : `${red}DD`,
+                    borderRadius: 20, background: p.status === "Under Construction" ? "rgba(139,113,40,.9)" : `${red}DD`, backdropFilter: "blur(4px)",
                     color: "#fff", letterSpacing: ".04em", textTransform: "uppercase",
                   }}>{p.status}</span>
                 </div>
@@ -545,7 +545,7 @@ export default function ProspectPortal({ onNavigateLogin }) {
           </div>
           <div style={{ textAlign: "center", marginTop: 32 }}>
             <button onClick={() => setPage("opportunities")} style={{
-              padding: "12px 28px", background: "transparent", border: `1px solid ${red}`, borderRadius: 4,
+              padding: "12px 28px", background: "transparent", border: `1px solid ${red}`, borderRadius: 8,
               fontSize: 13, color: red, cursor: "pointer", fontFamily: sans, fontWeight: 500,
             }}>View All Projects &#8594;</button>
           </div>
@@ -620,7 +620,7 @@ export default function ProspectPortal({ onNavigateLogin }) {
       <div style={{ display: "flex", gap: 8, marginBottom: 32 }}>
         {["All", "Under Construction", "Pre-Development", "Completed"].map(f => (
           <button key={f} onClick={() => setStatusFilter(f)} style={{
-            padding: "8px 16px", borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans,
+            padding: "8px 16px", borderRadius: 8, fontSize: 12, cursor: "pointer", fontFamily: sans,
             background: statusFilter === f ? darkText : "transparent",
             color: statusFilter === f ? "#fff" : "#888",
             border: statusFilter === f ? "none" : "1px solid #DDD",
@@ -644,7 +644,7 @@ export default function ProspectPortal({ onNavigateLogin }) {
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(0deg, rgba(0,0,0,.5) 0%, transparent 60%)" }} />
               <span style={{
                 position: "absolute", top: 12, right: 12, fontSize: 9, padding: "4px 10px",
-                borderRadius: 2,
+                borderRadius: 20, backdropFilter: "blur(4px)",
                 background: p.status === "Completed" ? `${green}DD` : p.status === "Under Construction" ? "rgba(139,113,40,.9)" : `${red}DD`,
                 color: "#fff", letterSpacing: ".04em", textTransform: "uppercase",
               }}>{p.status}</span>
@@ -661,8 +661,8 @@ export default function ProspectPortal({ onNavigateLogin }) {
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#999", marginBottom: 4 }}>
                     <span>Construction</span><span>{p.completionPct}%</span>
                   </div>
-                  <div style={{ background: "#F0EDEA", borderRadius: 3, height: 4, overflow: "hidden" }}>
-                    <div style={{ width: `${p.completionPct}%`, height: "100%", background: green, borderRadius: 3 }} />
+                  <div style={{ background: "#F0EDE8", borderRadius: 20, height: 6, overflow: "hidden" }}>
+                    <div style={{ width: `${p.completionPct}%`, height: "100%", background: "linear-gradient(90deg, #EA2028, #ff4a4a)", borderRadius: 20 }} />
                   </div>
                 </div>
               )}
