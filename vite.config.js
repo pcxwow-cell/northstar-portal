@@ -9,5 +9,17 @@ export default defineConfig({
     proxy: {
       '/api': 'http://localhost:3003'
     }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Split React core into its own chunk (cached independently)
+          'vendor-react': ['react', 'react-dom'],
+          // Split Recharts (large charting library) into its own chunk
+          'vendor-charts': ['recharts'],
+        }
+      }
+    }
   }
 })

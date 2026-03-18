@@ -1,8 +1,10 @@
-import { useState, useCallback, useEffect, useRef, createContext, useContext, useMemo } from "react";
+import { useState, useCallback, useEffect, useRef, createContext, useContext, useMemo, lazy, Suspense } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { login as apiLogin, logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, downloadDocument, fetchThreads, fetchThread, createThread, replyToThread, updateProfile, fetchSignatureRequests, signDocument, fetchNotificationPreferences, updateNotificationPreferences, fetchCapitalAccount, fetchCashFlows, calculateWaterfallApi, fetchEntities, createEntity, updateEntity, deleteEntity, runFinancialModel, changePassword, forgotPassword, resetPassword, fetchLoginHistory, setupMFA, verifyMFASetup, verifyMFA, disableMFA, getMFAStatus, regenerateBackupCodes, setToken, fmt, fmtCurrency } from "./api.js";
-import AdminPanel from "./Admin.jsx";
-import ProspectPortal from "./ProspectPortal.jsx";
+
+// Lazy load heavy components — they get their own chunks
+const AdminPanel = lazy(() => import("./Admin.jsx"));
+const ProspectPortal = lazy(() => import("./ProspectPortal.jsx"));
 
 // ─── THEME ───────────────────────────────────────────────
 export const serif = "'Cormorant Garamond', Georgia, serif";
@@ -2687,14 +2689,20 @@ export default function App() {
       ) : showLogin ? (
         <LoginPage onLogin={handleLogin} onShowProspects={() => { setShowLogin(false); window.location.hash = ""; }} />
       ) : (
-        <ProspectPortal onNavigateLogin={() => { setShowLogin(true); window.location.hash = "#/login"; }} />
+        <Suspense fallback={<div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: th.bg }}><LoadingSpinner size={32} /></div>}>
+          <ProspectPortal onNavigateLogin={() => { setShowLogin(true); window.location.hash = "#/login"; }} />
+        </Suspense>
       )}
     </ThemeContext.Provider>
   );
 
   // Admin users get the admin panel
   if (user && (user.role === "ADMIN" || user.role === "GP")) {
-    return <AdminPanel user={user} onLogout={handleLogout} />;
+    return (
+      <Suspense fallback={<div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F5F3EF" }}><LoadingSpinner size={32} /></div>}>
+        <AdminPanel user={user} onLogout={handleLogout} />
+      </Suspense>
+    );
   }
 
   if (!appData) return (
