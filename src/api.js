@@ -775,3 +775,37 @@ export const fmtCurrency = (n) => {
   if (n >= 1000) return `$${(n / 1000).toFixed(0)}K`;
   return `$${n}`;
 };
+
+// ─── Feature Flags ───
+
+const DEFAULT_FLAGS = {
+  overview: true, portfolio: true, captable: true, modeler: true,
+  documents: true, distributions: true, messages: true, profile: true,
+  capitalAccount: true, downloadDocuments: true, signDocuments: true,
+  viewWaterfall: true, exportData: true, mfa: true,
+};
+
+export async function fetchMyFlags() {
+  if (_demoMode) return DEFAULT_FLAGS;
+  try {
+    const data = await apiFetch("/features/my-flags");
+    return data.flags || DEFAULT_FLAGS;
+  } catch {
+    return DEFAULT_FLAGS;
+  }
+}
+
+export async function fetchUserFlags(userId) {
+  if (_demoMode) return { overrides: {}, roleDefaults: DEFAULT_FLAGS, globalFlags: {} };
+  return apiFetch(`/features/flags/${userId}`);
+}
+
+export async function updateUserFlags(userId, flags) {
+  if (_demoMode) return { message: "Updated", overrides: flags };
+  return apiFetch(`/features/flags/${userId}`, { method: "PUT", body: JSON.stringify({ flags }) });
+}
+
+export async function fetchFeatureDefaults() {
+  if (_demoMode) return { roleDefaults: { INVESTOR: DEFAULT_FLAGS }, globalFlags: {} };
+  return apiFetch("/features/defaults");
+}

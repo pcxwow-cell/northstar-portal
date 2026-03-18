@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef, createContext, useContext, useMemo, lazy, Suspense } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-import { login as apiLogin, logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, downloadDocument, fetchThreads, fetchThread, createThread, replyToThread, updateProfile, fetchSignatureRequests, signDocument, fetchNotificationPreferences, updateNotificationPreferences, fetchCapitalAccount, fetchCashFlows, calculateWaterfallApi, fetchEntities, createEntity, updateEntity, deleteEntity, runFinancialModel, changePassword, forgotPassword, resetPassword, fetchLoginHistory, setupMFA, verifyMFASetup, verifyMFA, disableMFA, getMFAStatus, regenerateBackupCodes, setToken, fmt, fmtCurrency } from "./api.js";
+import { login as apiLogin, logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, downloadDocument, fetchThreads, fetchThread, createThread, replyToThread, updateProfile, fetchSignatureRequests, signDocument, fetchNotificationPreferences, updateNotificationPreferences, fetchCapitalAccount, fetchCashFlows, calculateWaterfallApi, fetchEntities, createEntity, updateEntity, deleteEntity, runFinancialModel, changePassword, forgotPassword, resetPassword, fetchLoginHistory, setupMFA, verifyMFASetup, verifyMFA, disableMFA, getMFAStatus, regenerateBackupCodes, setToken, fmt, fmtCurrency, fetchMyFlags } from "./api.js";
 
 // Lazy load heavy components — they get their own chunks
 const AdminPanel = lazy(() => import("./Admin.jsx"));
@@ -2727,7 +2727,13 @@ export default function App() {
     profile: <ProfilePage investor={investor} toast={toast} onUpdate={(u) => setAppData(prev => ({ ...prev, investor: { ...prev.investor, ...u } }))} />,
   };
 
-  const navItems = [
+  // Feature flags control which nav items are visible per user
+  const [featureFlags, setFeatureFlags] = useState(null);
+  useEffect(() => {
+    fetchMyFlags().then(setFeatureFlags).catch(() => setFeatureFlags(null));
+  }, []);
+
+  const allNavItems = [
     { id: "overview", label: "Overview" },
     { id: "portfolio", label: "Portfolio" },
     { id: "captable", label: "Cap Table" },
@@ -2737,6 +2743,11 @@ export default function App() {
     { id: "messages", label: "Messages" },
     { id: "profile", label: "Profile" },
   ];
+
+  // Filter nav by feature flags (if loaded). If flags not loaded, show all.
+  const navItems = featureFlags
+    ? allNavItems.filter(n => featureFlags[n.id] !== false)
+    : allNavItems;
 
   return (
     <ThemeContext.Provider value={th}>

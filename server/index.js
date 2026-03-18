@@ -56,6 +56,7 @@ app.use("/api/v1/signatures", authenticate, require("./routes/signatures"));
 app.use("/api/v1/notifications", authenticate, require("./routes/notifications"));
 app.use("/api/v1/admin", authenticate, require("./routes/admin"));
 app.use("/api/v1/finance", authenticate, require("./routes/finance"));
+app.use("/api/v1/features", authenticate, require("./routes/features"));
 app.use("/api/v1", authenticate, require("./routes/entities"));
 
 // Serve uploaded files (local storage only — S3 uses signed URLs)
