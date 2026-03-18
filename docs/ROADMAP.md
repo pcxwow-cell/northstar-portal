@@ -1,30 +1,42 @@
 # Northstar Investor Portal — Roadmap
 
-> Last updated: 2026-03-17
+> Last updated: 2026-03-18
 
-## Current State (as of March 17, 2026)
+## Current State (as of March 18, 2026)
 
-**Architecture**: React 18 + Vite 5 frontend → Express API + Prisma ORM + SQLite (dev)
+**Architecture**: React 18 + Vite 5 frontend → Express API + Prisma ORM + SQLite (dev) / PostgreSQL (prod)
+**Tests**: 136 passing across 11 suites (auth, IDOR, RBAC, workflow e2e)
+**Deploy**: Vercel (frontend auto-deploy) at https://northstar-portal-roan.vercel.app/
 
-### What's Built (Sprints 1-11)
+### What's Built (Sprints 1-17 + Security + Polish)
 - JWT authentication with bcrypt, role-based access (INVESTOR/ADMIN/GP)
-- Express API with 25+ endpoints serving data from SQLite database
-- Prisma schema with 22 models, proper migration history
-- All investor pages fetch from API (no more static data.js)
+- MFA/TOTP with QR code setup, backup codes, login verification
+- Account lockout after 5 failed login attempts
+- Express API with 40+ endpoints serving data from database
+- Prisma schema with 22 models, PostgreSQL-ready
 - File storage abstraction (local disk + S3 adapter ready)
 - Document upload/download with per-investor access control and audit trail
-- Admin panel: dashboard, project management, investor CRM, doc upload, messaging
+- E-signature integration (DocuSign/HelloSign adapters + demo mode)
+- Admin panel: dashboard, project CRUD, investor CRM, doc upload, messaging
 - Threaded messaging (bidirectional): investor-to-staff, admin compose with recipient picker
+- Inbound email reply-to-thread system (HMAC-verified webhooks)
 - Investor segments/groups with CRUD API and member management
 - Project KPI dashboard with inline editing, waterfall config, construction updates
-- Capital account statements, XIRR/MOIC calculations, cash flow recording
-- E-signature integration, notification system with email templates
+- Capital account statements, XIRR/MOIC calculations, cash flow CRUD
+- Financial modeler with scenario analysis
+- Entity management (LLC, Trust, IRA, Individual)
+- Prospective investor portal with intake forms and lead capture
+- Email notifications (SendGrid/Resend adapters + demo mode)
 - Self-service profile editing, password change, login history
 - IDOR protection on all investor-scoped endpoints
-- Automated security test suite (57 tests covering auth, IDOR, RBAC)
-- Docker deployment (Dockerfile + docker-compose)
+- Zod input validation on critical API routes
+- 136 automated tests (auth, IDOR, RBAC, workflow e2e)
+- Docker deployment + Caddy SSL reverse proxy config
+- CI/CD pipeline (GitHub Actions)
+- Sentry error tracking adapter
 - Audit logging for all sensitive operations
-- Branded UI matching northstardevelopment.ca (logo, colors, responsive)
+- Branded "Elevated Minimal" UI matching northstardevelopment.ca
+- Vercel deployment with SPA rewrites and demo mode fallback
 
 ### What's Remaining
 **Investor side:**

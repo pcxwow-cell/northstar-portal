@@ -1,6 +1,6 @@
 # Northstar Investor Portal — Backlog
 
-> Last updated: 2026-03-17
+> Last updated: 2026-03-18
 > Priority: P0 = must-have, P1 = should-have, P2 = nice-to-have, P3 = future
 > Status: ○ not started, ◐ in progress, ● done
 > Research baseline: Juniper Square, Agora, InvestNext, Covercy, CashFlow Portal
@@ -132,7 +132,7 @@
 | M11.3 | **Investment detail page**: click project → full detail with photos, map placeholder, description, docs, updates, transaction history | P1 | ● |
 | M11.4 | **Self-service profile**: investor can update name, email, phone, entity info | P1 | ● |
 | M11.5 | **Notification center**: in-app notifications for new docs, messages, distributions | P1 | ● |
-| M11.6 | **Recent activity feed** on dashboard: "New document uploaded", "Distribution received", "Message from GP" | P2 | ○ |
+| M11.6 | **Recent activity feed** on dashboard: "New document uploaded", "Distribution received", "Message from GP" | P2 | ● |
 
 ---
 
@@ -227,3 +227,16 @@
 | — | Docker deployment (Dockerfile + docker-compose) | 2026-03-17 |
 | — | Audit logging for all sensitive operations | 2026-03-17 |
 | — | Email notification templates (document, signature, message, capital call) | 2026-03-17 |
+| — | MFA/TOTP with QR code setup, backup codes, login verification | 2026-03-17 |
+| — | PostgreSQL migration support (prisma schema ready) | 2026-03-17 |
+| — | CI/CD pipeline (GitHub Actions) | 2026-03-17 |
+| — | Account lockout after 5 failed login attempts | 2026-03-17 |
+| — | Zod input validation on critical API routes | 2026-03-17 |
+| — | Sentry error tracking integration (adapter) | 2026-03-17 |
+| — | Caddy reverse proxy SSL config | 2026-03-17 |
+| — | Inbound email reply-to-thread system | 2026-03-17 |
+| — | Workflow integration tests (136 total across 11 suites) | 2026-03-17 |
+| — | Bundle splitting: lazy load Admin + ProspectPortal, vendor chunks | 2026-03-17 |
+| — | Elevated Minimal design system applied across portal | 2026-03-17 |
+| — | Vercel deployment config (SPA rewrites, cache headers, demo mode 405 fix) | 2026-03-18 |
+| — | SKILLS.md comprehensive agent working guide | 2026-03-18 |
