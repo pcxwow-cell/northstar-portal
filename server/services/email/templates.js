@@ -2,6 +2,8 @@
 // Professional HTML email templates with Northstar branding.
 // All templates use inline CSS for maximum email client compatibility.
 
+const { generateReplyAddress } = require("./reply-address");
+
 const BRAND_RED = "#EA2028";
 const DARK_TEXT = "#231F20";
 const LIGHT_BG = "#F8F7F4";
@@ -138,7 +140,13 @@ function distributionPaid(investorName, amount, projectName, quarter) {
   return { subject: `Distribution Payment: ${formattedAmount} - ${projectName}`, html, text };
 }
 
-function newMessage(investorName, senderName, subject) {
+function newMessage(investorName, senderName, subject, messageBody, threadId, userId) {
+  const replyHint = threadId && userId
+    ? `<p style="font-size:12px;color:#888;margin:20px 0 0;padding-top:16px;border-top:1px solid #E8E5DE;">You can reply directly to this email and your response will be added to the conversation.</p>`
+    : "";
+  const quotedBody = messageBody
+    ? `<div style="background:#F8F7F4;border-left:3px solid ${BRAND_RED};padding:12px 16px;margin:16px 0;font-size:13px;color:#555;line-height:1.6;white-space:pre-wrap;">${messageBody.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`
+    : "";
   const html = layout("New Message", `
     <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 16px;">
       Dear ${investorName},
@@ -149,10 +157,20 @@ function newMessage(investorName, senderName, subject) {
     <div style="background:#F8F7F4;border:1px solid #E8E5DE;border-radius:4px;padding:16px 20px;margin:16px 0;">
       <p style="margin:0;font-size:14px;color:${DARK_TEXT};font-weight:500;">${subject}</p>
     </div>
+    ${quotedBody}
     ${button("View Message", "https://portal.northstardevelopment.ca/messages")}
+    ${replyHint}
   `);
-  const text = `Dear ${investorName},\n\nYou have a new message from ${senderName}: "${subject}". Log in to your investor portal to read and reply.\n\nNorthstar Pacific Development Group`;
-  return { subject: `New Message from ${senderName}: ${subject}`, html, text };
+  const replyHintText = threadId && userId
+    ? "\n\nYou can reply directly to this email and your response will be added to the conversation."
+    : "";
+  const text = `Dear ${investorName},\n\nYou have a new message from ${senderName}: "${subject}".${messageBody ? `\n\n${messageBody}` : ""}\n\nLog in to your investor portal to read and reply.${replyHintText}\n\nNorthstar Pacific Development Group`;
+
+  const result = { subject: `New Message from ${senderName}: ${subject}`, html, text };
+  if (threadId && userId) {
+    result.headers = { "Reply-To": generateReplyAddress(threadId, userId) };
+  }
+  return result;
 }
 
 function capitalCall(investorName, amount, projectName, dueDate) {

@@ -19,13 +19,15 @@
 //
 // const FROM = `${process.env.EMAIL_FROM_NAME || "Northstar Portal"} <${process.env.EMAIL_FROM_ADDRESS || "portal@northstardevelopment.ca"}>`;
 //
-// async function sendEmail({ to, subject, html, text }) {
+// async function sendEmail({ to, subject, html, text, headers }) {
 //   const { data, error } = await resend.emails.send({
 //     from: FROM,
 //     to,
 //     subject,
 //     html,
 //     text,
+//     ...(headers?.["Reply-To"] ? { reply_to: headers["Reply-To"] } : {}),
+//     ...(headers ? { headers } : {}),
 //   });
 //
 //   if (error) throw new Error(error.message);

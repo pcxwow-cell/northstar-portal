@@ -194,6 +194,8 @@ router.post("/:id/reply", async (req, res, next) => {
         notifyMany(recipientIds, "new_message", {
           senderName: req.user.name,
           messageSubject: thread.subject,
+          messageBody: body,
+          threadId,
         }).catch(err => console.error("Thread notification error:", err));
       }
     } catch (notifyErr) {

@@ -67,7 +67,7 @@ async function notify(userId, type, data) {
         emailContent = templates.distributionPaid(user.name, data.amount, data.projectName, data.quarter);
         break;
       case "new_message":
-        emailContent = templates.newMessage(user.name, data.senderName, data.messageSubject);
+        emailContent = templates.newMessage(user.name, data.senderName, data.messageSubject, data.messageBody, data.threadId, userId);
         break;
       case "capital_call":
         emailContent = templates.capitalCall(user.name, data.amount, data.projectName, data.dueDate);
@@ -84,6 +84,7 @@ async function notify(userId, type, data) {
         subject: emailContent.subject,
         html: emailContent.html,
         text: emailContent.text,
+        ...(emailContent.headers ? { headers: emailContent.headers } : {}),
       });
     } catch (emailErr) {
       // Log failure but don't throw

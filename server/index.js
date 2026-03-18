@@ -24,6 +24,11 @@ if (process.env.NODE_ENV !== "production") {
 
 const { authenticate } = require("./middleware/auth");
 
+// ─── Inbound email webhook (no auth — verified by reply-to token HMAC) ───
+// The main POST / handler has no auth; the POST /test handler checks req.user internally.
+const inboundEmailRouter = require("./routes/inbound-email");
+app.use("/api/v1/email/inbound", express.urlencoded({ extended: true }), inboundEmailRouter);
+
 // ─── Rate-limited public routes ───
 const authLimiter = rateLimit({ windowMs: 60000, max: 10 }); // 10 attempts per minute
 const prospectLimiter = rateLimit({ windowMs: 60000, max: 5 }); // 5 submissions per minute

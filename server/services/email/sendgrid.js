@@ -21,8 +21,10 @@
 //   name: process.env.EMAIL_FROM_NAME || "Northstar Portal",
 // };
 //
-// async function sendEmail({ to, subject, html, text }) {
+// async function sendEmail({ to, subject, html, text, headers }) {
 //   const msg = { to, from: FROM, subject, html, text };
+//   if (headers) msg.headers = headers;
+//   if (headers?.["Reply-To"]) msg.replyTo = headers["Reply-To"];
 //   const [response] = await sgMail.send(msg);
 //   return {
 //     id: response.headers["x-message-id"] || null,
@@ -31,7 +33,7 @@
 // }
 //
 // async function sendBulk(emails) {
-//   const messages = emails.map(e => ({ to: e.to, from: FROM, subject: e.subject, html: e.html, text: e.text }));
+//   const messages = emails.map(e => ({ to: e.to, from: FROM, subject: e.subject, html: e.html, text: e.text, ...(e.headers ? { headers: e.headers, replyTo: e.headers["Reply-To"] } : {}) }));
 //   await sgMail.send(messages);
 //   return messages.map(() => ({ id: null, status: "sent" }));
 // }

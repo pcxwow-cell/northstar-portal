@@ -3,11 +3,14 @@
 
 const crypto = require("crypto");
 
-async function sendEmail({ to, subject, html, text }) {
+async function sendEmail({ to, subject, html, text, headers }) {
   const id = "demo_email_" + crypto.randomBytes(6).toString("hex");
   console.log(`\n📧 [DEMO EMAIL] ─────────────────────────────`);
   console.log(`   To:      ${to}`);
   console.log(`   Subject: ${subject}`);
+  if (headers?.["Reply-To"]) {
+    console.log(`   Reply-To: ${headers["Reply-To"]}`);
+  }
   console.log(`   Text:    ${(text || "").substring(0, 120)}...`);
   console.log(`   ID:      ${id}`);
   console.log(`─────────────────────────────────────────────\n`);
