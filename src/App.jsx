@@ -2603,6 +2603,7 @@ export default function App() {
   });
   const toast = useToast();
   const [announcement, setAnnouncement] = useState("");
+  const [featureFlags, setFeatureFlags] = useState(null);
   const th = themes[themeMode];
 
   // Listen for hash changes
@@ -2654,6 +2655,11 @@ export default function App() {
       setLoading(false);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Feature flags — load once on mount, silently ignore failures (demo mode)
+  useEffect(() => {
+    fetchMyFlags().then(setFeatureFlags).catch(() => setFeatureFlags(null));
+  }, []);
 
   function toggleTheme() {
     const next = themeMode === "dark" ? "light" : "dark";
@@ -2729,12 +2735,6 @@ export default function App() {
     messages: <MessagesPage toast={toast} investor={investor} />,
     profile: <ProfilePage investor={investor} toast={toast} onUpdate={(u) => setAppData(prev => ({ ...prev, investor: { ...prev.investor, ...u } }))} />,
   };
-
-  // Feature flags control which nav items are visible per user
-  const [featureFlags, setFeatureFlags] = useState(null);
-  useEffect(() => {
-    fetchMyFlags().then(setFeatureFlags).catch(() => setFeatureFlags(null));
-  }, []);
 
   const allNavItems = [
     { id: "overview", label: "Overview" },
