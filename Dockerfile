@@ -21,7 +21,10 @@ COPY prisma/ ./prisma/
 WORKDIR /app/server
 RUN npm ci --production
 
-# Generate Prisma client
+# Swap Prisma provider to PostgreSQL for production
+RUN sed -i 's/provider = "sqlite"/provider = "postgresql"/' ../prisma/schema.prisma
+
+# Generate Prisma client for PostgreSQL
 RUN npx prisma generate
 
 # Back to app root
@@ -29,4 +32,5 @@ WORKDIR /app
 
 EXPOSE 3003
 
-CMD ["node", "server/index.js"]
+# Run migrations then start the server
+CMD ["sh", "-c", "cd server && npx prisma migrate deploy && node index.js"]

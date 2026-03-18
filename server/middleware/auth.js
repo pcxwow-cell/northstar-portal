@@ -8,6 +8,7 @@ const JWT_SECRET = process.env.JWT_SECRET || (
     : "dev-secret"
 );
 const TOKEN_EXPIRY = "7d";
+const MFA_TOKEN_EXPIRY = "5m"; // short-lived token for MFA verification step
 
 // Generate JWT token
 function signToken(user) {
@@ -16,6 +17,26 @@ function signToken(user) {
     JWT_SECRET,
     { expiresIn: TOKEN_EXPIRY }
   );
+}
+
+// Generate a short-lived token that only allows MFA verification
+function signMfaToken(user) {
+  return jwt.sign(
+    { id: user.id, mfaPending: true },
+    JWT_SECRET,
+    { expiresIn: MFA_TOKEN_EXPIRY }
+  );
+}
+
+// Verify an MFA-pending token
+function verifyMfaToken(token) {
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+    if (!payload.mfaPending) return null;
+    return payload;
+  } catch {
+    return null;
+  }
 }
 
 // Verify JWT and attach user to req
@@ -50,4 +71,4 @@ function requireRole(...roles) {
   };
 }
 
-module.exports = { signToken, authenticate, requireRole };
+module.exports = { signToken, signMfaToken, verifyMfaToken, authenticate, requireRole };

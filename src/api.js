@@ -83,6 +83,10 @@ export async function login(email, password) {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
+    // If MFA is required, return the MFA challenge (no token set yet)
+    if (data.requiresMfa) {
+      return { requiresMfa: true, userId: data.userId, mfaToken: data.mfaToken };
+    }
     setToken(data.token);
     return data.user;
   } catch (err) {
@@ -141,6 +145,57 @@ export async function forgotPassword(email) {
 export async function resetPassword(token, newPassword) {
   if (_demoMode) return { success: true };
   return apiFetch("/auth/reset-password", { method: "POST", body: JSON.stringify({ token, newPassword }) });
+}
+
+// ─── MFA (Two-Factor Authentication) ───
+export async function setupMFA() {
+  if (_demoMode) {
+    return {
+      secret: "DEMO1234SECRET56",
+      otpauthUri: "otpauth://totp/Northstar%20Portal:demo@northstar.ca?secret=DEMO1234SECRET56&issuer=Northstar%20Portal",
+      qrCodeDataUrl: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjEwMCIgeT0iOTUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyIiBmaWxsPSIjOTk5Ij5EZW1vIFFSIENvZGU8L3RleHQ+PHRleHQgeD0iMTAwIiB5PSIxMTUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjEwIiBmaWxsPSIjYmJiIj4oTm90IGZ1bmN0aW9uYWwpPC90ZXh0Pjwvc3ZnPg==",
+    };
+  }
+  return apiFetch("/auth/mfa/setup", { method: "POST" });
+}
+
+export async function verifyMFASetup(token) {
+  if (_demoMode) {
+    if (token === "123456") return { success: true, backupCodes: ["a1b2c3d4", "e5f6g7h8", "i9j0k1l2", "m3n4o5p6", "q7r8s9t0", "u1v2w3x4", "y5z6a7b8", "c9d0e1f2"] };
+    throw new Error("Invalid verification code");
+  }
+  return apiFetch("/auth/mfa/verify-setup", { method: "POST", body: JSON.stringify({ token }) });
+}
+
+export async function verifyMFA(userId, token, mfaToken) {
+  if (_demoMode) {
+    if (token === "123456") {
+      const role = localStorage.getItem("northstar_demo_role");
+      return {
+        token: "demo-jwt-token",
+        user: role === "ADMIN"
+          ? { id: 2, name: "Northstar Admin", initials: "NA", email: "admin@northstardevelopment.ca", role: "ADMIN" }
+          : { id: 1, name: "James Chen", initials: "JC", email: "j.chen@pacificventures.ca", role: "Limited Partner" },
+      };
+    }
+    throw new Error("Invalid verification code");
+  }
+  return apiFetch("/auth/mfa/verify", { method: "POST", body: JSON.stringify({ userId, token, mfaToken }) });
+}
+
+export async function disableMFA(password) {
+  if (_demoMode) return { success: true };
+  return apiFetch("/auth/mfa/disable", { method: "DELETE", body: JSON.stringify({ password }) });
+}
+
+export async function getMFAStatus() {
+  if (_demoMode) return { mfaEnabled: false };
+  return apiFetch("/auth/mfa/status");
+}
+
+export async function regenerateBackupCodes() {
+  if (_demoMode) return { backupCodes: ["a1b2c3d4", "e5f6g7h8", "i9j0k1l2", "m3n4o5p6", "q7r8s9t0", "u1v2w3x4", "y5z6a7b8", "c9d0e1f2"] };
+  return apiFetch("/auth/mfa/regenerate-backup", { method: "POST" });
 }
 
 // ─── Login History ───

@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef, createContext, useContext } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-import { login as apiLogin, logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, downloadDocument, fetchThreads, fetchThread, createThread, replyToThread, updateProfile, fetchSignatureRequests, signDocument, fetchNotificationPreferences, updateNotificationPreferences, fetchCapitalAccount, fetchCashFlows, calculateWaterfallApi, fetchEntities, createEntity, updateEntity, deleteEntity, runFinancialModel, changePassword, forgotPassword, resetPassword, fetchLoginHistory, fmt, fmtCurrency } from "./api.js";
+import { login as apiLogin, logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, downloadDocument, fetchThreads, fetchThread, createThread, replyToThread, updateProfile, fetchSignatureRequests, signDocument, fetchNotificationPreferences, updateNotificationPreferences, fetchCapitalAccount, fetchCashFlows, calculateWaterfallApi, fetchEntities, createEntity, updateEntity, deleteEntity, runFinancialModel, changePassword, forgotPassword, resetPassword, fetchLoginHistory, setupMFA, verifyMFASetup, verifyMFA, disableMFA, getMFAStatus, regenerateBackupCodes, setToken, fmt, fmtCurrency } from "./api.js";
 import AdminPanel from "./Admin.jsx";
 import ProspectPortal from "./ProspectPortal.jsx";
 
@@ -1504,7 +1504,7 @@ function PasswordStrengthBar({ password }) {
   );
 }
 
-// ─── SECURITY SECTION (Password Change + Login History) ──
+// ─── SECURITY SECTION (Password Change + MFA + Login History) ──
 function SecuritySection({ toast, inputStyle }) {
   const { bg, surface, line, t1, t2, t3 } = useTheme();
   const [currentPw, setCurrentPw] = useState("");
@@ -1514,10 +1514,69 @@ function SecuritySection({ toast, inputStyle }) {
   const [saving, setSaving] = useState(false);
   const [loginHistory, setLoginHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
+  // MFA state
+  const [mfaEnabled, setMfaEnabled] = useState(false);
+  const [mfaLoading, setMfaLoading] = useState(true);
+  const [mfaSetupStep, setMfaSetupStep] = useState(0); // 0=none, 1=qr, 2=verify, 3=backup
+  const [mfaQR, setMfaQR] = useState(null);
+  const [mfaSecret, setMfaSecret] = useState("");
+  const [mfaVerifyCode, setMfaVerifyCode] = useState("");
+  const [mfaBackupCodes, setMfaBackupCodes] = useState([]);
+  const [mfaError, setMfaError] = useState("");
+  const [mfaDisablePw, setMfaDisablePw] = useState("");
+  const [showMfaDisable, setShowMfaDisable] = useState(false);
 
   useEffect(() => {
     fetchLoginHistory().then(setLoginHistory).catch(() => {});
+    getMFAStatus().then(s => { setMfaEnabled(s.mfaEnabled); setMfaLoading(false); }).catch(() => setMfaLoading(false));
   }, []);
+
+  async function handleMfaSetup() {
+    setMfaError("");
+    setMfaLoading(true);
+    try {
+      const data = await setupMFA();
+      setMfaQR(data.qrCodeDataUrl);
+      setMfaSecret(data.secret);
+      setMfaSetupStep(1);
+    } catch (err) { setMfaError(err.message); }
+    setMfaLoading(false);
+  }
+
+  async function handleMfaVerify() {
+    setMfaError("");
+    setMfaLoading(true);
+    try {
+      const data = await verifyMFASetup(mfaVerifyCode);
+      setMfaBackupCodes(data.backupCodes);
+      setMfaEnabled(true);
+      setMfaSetupStep(3);
+      toast.add("Two-factor authentication enabled", "success");
+    } catch (err) { setMfaError(err.message); }
+    setMfaLoading(false);
+  }
+
+  async function handleMfaDisable() {
+    setMfaError("");
+    setMfaLoading(true);
+    try {
+      await disableMFA(mfaDisablePw);
+      setMfaEnabled(false);
+      setShowMfaDisable(false);
+      setMfaDisablePw("");
+      toast.add("Two-factor authentication disabled", "success");
+    } catch (err) { setMfaError(err.message); }
+    setMfaLoading(false);
+  }
+
+  async function handleRegenerateBackup() {
+    setMfaError("");
+    try {
+      const data = await regenerateBackupCodes();
+      setMfaBackupCodes(data.backupCodes);
+      setMfaSetupStep(3);
+    } catch (err) { setMfaError(err.message); }
+  }
 
   async function handleChangePassword(e) {
     e.preventDefault();
@@ -1563,6 +1622,82 @@ function SecuritySection({ toast, inputStyle }) {
             border: "none", borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: saving ? "default" : "pointer",
           }}>{saving ? "Changing..." : "Change Password"}</button>
         </form>
+      </div>
+
+      {/* Two-Factor Authentication */}
+      <div style={{ borderRadius: 12, padding: "28px 24px", background: surface, marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: t3, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 16 }}>Two-Factor Authentication</div>
+        {mfaError && <div style={{ fontSize: 12, color: red, padding: "8px 12px", border: `1px solid ${red}22`, borderRadius: 4, marginBottom: 12, background: `${red}08` }}>{mfaError}</div>}
+
+        {mfaEnabled && mfaSetupStep === 0 && (
+          <>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={green} strokeWidth="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+              <span style={{ fontSize: 14, color: t1, fontWeight: 500 }}>Two-factor authentication is enabled</span>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => setShowMfaDisable(true)} style={{ padding: "7px 16px", background: "#fff", border: `1px solid ${line}`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: t2 }}>Disable</button>
+              <button onClick={handleRegenerateBackup} style={{ padding: "7px 16px", background: "#fff", border: `1px solid ${line}`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: t2 }}>Regenerate Backup Codes</button>
+            </div>
+            {showMfaDisable && (
+              <div style={{ marginTop: 12, padding: 16, border: `1px solid ${line}`, borderRadius: 8, background: bg }}>
+                <div style={{ fontSize: 12, color: t2, marginBottom: 8 }}>Enter your password to disable 2FA:</div>
+                <input type="password" value={mfaDisablePw} onChange={e => setMfaDisablePw(e.target.value)} style={inputStyle} placeholder="Password" />
+                <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                  <button onClick={() => { setShowMfaDisable(false); setMfaDisablePw(""); setMfaError(""); }} style={{ padding: "7px 16px", background: "#fff", border: `1px solid ${line}`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: t2 }}>Cancel</button>
+                  <button onClick={handleMfaDisable} disabled={!mfaDisablePw} style={{ padding: "7px 16px", background: red, color: "#fff", border: "none", borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, opacity: mfaDisablePw ? 1 : 0.5 }}>Confirm Disable</button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {!mfaEnabled && mfaSetupStep === 0 && (
+          <>
+            <p style={{ fontSize: 13, color: t2, marginBottom: 12, lineHeight: 1.5 }}>Add an extra layer of security to your account by requiring a verification code from an authenticator app (Google Authenticator, Authy, etc.) when signing in.</p>
+            <button onClick={handleMfaSetup} disabled={mfaLoading} style={{ padding: "8px 20px", background: red, color: "#fff", border: "none", borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: "pointer" }}>
+              Enable Two-Factor Authentication
+            </button>
+          </>
+        )}
+
+        {mfaSetupStep === 1 && (
+          <>
+            <p style={{ fontSize: 13, color: t2, marginBottom: 12 }}>Scan this QR code with your authenticator app:</p>
+            {mfaQR && <div style={{ textAlign: "center", marginBottom: 16 }}><img src={mfaQR} alt="MFA QR Code" style={{ width: 200, height: 200, borderRadius: 8, border: `1px solid ${line}` }} /></div>}
+            <div style={{ fontSize: 11, color: t3, marginBottom: 4 }}>Or enter this secret key manually:</div>
+            <div style={{ fontSize: 14, fontFamily: "monospace", padding: "10px 14px", background: bg, borderRadius: 6, border: `1px solid ${line}`, marginBottom: 16, wordBreak: "break-all", letterSpacing: ".05em", userSelect: "all" }}>{mfaSecret}</div>
+            <button onClick={() => setMfaSetupStep(2)} style={{ padding: "8px 20px", background: red, color: "#fff", border: "none", borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: "pointer" }}>Next</button>
+          </>
+        )}
+
+        {mfaSetupStep === 2 && (
+          <>
+            <p style={{ fontSize: 13, color: t2, marginBottom: 12 }}>Enter the 6-digit code from your authenticator app to verify setup:</p>
+            <input type="text" inputMode="numeric" maxLength={6} value={mfaVerifyCode} onChange={e => setMfaVerifyCode(e.target.value.replace(/\D/g, ""))}
+              placeholder="000000" style={{ ...inputStyle, fontSize: 20, fontFamily: "monospace", textAlign: "center", letterSpacing: ".3em", maxWidth: 180 }} />
+            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+              <button onClick={() => { setMfaSetupStep(0); setMfaVerifyCode(""); setMfaError(""); }} style={{ padding: "7px 16px", background: "#fff", border: `1px solid ${line}`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: t2 }}>Cancel</button>
+              <button onClick={handleMfaVerify} disabled={mfaVerifyCode.length !== 6 || mfaLoading} style={{ padding: "7px 16px", background: red, color: "#fff", border: "none", borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, opacity: mfaVerifyCode.length === 6 ? 1 : 0.5 }}>Verify & Enable</button>
+            </div>
+          </>
+        )}
+
+        {mfaSetupStep === 3 && (
+          <>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D4A017" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><circle cx="12" cy="17" r="1"/></svg>
+              <span style={{ fontSize: 13, color: t1, fontWeight: 600 }}>Save these backup codes</span>
+            </div>
+            <p style={{ fontSize: 12, color: t2, marginBottom: 12 }}>Each code can only be used once. Store them somewhere safe — you will not be able to see them again.</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, padding: 16, background: bg, borderRadius: 8, border: `1px solid ${line}`, marginBottom: 16 }}>
+              {mfaBackupCodes.map((code, i) => (
+                <div key={i} style={{ fontFamily: "monospace", fontSize: 14, padding: "4px 0", letterSpacing: ".08em" }}>{code}</div>
+              ))}
+            </div>
+            <button onClick={() => { setMfaSetupStep(0); setMfaVerifyCode(""); setMfaBackupCodes([]); }} style={{ padding: "8px 20px", background: red, color: "#fff", border: "none", borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: "pointer" }}>Done</button>
+          </>
+        )}
       </div>
 
       {/* Login History */}
@@ -1827,17 +1962,74 @@ function LoginPage({ onLogin, onShowProspects }) {
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
   const [forgotLoading, setForgotLoading] = useState(false);
+  // MFA state
+  const [mfaPending, setMfaPending] = useState(false);
+  const [mfaUserId, setMfaUserId] = useState(null);
+  const [mfaToken, setMfaToken] = useState("");
+  const [mfaCode, setMfaCode] = useState(["", "", "", "", "", ""]);
+  const [useBackupCode, setUseBackupCode] = useState(false);
+  const [backupCode, setBackupCode] = useState("");
+  const mfaInputRefs = [useRef(), useRef(), useRef(), useRef(), useRef(), useRef()];
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      const user = await apiLogin(email, password);
-      onLogin(user);
+      const result = await apiLogin(email, password);
+      if (result.requiresMfa) {
+        setMfaPending(true);
+        setMfaUserId(result.userId);
+        setMfaToken(result.mfaToken);
+        setLoading(false);
+        setTimeout(() => mfaInputRefs[0].current?.focus(), 100);
+        return;
+      }
+      onLogin(result);
     } catch (err) {
       setError(err.message || "Invalid email or password");
       setLoading(false);
+    }
+  }
+
+  async function handleMfaSubmit(e) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    const code = useBackupCode ? backupCode.trim() : mfaCode.join("");
+    try {
+      const data = await verifyMFA(mfaUserId, code, mfaToken);
+      setToken(data.token);
+      onLogin(data.user);
+    } catch (err) {
+      setError(err.message || "Invalid verification code");
+      setLoading(false);
+    }
+  }
+
+  function handleMfaDigit(index, value) {
+    if (!/^\d*$/.test(value)) return;
+    const updated = [...mfaCode];
+    updated[index] = value.slice(-1);
+    setMfaCode(updated);
+    if (value && index < 5) mfaInputRefs[index + 1].current?.focus();
+  }
+
+  function handleMfaKeyDown(index, e) {
+    if (e.key === "Backspace" && !mfaCode[index] && index > 0) {
+      mfaInputRefs[index - 1].current?.focus();
+    }
+  }
+
+  function handleMfaPaste(e) {
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (pasted.length > 0) {
+      const updated = [...mfaCode];
+      for (let i = 0; i < 6; i++) updated[i] = pasted[i] || "";
+      setMfaCode(updated);
+      const nextEmpty = Math.min(pasted.length, 5);
+      mfaInputRefs[nextEmpty].current?.focus();
+      e.preventDefault();
     }
   }
 
@@ -1954,56 +2146,121 @@ function LoginPage({ onLogin, onShowProspects }) {
 
           {/* Right: Login form */}
           <div className="login-form-wrap" style={{ animation: "fadeIn .6s ease .2s both" }}>
-            <form onSubmit={handleSubmit} style={{
-              background: "#fff", border: "1px solid #ECEAE5", borderRadius: 12, padding: "40px 32px",
-              boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)",
-            }}>
-              <div style={{ textAlign: "center", marginBottom: 32 }}>
-                <NorthstarIcon size={40} color={red} />
-                <h2 style={{ fontSize: 20, fontWeight: 400, marginBottom: 4, marginTop: 16, color: darkText }}>Investor Portal</h2>
-                <p style={{ fontSize: 13, color: "#999" }}>Sign in to access your account</p>
-              </div>
-              {error && (
-                <div style={{ fontSize: 12, color: red, padding: "10px 14px", border: `1px solid ${red}22`, borderRadius: 4, marginBottom: 16, background: `${red}08` }}>{error}</div>
-              )}
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: "block", fontSize: 11, color: "#888", fontWeight: 500, marginBottom: 6 }}>Email</label>
-                <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="investor@example.com"
-                  style={{ width: "100%", padding: "12px 14px", background: "#FAFAFA", border: "1px solid #E0DDD8", borderRadius: 8, color: darkText, fontSize: 14, fontFamily: sans, outline: "none", boxSizing: "border-box", transition: "border-color .15s" }}
-                  onFocus={e => e.target.style.borderColor = red}
-                  onBlur={e => e.target.style.borderColor = "#E0DDD8"} />
-              </div>
-              <div style={{ marginBottom: 28 }}>
-                <label style={{ display: "block", fontSize: 11, color: "#888", fontWeight: 500, marginBottom: 6 }}>Password</label>
-                <input type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••"
-                  style={{ width: "100%", padding: "12px 14px", background: "#FAFAFA", border: "1px solid #E0DDD8", borderRadius: 8, color: darkText, fontSize: 14, fontFamily: sans, outline: "none", boxSizing: "border-box", transition: "border-color .15s" }}
-                  onFocus={e => e.target.style.borderColor = red}
-                  onBlur={e => e.target.style.borderColor = "#E0DDD8"} />
-              </div>
-              <button type="submit" disabled={loading} style={{
-                width: "100%", padding: "13px", background: loading ? `${red}AA` : red, color: "#fff",
-                border: "none", borderRadius: 8, fontSize: 14, fontFamily: sans, fontWeight: 500, cursor: loading ? "default" : "pointer",
-                letterSpacing: ".02em", transition: "background .15s", boxShadow: "0 1px 3px rgba(234,32,40,.3)",
+            {mfaPending ? (
+              /* ── MFA Verification Form ── */
+              <form onSubmit={handleMfaSubmit} style={{
+                background: "#fff", border: "1px solid #ECEAE5", borderRadius: 12, padding: "40px 32px",
+                boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)",
               }}>
-                {loading ? "Signing in..." : "Sign In"}
-              </button>
-              <div style={{ textAlign: "right", marginTop: 10 }}>
-                <span onClick={() => setShowForgot(true)} style={{ fontSize: 12, color: red, cursor: "pointer" }}>Forgot password?</span>
-              </div>
-              <div style={{ marginTop: 14, padding: "14px 16px", border: "1px solid #ECEAE5", borderRadius: 4, background: cream }}>
-                <div style={{ fontSize: 9, color: "#AAA", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 10 }}>Quick Demo Login</div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button type="button" onClick={() => { setEmail("j.chen@pacificventures.ca"); setPassword("northstar2025"); setTimeout(() => document.querySelector("form")?.requestSubmit(), 100); }}
-                    style={{ flex: 1, padding: "10px", background: "#fff", border: "1px solid #DDD", borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: darkText, fontWeight: 500 }}>
-                    Investor Demo
-                  </button>
-                  <button type="button" onClick={() => { setEmail("admin@northstardevelopment.ca"); setPassword("admin2025"); setTimeout(() => document.querySelector("form")?.requestSubmit(), 100); }}
-                    style={{ flex: 1, padding: "10px", background: "#fff", border: `1px solid ${red}40`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: red, fontWeight: 500 }}>
-                    Admin Demo
-                  </button>
+                <div style={{ textAlign: "center", marginBottom: 32 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: "50%", background: `${red}10`, display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={red} strokeWidth="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M12 16v2"/><path d="M8 11V7a4 4 0 118 0v4"/></svg>
+                  </div>
+                  <h2 style={{ fontSize: 20, fontWeight: 400, marginBottom: 4, color: darkText }}>Two-Factor Authentication</h2>
+                  <p style={{ fontSize: 13, color: "#999" }}>Enter the code from your authenticator app</p>
                 </div>
-              </div>
-            </form>
+                {error && (
+                  <div style={{ fontSize: 12, color: red, padding: "10px 14px", border: `1px solid ${red}22`, borderRadius: 4, marginBottom: 16, background: `${red}08` }}>{error}</div>
+                )}
+                {!useBackupCode ? (
+                  <>
+                    <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 24 }} onPaste={handleMfaPaste}>
+                      {mfaCode.map((digit, i) => (
+                        <input key={i} ref={mfaInputRefs[i]} type="text" inputMode="numeric" maxLength={1}
+                          value={digit} onChange={e => handleMfaDigit(i, e.target.value)} onKeyDown={e => handleMfaKeyDown(i, e)}
+                          style={{
+                            width: 48, height: 56, textAlign: "center", fontSize: 24, fontWeight: 500, fontFamily: "monospace",
+                            border: `2px solid ${digit ? red : "#E0DDD8"}`, borderRadius: 8, outline: "none", color: darkText,
+                            background: "#FAFAFA", transition: "border-color .15s",
+                          }}
+                          onFocus={e => e.target.style.borderColor = red}
+                          onBlur={e => { if (!digit) e.target.style.borderColor = "#E0DDD8"; }}
+                        />
+                      ))}
+                    </div>
+                    <div style={{ textAlign: "center", marginBottom: 20 }}>
+                      <span onClick={() => { setUseBackupCode(true); setError(""); }} style={{ fontSize: 12, color: red, cursor: "pointer" }}>Use a backup code instead</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ marginBottom: 20 }}>
+                      <label style={{ display: "block", fontSize: 11, color: "#888", fontWeight: 500, marginBottom: 6 }}>Backup Code</label>
+                      <input type="text" value={backupCode} onChange={e => setBackupCode(e.target.value)} placeholder="Enter 8-character backup code"
+                        style={{ width: "100%", padding: "12px 14px", background: "#FAFAFA", border: "1px solid #E0DDD8", borderRadius: 8, color: darkText, fontSize: 16, fontFamily: "monospace", outline: "none", boxSizing: "border-box", textAlign: "center", letterSpacing: ".15em" }}
+                        onFocus={e => e.target.style.borderColor = red}
+                        onBlur={e => e.target.style.borderColor = "#E0DDD8"} />
+                    </div>
+                    <div style={{ textAlign: "center", marginBottom: 20 }}>
+                      <span onClick={() => { setUseBackupCode(false); setError(""); setBackupCode(""); }} style={{ fontSize: 12, color: red, cursor: "pointer" }}>Use authenticator app instead</span>
+                    </div>
+                  </>
+                )}
+                <button type="submit" disabled={loading} style={{
+                  width: "100%", padding: "13px", background: loading ? `${red}AA` : red, color: "#fff",
+                  border: "none", borderRadius: 8, fontSize: 14, fontFamily: sans, fontWeight: 500, cursor: loading ? "default" : "pointer",
+                  letterSpacing: ".02em", transition: "background .15s", boxShadow: "0 1px 3px rgba(234,32,40,.3)",
+                }}>
+                  {loading ? "Verifying..." : "Verify"}
+                </button>
+                <div style={{ textAlign: "center", marginTop: 16 }}>
+                  <span onClick={() => { setMfaPending(false); setMfaCode(["","","","","",""]); setBackupCode(""); setUseBackupCode(false); setError(""); setPassword(""); }}
+                    style={{ fontSize: 12, color: "#888", cursor: "pointer" }}>Back to login</span>
+                </div>
+              </form>
+            ) : (
+              /* ── Standard Login Form ── */
+              <form onSubmit={handleSubmit} style={{
+                background: "#fff", border: "1px solid #ECEAE5", borderRadius: 12, padding: "40px 32px",
+                boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)",
+              }}>
+                <div style={{ textAlign: "center", marginBottom: 32 }}>
+                  <NorthstarIcon size={40} color={red} />
+                  <h2 style={{ fontSize: 20, fontWeight: 400, marginBottom: 4, marginTop: 16, color: darkText }}>Investor Portal</h2>
+                  <p style={{ fontSize: 13, color: "#999" }}>Sign in to access your account</p>
+                </div>
+                {error && (
+                  <div style={{ fontSize: 12, color: red, padding: "10px 14px", border: `1px solid ${red}22`, borderRadius: 4, marginBottom: 16, background: `${red}08` }}>{error}</div>
+                )}
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: "block", fontSize: 11, color: "#888", fontWeight: 500, marginBottom: 6 }}>Email</label>
+                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="investor@example.com"
+                    style={{ width: "100%", padding: "12px 14px", background: "#FAFAFA", border: "1px solid #E0DDD8", borderRadius: 8, color: darkText, fontSize: 14, fontFamily: sans, outline: "none", boxSizing: "border-box", transition: "border-color .15s" }}
+                    onFocus={e => e.target.style.borderColor = red}
+                    onBlur={e => e.target.style.borderColor = "#E0DDD8"} />
+                </div>
+                <div style={{ marginBottom: 28 }}>
+                  <label style={{ display: "block", fontSize: 11, color: "#888", fontWeight: 500, marginBottom: 6 }}>Password</label>
+                  <input type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••"
+                    style={{ width: "100%", padding: "12px 14px", background: "#FAFAFA", border: "1px solid #E0DDD8", borderRadius: 8, color: darkText, fontSize: 14, fontFamily: sans, outline: "none", boxSizing: "border-box", transition: "border-color .15s" }}
+                    onFocus={e => e.target.style.borderColor = red}
+                    onBlur={e => e.target.style.borderColor = "#E0DDD8"} />
+                </div>
+                <button type="submit" disabled={loading} style={{
+                  width: "100%", padding: "13px", background: loading ? `${red}AA` : red, color: "#fff",
+                  border: "none", borderRadius: 8, fontSize: 14, fontFamily: sans, fontWeight: 500, cursor: loading ? "default" : "pointer",
+                  letterSpacing: ".02em", transition: "background .15s", boxShadow: "0 1px 3px rgba(234,32,40,.3)",
+                }}>
+                  {loading ? "Signing in..." : "Sign In"}
+                </button>
+                <div style={{ textAlign: "right", marginTop: 10 }}>
+                  <span onClick={() => setShowForgot(true)} style={{ fontSize: 12, color: red, cursor: "pointer" }}>Forgot password?</span>
+                </div>
+                <div style={{ marginTop: 14, padding: "14px 16px", border: "1px solid #ECEAE5", borderRadius: 4, background: cream }}>
+                  <div style={{ fontSize: 9, color: "#AAA", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 10 }}>Quick Demo Login</div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button type="button" onClick={() => { setEmail("j.chen@pacificventures.ca"); setPassword("northstar2025"); setTimeout(() => document.querySelector("form")?.requestSubmit(), 100); }}
+                      style={{ flex: 1, padding: "10px", background: "#fff", border: "1px solid #DDD", borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: darkText, fontWeight: 500 }}>
+                      Investor Demo
+                    </button>
+                    <button type="button" onClick={() => { setEmail("admin@northstardevelopment.ca"); setPassword("admin2025"); setTimeout(() => document.querySelector("form")?.requestSubmit(), 100); }}
+                      style={{ flex: 1, padding: "10px", background: "#fff", border: `1px solid ${red}40`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: red, fontWeight: 500 }}>
+                      Admin Demo
+                    </button>
+                  </div>
+                </div>
+              </form>
+            )}
             <p style={{ fontSize: 12, color: "#999", textAlign: "center", marginTop: 20 }}>
               Interested in investing? <span onClick={onShowProspects} style={{ color: red, cursor: "pointer", fontWeight: 500 }}>Learn more →</span>
             </p>

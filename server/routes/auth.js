@@ -2,9 +2,10 @@ const { Router } = require("express");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const prisma = require("../prisma");
-const { signToken, authenticate } = require("../middleware/auth");
+const { signToken, signMfaToken, verifyMfaToken, authenticate } = require("../middleware/auth");
 const audit = require("../services/audit");
 const { validatePassword } = require("../services/password");
+const mfa = require("../services/mfa");
 const router = Router();
 
 // POST /api/v1/auth/login
@@ -43,6 +44,16 @@ router.post("/login", async (req, res, next) => {
     }
 
     await recordLogin(user.id, true);
+
+    // If MFA is enabled, return a temporary token and require MFA verification
+    if (user.mfaEnabled) {
+      const mfaToken = signMfaToken(user);
+      return res.json({
+        requiresMfa: true,
+        userId: user.id,
+        mfaToken,
+      });
+    }
 
     const token = signToken(user);
     audit.log(req, "login", `user:${user.id}`, { email: user.email, role: user.role });
@@ -224,6 +235,163 @@ router.get("/login-history", authenticate, async (req, res, next) => {
 router.post("/logout", (req, res) => {
   audit.log(req, "logout", null, null);
   res.json({ message: "Logged out" });
+});
+
+// ─── MFA ROUTES ─────────────────────────────────────────
+
+// GET /api/v1/auth/mfa/status — check if MFA is enabled for current user
+router.get("/mfa/status", authenticate, async (req, res, next) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) return res.status(404).json({ error: "User not found" });
+    res.json({ mfaEnabled: user.mfaEnabled });
+  } catch (err) { next(err); }
+});
+
+// POST /api/v1/auth/mfa/setup — generate MFA secret + QR code
+router.post("/mfa/setup", authenticate, async (req, res, next) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) return res.status(404).json({ error: "User not found" });
+    if (user.mfaEnabled) return res.status(400).json({ error: "MFA is already enabled" });
+
+    const { secret, otpauthUri, qrCodeDataUrl } = await mfa.generateSecret(user.email);
+
+    // Store secret (not yet enabled — user must verify first)
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { mfaSecret: secret },
+    });
+
+    audit.log(req, "mfa_setup_initiated", `user:${user.id}`, { email: user.email });
+    res.json({ secret, otpauthUri, qrCodeDataUrl });
+  } catch (err) { next(err); }
+});
+
+// POST /api/v1/auth/mfa/verify-setup — verify token and enable MFA
+router.post("/mfa/verify-setup", authenticate, async (req, res, next) => {
+  try {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ error: "Verification code is required" });
+
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) return res.status(404).json({ error: "User not found" });
+    if (!user.mfaSecret) return res.status(400).json({ error: "MFA setup not initiated" });
+    if (user.mfaEnabled) return res.status(400).json({ error: "MFA is already enabled" });
+
+    const valid = mfa.verifyToken(token, user.mfaSecret);
+    if (!valid) return res.status(400).json({ error: "Invalid verification code" });
+
+    // Generate backup codes
+    const { codes, hashed } = mfa.generateBackupCodes();
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        mfaEnabled: true,
+        mfaBackupCodes: JSON.stringify(hashed),
+      },
+    });
+
+    audit.log(req, "mfa_enabled", `user:${user.id}`, { email: user.email });
+    res.json({ success: true, backupCodes: codes });
+  } catch (err) { next(err); }
+});
+
+// POST /api/v1/auth/mfa/verify — verify MFA token during login
+router.post("/mfa/verify", async (req, res, next) => {
+  try {
+    const { token, userId, mfaToken } = req.body;
+    if (!token || !userId || !mfaToken) {
+      return res.status(400).json({ error: "Token, userId, and mfaToken are required" });
+    }
+
+    // Verify the temporary MFA token
+    const payload = verifyMfaToken(mfaToken);
+    if (!payload || payload.id !== userId) {
+      return res.status(401).json({ error: "Invalid or expired MFA session" });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !user.mfaEnabled) {
+      return res.status(400).json({ error: "MFA not enabled for this user" });
+    }
+
+    // Try TOTP token first
+    let valid = mfa.verifyToken(token, user.mfaSecret);
+
+    // If not valid, try as a backup code
+    if (!valid && user.mfaBackupCodes) {
+      const hashedCodes = JSON.parse(user.mfaBackupCodes);
+      const idx = mfa.verifyBackupCode(token, hashedCodes);
+      if (idx >= 0) {
+        valid = true;
+        // Remove used backup code
+        hashedCodes.splice(idx, 1);
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { mfaBackupCodes: JSON.stringify(hashedCodes) },
+        });
+      }
+    }
+
+    if (!valid) {
+      return res.status(401).json({ error: "Invalid verification code" });
+    }
+
+    const fullToken = signToken(user);
+    audit.log(req, "login", `user:${user.id}`, { email: user.email, role: user.role, mfa: true });
+    res.json({
+      token: fullToken,
+      user: {
+        id: user.id,
+        name: user.name,
+        initials: user.initials,
+        email: user.email,
+        role: user.role === "INVESTOR" ? "Limited Partner" : user.role,
+      },
+    });
+  } catch (err) { next(err); }
+});
+
+// DELETE /api/v1/auth/mfa/disable — disable MFA (requires password)
+router.delete("/mfa/disable", authenticate, async (req, res, next) => {
+  try {
+    const { password } = req.body;
+    if (!password) return res.status(400).json({ error: "Password is required" });
+
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const valid = await bcrypt.compare(password, user.passwordHash);
+    if (!valid) return res.status(401).json({ error: "Invalid password" });
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { mfaEnabled: false, mfaSecret: null, mfaBackupCodes: null },
+    });
+
+    audit.log(req, "mfa_disabled", `user:${user.id}`, { email: user.email });
+    res.json({ success: true });
+  } catch (err) { next(err); }
+});
+
+// POST /api/v1/auth/mfa/regenerate-backup — regenerate backup codes
+router.post("/mfa/regenerate-backup", authenticate, async (req, res, next) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) return res.status(404).json({ error: "User not found" });
+    if (!user.mfaEnabled) return res.status(400).json({ error: "MFA is not enabled" });
+
+    const { codes, hashed } = mfa.generateBackupCodes();
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { mfaBackupCodes: JSON.stringify(hashed) },
+    });
+
+    audit.log(req, "mfa_backup_regenerated", `user:${user.id}`, { email: user.email });
+    res.json({ backupCodes: codes });
+  } catch (err) { next(err); }
 });
 
 module.exports = router;

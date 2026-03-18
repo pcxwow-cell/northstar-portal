@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Install server dependencies
+        run: cd server && npm ci
+
+      - name: Generate Prisma client
+        run: cd server && npx prisma generate
+
+      - name: Push schema to test DB
+        run: cd server && npx prisma db push
+        env:
+          DATABASE_URL: file:../prisma/test.db
+
+      - name: Run tests
+        run: cd server && npx jest --forceExit --detectOpenHandles --verbose
+        env:
+          DATABASE_URL: file:../prisma/test.db
+          JWT_SECRET: test-secret-ci
+          API_PORT: 0
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Verify build output
+        run: |
+          test -f dist/index.html || exit 1
+          echo "Build output verified"
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Check for syntax errors
+        run: npx vite build 2>&1 | tail -5
