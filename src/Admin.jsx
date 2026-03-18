@@ -350,26 +350,54 @@ function ProjectManager({ toast, onViewProject }) {
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        {projects.map(p => (
-          <div key={p.id} style={{ background: "#fff", borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <div>
-                <div style={{ fontSize: 18, fontWeight: 500 }}>{p.name}</div>
-                <div style={{ fontSize: 12, color: "#767168" }}>{p.location} · {p.investorCount} investors · {p.docCount} docs</div>
+        {projects.map(p => {
+          // Project thumbnail from Northstar's actual images
+          const thumbs = {
+            "Porthaven": "https://northstardevelopment.ca/public/images/porthaven-1.jpg",
+            "Livy": "https://northstardevelopment.ca/public/images/livy-2.jpeg",
+            "Estrella": "https://northstardevelopment.ca/public/images/estrella-1.jpg",
+            "Panorama B6": "https://northstardevelopment.ca/public/images/panorama-1.jpg",
+          };
+          const thumb = thumbs[p.name] || null;
+          const statusColor = p.status === "Completed" ? green : p.status === "Under Construction" ? "#B8860B" : "#666";
+          const statusBg = p.status === "Completed" ? "#EFE" : p.status === "Under Construction" ? "#FFF8E1" : "#F5F5F5";
+
+          return (
+          <div key={p.id} onClick={() => onViewProject?.(p.id)} style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", cursor: "pointer", transition: "box-shadow .15s, transform .15s" }}
+            onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,.1)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+            onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)"; e.currentTarget.style.transform = "none"; }}>
+            <div style={{ display: "flex" }}>
+              {/* Thumbnail */}
+              {thumb && (
+                <div style={{ width: 120, minHeight: 100, flexShrink: 0, backgroundImage: `url(${thumb})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+              )}
+              {!thumb && (
+                <div style={{ width: 120, minHeight: 100, flexShrink: 0, background: `linear-gradient(135deg, ${red}15, ${red}05)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontSize: 32, fontWeight: 300, color: `${red}40` }}>{p.name?.[0] || "P"}</span>
+                </div>
+              )}
+              <div style={{ flex: 1, padding: "16px 20px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 17, fontWeight: 500 }}>{p.name}</div>
+                    <div style={{ fontSize: 12, color: "#767168", marginTop: 2 }}>{p.location}</div>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <span style={{ fontSize: 10, padding: "3px 10px", borderRadius: 4, background: statusBg, color: statusColor, fontWeight: 500 }}>{p.status}</span>
+                    <button onClick={(e) => { e.stopPropagation(); setEditing(editing === p.id ? null : p.id); }} style={{ ...btnOutline, padding: "4px 12px", fontSize: 11 }}>{editing === p.id ? "Close" : "Quick Edit"}</button>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 24, fontSize: 12, color: "#888", flexWrap: "wrap" }}>
+                  <span>{p.investorCount} investors</span>
+                  <span>{p.docCount} documents</span>
+                  <span>Completion: <strong style={{ color: darkText }}>{p.completion}%</strong></span>
+                  <span>Raise: <strong style={{ color: darkText }}>{fmtCurrency(p.totalRaise)}</strong></span>
+                </div>
               </div>
-              <div style={{ display: "flex", gap: 6 }}>
-                <button onClick={() => onViewProject?.(p.id)} style={btnStyle}>View</button>
-                <button onClick={() => setEditing(editing === p.id ? null : p.id)} style={btnOutline}>{editing === p.id ? "Close" : "Edit"}</button>
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 32, fontSize: 13, color: "#666" }}>
-              <span>Status: <strong>{p.status}</strong></span>
-              <span>Completion: <strong>{p.completion}%</strong></span>
-              <span>Total Raise: <strong>{fmtCurrency(p.totalRaise)}</strong></span>
             </div>
             {editing === p.id && (
-              <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #F0EDE8" }}>
-                <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+              <div style={{ padding: "16px 20px", borderTop: "1px solid #F0EDE8" }} onClick={e => e.stopPropagation()}>
+                <div className="admin-form-row" style={{ display: "flex", gap: 12, marginBottom: 12 }}>
                   <select value={p.status} onChange={e => handleSave(p.id, "status", e.target.value)} style={{ ...inputStyle, width: "auto" }}>
                     <option>Pre-Development</option><option>Under Construction</option><option>Completed</option>
                   </select>
@@ -382,7 +410,8 @@ function ProjectManager({ toast, onViewProject }) {
               </div>
             )}
           </div>
-        ))}
+        );
+        })}
       </div>
     </>
   );
@@ -586,6 +615,23 @@ function ProjectDetail({ projectId, onBack, toast }) {
   const [cfDesc, setCfDesc] = useState("");
   const [recalculating, setRecalculating] = useState(false);
 
+  // Financial modeler state (must be before any conditional returns — React hooks rule)
+  const [fmExitValue, setFmExitValue] = useState("");
+  const [fmHoldYears, setFmHoldYears] = useState("5");
+  const [fmAnnualCF, setFmAnnualCF] = useState("0");
+  const [fmResult, setFmResult] = useState(null);
+  const [fmLoading, setFmLoading] = useState(false);
+
+  // Org chart state
+  const [orgChart, setOrgChart] = useState([]);
+
+  // Cash flow editing state
+  const [editCf, setEditCf] = useState(null);
+  const [editCfDate, setEditCfDate] = useState("");
+  const [editCfAmount, setEditCfAmount] = useState("");
+  const [editCfType, setEditCfType] = useState("");
+  const [editCfDesc, setEditCfDesc] = useState("");
+
   useEffect(() => { load(); }, [projectId]);
   async function load() { fetchAdminProjectDetail(projectId).then(setProject); }
 
@@ -595,6 +641,12 @@ function ProjectDetail({ projectId, onBack, toast }) {
       if (project.investors) setCfInvestors(project.investors);
     }
   }, [tab, project?.id]);
+
+  useEffect(() => {
+    if (project?.orgChart) {
+      try { setOrgChart(JSON.parse(project.orgChart)); } catch { setOrgChart([]); }
+    }
+  }, [project?.orgChart]);
 
   async function loadCashFlows() {
     const allFlows = [];
@@ -650,22 +702,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
     try { await updateInvestorKPI(userId, projectId, { [field]: parseFloat(value) }); toast("KPI updated"); load(); } catch (e) { toast(e.message, "error"); }
   }
 
-  if (!project) return <p style={{ color: "#767168" }}>Loading...</p>;
-
-  // Financial modeler state
-  const [fmExitValue, setFmExitValue] = useState("");
-  const [fmHoldYears, setFmHoldYears] = useState("5");
-  const [fmAnnualCF, setFmAnnualCF] = useState("0");
-  const [fmResult, setFmResult] = useState(null);
-  const [fmLoading, setFmLoading] = useState(false);
-
-  // Org chart state
-  const [orgChart, setOrgChart] = useState([]);
-  useEffect(() => {
-    if (project?.orgChart) {
-      try { setOrgChart(JSON.parse(project.orgChart)); } catch { setOrgChart([]); }
-    }
-  }, [project?.orgChart]);
+  if (!project) return <AdminSpinner />;
 
   async function handleRunModel() {
     setFmLoading(true);
