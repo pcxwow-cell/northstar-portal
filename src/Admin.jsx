@@ -12,10 +12,10 @@ const btnOutline = { ...btnStyle, background: "#fff", color: darkText, border: "
 // ─── ADMIN LOADING SPINNER ───
 function AdminSpinner() {
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "60px 20px", gap: 12 }}>
+    <div role="status" aria-label="Loading" aria-busy="true" style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "60px 20px", gap: 12 }}>
       <style>{`@keyframes adminSpin { to { transform: rotate(360deg); } }`}</style>
       <div style={{ width: 24, height: 24, border: `2px solid ${red}22`, borderTopColor: red, borderRadius: "50%", animation: "adminSpin .7s linear infinite" }} />
-      <span style={{ fontSize: 13, color: "#999" }}>Loading...</span>
+      <span style={{ fontSize: 13, color: "#767168" }}>Loading...</span>
     </div>
   );
 }
@@ -23,7 +23,7 @@ function AdminSpinner() {
 // ─── ADMIN ERROR BANNER ───
 function AdminError({ message, onRetry }) {
   return (
-    <div style={{ padding: "14px 20px", borderRadius: 10, background: "#FEE", border: `1px solid ${red}30`, display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 13, color: red }}>
+    <div role="alert" style={{ padding: "14px 20px", borderRadius: 10, background: "#FEE", border: `1px solid ${red}30`, display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 13, color: red }}>
       <span>{message || "Something went wrong."}</span>
       {onRetry && <span onClick={onRetry} style={{ ...btnOutline, fontSize: 12, color: red, borderColor: `${red}44`, cursor: "pointer" }}>Retry</span>}
     </div>
@@ -35,7 +35,7 @@ function AdminEmpty({ title, subtitle }) {
   return (
     <div style={{ textAlign: "center", padding: "48px 20px" }}>
       <div style={{ fontSize: 15, fontWeight: 500, color: "#666", marginBottom: 6 }}>{title}</div>
-      {subtitle && <div style={{ fontSize: 13, color: "#999" }}>{subtitle}</div>}
+      {subtitle && <div style={{ fontSize: 13, color: "#767168" }}>{subtitle}</div>}
     </div>
   );
 }
@@ -81,6 +81,11 @@ export default function AdminPanel({ user, onLogout }) {
 
   return (
     <div style={{ fontFamily: sans, color: darkText, minHeight: "100vh", background: "#F8F7F4" }}>
+      <style>{`
+        *:focus-visible { outline: 2px solid #EA2028; outline-offset: 2px; border-radius: 4px; }
+        button:active { transform: scale(0.97); }
+        button { transition: transform .1s ease; }
+      `}</style>
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px", height: 60, background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ width: 24, height: 24, background: red, borderRadius: 4 }} />
@@ -89,12 +94,12 @@ export default function AdminPanel({ user, onLogout }) {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <span style={{ fontSize: 13, color: "#666" }}>{user.name}</span>
-          <button onClick={onLogout} style={{ ...btnOutline, fontSize: 12, borderRadius: 6 }}>Sign Out</button>
+          <button onClick={onLogout} aria-label="Sign out of admin panel" style={{ ...btnOutline, fontSize: 12, borderRadius: 6 }}>Sign Out</button>
         </div>
       </header>
-      <nav style={{ display: "flex", gap: 4, background: "#fff", borderBottom: "1px solid #ECEAE5", padding: "8px 32px" }}>
+      <nav role="navigation" aria-label="Admin navigation" style={{ display: "flex", gap: 4, background: "#fff", borderBottom: "1px solid #ECEAE5", padding: "8px 32px" }}>
         {navItems.map(n => (
-          <span key={n.id} onClick={() => setView(n.id)} style={{
+          <span key={n.id} role="link" tabIndex={0} aria-current={view === n.id ? "page" : undefined} onClick={() => setView(n.id)} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setView(n.id); } }} style={{
             fontSize: 13, padding: "8px 16px", cursor: "pointer",
             color: view === n.id ? red : "#888",
             background: view === n.id ? "#EA20280D" : "transparent",
@@ -106,9 +111,9 @@ export default function AdminPanel({ user, onLogout }) {
             onMouseLeave={e => { if (view !== n.id) e.currentTarget.style.background = "transparent"; }}>{n.label}</span>
         ))}
       </nav>
-      <main style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 32px 80px" }}>{pages[view]}</main>
+      <main role="main" aria-label="Admin content" style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 32px 80px" }}>{pages[view]}</main>
       {toast && (
-        <div style={{ position: "fixed", bottom: 24, right: 24, padding: "12px 20px", background: toast.type === "error" ? "#FEE" : "#EFE", border: `1px solid ${toast.type === "error" ? red : green}`, borderRadius: 10, fontSize: 13, color: toast.type === "error" ? red : green, zIndex: 100, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>{toast.msg}</div>
+        <div role="alert" aria-live="polite" style={{ position: "fixed", bottom: 24, right: 24, padding: "12px 20px", background: toast.type === "error" ? "#FEE" : "#EFE", border: `1px solid ${toast.type === "error" ? red : green}`, borderRadius: 10, fontSize: 13, color: toast.type === "error" ? red : green, zIndex: 100, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>{toast.msg}</div>
       )}
     </div>
   );
@@ -135,7 +140,7 @@ function Dashboard() {
             onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,.08)"; }}
             onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)"; }}>
             <div style={{ fontSize: 28, fontWeight: 300, marginBottom: 4 }}>{s.value}</div>
-            <div style={{ fontSize: 11, color: "#999", textTransform: "uppercase", letterSpacing: ".08em" }}>{s.label}</div>
+            <div style={{ fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".08em" }}>{s.label}</div>
           </div>
         ))}
       </div>
@@ -144,7 +149,7 @@ function Dashboard() {
         {data.recentDocs.map((d, i) => (
           <div key={d.id} style={{ padding: "12px 20px", borderBottom: i < data.recentDocs.length - 1 ? "1px solid #F0EDE8" : "none", display: "flex", justifyContent: "space-between", fontSize: 13 }}>
             <span>{d.name}</span>
-            <span style={{ color: "#999" }}>{d.project?.name || "General"} · {d.date}</span>
+            <span style={{ color: "#767168" }}>{d.project?.name || "General"} · {d.date}</span>
           </div>
         ))}
       </div>
@@ -275,7 +280,7 @@ function ProjectManager({ toast, onViewProject }) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <div>
                 <div style={{ fontSize: 18, fontWeight: 500 }}>{p.name}</div>
-                <div style={{ fontSize: 12, color: "#999" }}>{p.location} · {p.investorCount} investors · {p.docCount} docs</div>
+                <div style={{ fontSize: 12, color: "#767168" }}>{p.location} · {p.investorCount} investors · {p.docCount} docs</div>
               </div>
               <div style={{ display: "flex", gap: 6 }}>
                 <button onClick={() => onViewProject?.(p.id)} style={btnStyle}>View</button>
@@ -400,7 +405,7 @@ function InvestorManager({ toast, onViewProfile }) {
 
       {/* Column headers */}
       <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 100px 120px 120px 140px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: "#999", textTransform: "uppercase", letterSpacing: ".06em" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 100px 120px 120px 140px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em" }}>
           <span onClick={() => toggleSort("name")} style={{ cursor: "pointer" }}>Name {sortBy === "name" ? (sortDir === "asc" ? "↑" : "↓") : ""}</span>
           <span onClick={() => toggleSort("email")} style={{ cursor: "pointer" }}>Email {sortBy === "email" ? (sortDir === "asc" ? "↑" : "↓") : ""}</span>
           <span>Status</span>
@@ -467,12 +472,12 @@ function InvestorManager({ toast, onViewProfile }) {
                     )}
                   </div>
                 ))}
-                {inv.projects.length === 0 && <div style={{ fontSize: 12, color: "#999", fontStyle: "italic" }}>No project assignments</div>}
+                {inv.projects.length === 0 && <div style={{ fontSize: 12, color: "#767168", fontStyle: "italic" }}>No project assignments</div>}
               </div>
             )}
           </div>
         ))}
-        {investors.length === 0 && <div style={{ padding: 24, color: "#999", textAlign: "center" }}>No investors found</div>}
+        {investors.length === 0 && <div style={{ padding: 24, color: "#767168", textAlign: "center" }}>No investors found</div>}
       </div>
     </>
   );
@@ -568,7 +573,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
     try { await updateInvestorKPI(userId, projectId, { [field]: parseFloat(value) }); toast("KPI updated"); load(); } catch (e) { toast(e.message, "error"); }
   }
 
-  if (!project) return <p style={{ color: "#999" }}>Loading...</p>;
+  if (!project) return <p style={{ color: "#767168" }}>Loading...</p>;
 
   // Financial modeler state
   const [fmExitValue, setFmExitValue] = useState("");
@@ -620,7 +625,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
       <p style={{ fontSize: 12, color: red, cursor: "pointer", marginBottom: 24 }} onClick={onBack}>← Back to projects</p>
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 28, fontWeight: 300 }}>{project.name}</h1>
-        <div style={{ fontSize: 13, color: "#999" }}>{project.location} · {project.type}</div>
+        <div style={{ fontSize: 13, color: "#767168" }}>{project.location} · {project.type}</div>
       </div>
 
       {/* KPI cards */}
@@ -634,7 +639,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
         ].map((s, i) => (
           <div key={i} style={{ background: "#fff", borderRadius: 10, padding: "16px 20px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
             <div style={{ fontSize: 22, fontWeight: 300, marginBottom: 2 }}>{s.value}</div>
-            <div style={{ fontSize: 10, color: "#999", textTransform: "uppercase", letterSpacing: ".08em" }}>{s.label}</div>
+            <div style={{ fontSize: 10, color: "#767168", textTransform: "uppercase", letterSpacing: ".08em" }}>{s.label}</div>
           </div>
         ))}
       </div>
@@ -686,7 +691,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
                 <label style={{ fontSize: 11, color: "#888" }}>Units Sold</label>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
                   <input type="number" defaultValue={project.unitsSold || 0} onBlur={e => handleSaveField("unitsSold", parseInt(e.target.value))} style={{ ...inputStyle, width: 80 }} />
-                  <span style={{ fontSize: 12, color: "#999" }}>/ {project.units || 0} total</span>
+                  <span style={{ fontSize: 12, color: "#767168" }}>/ {project.units || 0} total</span>
                   {project.units > 0 && (
                     <div style={{ flex: 1, height: 6, background: "#F0EDE8", borderRadius: 20, overflow: "hidden" }}>
                       <div style={{ width: `${Math.min(100, ((project.unitsSold || 0) / project.units) * 100)}%`, height: "100%", background: green, borderRadius: 20 }} />
@@ -712,7 +717,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
             </div>
             {orgChart.length > 0 ? (
               <>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 30px", fontSize: 11, color: "#999", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 30px", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
                   <span>Role</span><span>Name</span><span>Company</span><span></span>
                 </div>
                 {orgChart.map((row, i) => (
@@ -738,7 +743,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                 <div>
                   <span style={{ fontSize: 14, fontWeight: 500 }}>{inv.name}</span>
-                  <span style={{ fontSize: 12, color: "#999", marginLeft: 8 }}>{inv.email}</span>
+                  <span style={{ fontSize: 12, color: "#767168", marginLeft: 8 }}>{inv.email}</span>
                 </div>
                 <button onClick={() => setEditingKPI(editingKPI === inv.userId ? null : inv.userId)} style={{ ...btnOutline, padding: "4px 10px", fontSize: 11 }}>
                   {editingKPI === inv.userId ? "Done" : "Edit KPIs"}
@@ -774,7 +779,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
           {project.capTable.length > 0 && (
             <>
               <div style={{ fontSize: 13, fontWeight: 600, color: "#666", marginTop: 24, marginBottom: 14 }}>Cap Table</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 120px 100px 100px 80px 80px", fontSize: 11, color: "#999", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 120px 100px 100px 80px 80px", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
                 <span>Holder</span><span>Class</span><span>Committed</span><span>Called</span><span>Unfunded</span><span>Ownership</span>
               </div>
               {project.capTable.map(e => (
@@ -834,10 +839,10 @@ function ProjectDetail({ projectId, onBack, toast }) {
                 <div key={t.id} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #F5F3F0", fontSize: 13 }}>
                   <div>
                     <span style={{ fontWeight: 500 }}>{t.name}</span>
-                    <span style={{ color: "#999", marginLeft: 12 }}>LP: {t.lpShare} · GP: {t.gpShare}</span>
+                    <span style={{ color: "#767168", marginLeft: 12 }}>LP: {t.lpShare} · GP: {t.gpShare}</span>
                   </div>
                   <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                    <span style={{ color: "#999", fontSize: 12 }}>{t.threshold}</span>
+                    <span style={{ color: "#767168", fontSize: 12 }}>{t.threshold}</span>
                     <span style={{ padding: "2px 8px", borderRadius: 3, fontSize: 10, background: t.status === "complete" ? "#EFE" : t.status === "accruing" ? "#FFF8E1" : "#F0EDE8", color: t.status === "complete" ? green : t.status === "accruing" ? "#B8860B" : "#999" }}>{t.status}</span>
                   </div>
                 </div>
@@ -871,7 +876,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
               {fmLoading ? "Running..." : "Run Scenario"}
             </button>
           </div>
-          <div style={{ fontSize: 12, color: "#999", marginBottom: 20 }}>
+          <div style={{ fontSize: 12, color: "#767168", marginBottom: 20 }}>
             Pre-filled: Total Investment ${fmt(project.totalRaise)} | Pref: {project.prefReturn}% | Carry: {project.carry}%
           </div>
 
@@ -887,7 +892,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
                 ].map((c, i) => (
                   <div key={i} style={{ background: "#F8F7F4", borderRadius: 6, padding: "16px 20px", textAlign: "center" }}>
                     <div style={{ fontSize: 22, fontWeight: 300, color: darkText }}>{c.value}</div>
-                    <div style={{ fontSize: 10, color: "#999", textTransform: "uppercase", letterSpacing: ".06em", marginTop: 4 }}>{c.label}</div>
+                    <div style={{ fontSize: 10, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em", marginTop: 4 }}>{c.label}</div>
                   </div>
                 ))}
               </div>
@@ -901,7 +906,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
                   <div key={i} style={{ marginBottom: 12 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
                       <span style={{ fontWeight: 500 }}>{tier.name}</span>
-                      <span style={{ color: "#999" }}>LP: ${fmt(Math.round(tier.lpAmount))} | GP: ${fmt(Math.round(tier.gpAmount))}</span>
+                      <span style={{ color: "#767168" }}>LP: ${fmt(Math.round(tier.lpAmount))} | GP: ${fmt(Math.round(tier.gpAmount))}</span>
                     </div>
                     <div style={{ height: 12, background: "#F0EDE8", borderRadius: 2, overflow: "hidden", display: "flex" }}>
                       <div style={{ width: `${lpPct}%`, background: green, height: "100%" }} />
@@ -910,14 +915,14 @@ function ProjectDetail({ projectId, onBack, toast }) {
                   </div>
                 );
               })}
-              <div style={{ display: "flex", gap: 16, fontSize: 11, color: "#999", marginBottom: 24, marginTop: 8 }}>
+              <div style={{ display: "flex", gap: 16, fontSize: 11, color: "#767168", marginBottom: 24, marginTop: 8 }}>
                 <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, background: green, borderRadius: 2, display: "inline-block" }} /> LP</span>
                 <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, background: `${red}99`, borderRadius: 2, display: "inline-block" }} /> GP</span>
               </div>
 
               {/* Year-by-year */}
               <div style={{ fontSize: 13, fontWeight: 600, color: "#666", marginBottom: 12 }}>Year-by-Year Cash Flow</div>
-              <div style={{ display: "grid", gridTemplateColumns: "80px 120px 120px 120px", fontSize: 11, color: "#999", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "80px 120px 120px 120px", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
                 <span>Year</span><span style={{ textAlign: "right" }}>Cash Flow</span><span style={{ textAlign: "right" }}>Cumulative</span><span style={{ textAlign: "right" }}>Balance</span>
               </div>
               {fmResult.yearByYear.map((y, i) => (
@@ -937,7 +942,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
               {fmResult.sensitivity && (
                 <>
                   <div style={{ fontSize: 13, fontWeight: 600, color: "#666", marginBottom: 12, marginTop: 24 }}>Sensitivity Analysis</div>
-                  <div style={{ display: "grid", gridTemplateColumns: "80px 120px 120px 100px 80px", fontSize: 11, color: "#999", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "80px 120px 120px 100px 80px", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
                     <span>Scenario</span><span style={{ textAlign: "right" }}>Exit Value</span><span style={{ textAlign: "right" }}>LP Return</span><span style={{ textAlign: "right" }}>LP IRR</span><span style={{ textAlign: "right" }}>LP MOIC</span>
                   </div>
                   {fmResult.sensitivity.map((s, i) => (
@@ -1059,7 +1064,7 @@ function DocumentManager({ toast }) {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
           <div>
             <h2 style={{ fontSize: 22, fontWeight: 400, marginBottom: 6 }}>{docDetail.name}</h2>
-            <div style={{ fontSize: 12, color: "#999" }}>
+            <div style={{ fontSize: 12, color: "#767168" }}>
               {docDetail.project?.name || "General"} · {docDetail.category} · {docDetail.date} · {docDetail.size}
               <span style={{ marginLeft: 8, padding: "2px 8px", borderRadius: 3, fontSize: 10, background: docDetail.status === "published" ? "#EFE" : "#FFF8E1", color: docDetail.status === "published" ? green : "#B8860B" }}>{docDetail.status}</span>
             </div>
@@ -1086,10 +1091,10 @@ function DocumentManager({ toast }) {
                       <input type="checkbox" checked={sigSelectedIds.includes(inv.id)}
                         onChange={e => setSigSelectedIds(prev => e.target.checked ? [...prev, inv.id] : prev.filter(id => id !== inv.id))} />
                       <span style={{ fontWeight: 500 }}>{inv.name}</span>
-                      <span style={{ color: "#999" }}>{inv.email}</span>
+                      <span style={{ color: "#767168" }}>{inv.email}</span>
                     </label>
                   ))}
-                  {sigInvestors.length === 0 && <div style={{ padding: 14, color: "#999", fontSize: 12 }}>Loading investors...</div>}
+                  {sigInvestors.length === 0 && <div style={{ padding: 14, color: "#767168", fontSize: 12 }}>Loading investors...</div>}
                 </div>
               </div>
               <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
@@ -1104,7 +1109,7 @@ function DocumentManager({ toast }) {
 
         {/* Access audit table */}
         <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 120px 120px 120px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: "#999", textTransform: "uppercase", letterSpacing: ".06em" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 120px 120px 120px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em" }}>
             <span>Investor</span><span>Email</span><span>Viewed</span><span>Downloaded</span><span>Acknowledged</span>
           </div>
           {docDetail.accessList.length > 0 ? docDetail.accessList.map((a, i) => (
@@ -1119,7 +1124,7 @@ function DocumentManager({ toast }) {
               <span style={{ color: a.acknowledgedAt ? green : "#CCC" }}>{a.acknowledgedAt ? new Date(a.acknowledgedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}</span>
             </div>
           )) : (
-            <div style={{ padding: 20, color: "#999", textAlign: "center", fontSize: 13 }}>No investor access records</div>
+            <div style={{ padding: 20, color: "#767168", textAlign: "center", fontSize: 13 }}>No investor access records</div>
           )}
         </div>
       </>
@@ -1173,7 +1178,7 @@ function DocumentManager({ toast }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 300 }}>Documents</h1>
-          <p style={{ fontSize: 13, color: "#999", marginTop: 4 }}>{docs.length} documents</p>
+          <p style={{ fontSize: 13, color: "#767168", marginTop: 4 }}>{docs.length} documents</p>
         </div>
         <button onClick={() => setShowUpload(true)} style={btnStyle}>Upload Document</button>
       </div>
@@ -1192,9 +1197,9 @@ function DocumentManager({ toast }) {
       </div>
 
       {/* Document table */}
-      {loading ? <p style={{ color: "#999" }}>Loading...</p> : (
+      {loading ? <p style={{ color: "#767168" }}>Loading...</p> : (
         <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 100px 100px 80px 80px 80px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: "#999", textTransform: "uppercase", letterSpacing: ".06em" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 100px 100px 80px 80px 80px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em" }}>
             <span>Document</span><span>Project</span><span>Category</span><span>Investors</span><span>Viewed</span><span>Downloaded</span>
           </div>
           {docs.map((d, i) => (
@@ -1216,7 +1221,7 @@ function DocumentManager({ toast }) {
               <span style={{ color: d.downloaded > 0 ? green : "#CCC" }}>{d.downloaded}</span>
             </div>
           ))}
-          {docs.length === 0 && <div style={{ padding: 24, color: "#999", textAlign: "center" }}>No documents found</div>}
+          {docs.length === 0 && <div style={{ padding: 24, color: "#767168", textAlign: "center" }}>No documents found</div>}
         </div>
       )}
     </>
@@ -1249,7 +1254,7 @@ function InvestorProfile({ investorId, onBack, toast }) {
     try { await deleteEntity(entityId); toast("Entity deleted"); loadEntities(); } catch (err) { toast(err.message, "error"); }
   }
 
-  if (!profile) return <p style={{ color: "#999" }}>Loading...</p>;
+  if (!profile) return <p style={{ color: "#767168" }}>Loading...</p>;
 
   const section = { background: "#fff", borderRadius: 12, padding: "20px 24px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" };
   const sectionTitle = { fontSize: 13, fontWeight: 600, color: "#666", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 14 };
@@ -1264,7 +1269,7 @@ function InvestorProfile({ investorId, onBack, toast }) {
           </div>
           <div>
             <h1 style={{ fontSize: 24, fontWeight: 400 }}>{profile.name}</h1>
-            <div style={{ fontSize: 13, color: "#999" }}>{profile.email} · {profile.role === "INVESTOR" ? "Limited Partner" : profile.role} · Joined {profile.joined}</div>
+            <div style={{ fontSize: 13, color: "#767168" }}>{profile.email} · {profile.role === "INVESTOR" ? "Limited Partner" : profile.role} · Joined {profile.joined}</div>
           </div>
         </div>
         <span style={{ padding: "4px 12px", borderRadius: 4, fontSize: 12, fontWeight: 500, background: profile.status === "ACTIVE" ? "#EFE" : profile.status === "PENDING" ? "#FFF8E1" : "#FEE", color: profile.status === "ACTIVE" ? green : profile.status === "PENDING" ? "#B8860B" : red }}>{profile.status}</span>
@@ -1290,23 +1295,23 @@ function InvestorProfile({ investorId, onBack, toast }) {
           <form onSubmit={handleCreateEntity} style={{ padding: "12px", background: "#FAFAF8", borderRadius: 4, marginBottom: 12 }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
               <div>
-                <label style={{ fontSize: 10, color: "#999" }}>Name</label>
+                <label style={{ fontSize: 10, color: "#767168" }}>Name</label>
                 <input value={entityForm.name} onChange={e => setEntityForm(f => ({ ...f, name: e.target.value }))} required style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} placeholder="Entity name" />
               </div>
               <div>
-                <label style={{ fontSize: 10, color: "#999" }}>Type</label>
+                <label style={{ fontSize: 10, color: "#767168" }}>Type</label>
                 <select value={entityForm.type} onChange={e => setEntityForm(f => ({ ...f, type: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }}>
                   <option>Individual</option><option>LLC</option><option>Trust</option><option>IRA</option><option>Corporation</option><option>Partnership</option>
                 </select>
               </div>
               <div>
-                <label style={{ fontSize: 10, color: "#999" }}>Tax ID</label>
+                <label style={{ fontSize: 10, color: "#767168" }}>Tax ID</label>
                 <input value={entityForm.taxId} onChange={e => setEntityForm(f => ({ ...f, taxId: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} placeholder="EIN/SSN" />
               </div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 8, alignItems: "flex-end" }}>
               <div>
-                <label style={{ fontSize: 10, color: "#999" }}>State</label>
+                <label style={{ fontSize: 10, color: "#767168" }}>State</label>
                 <input value={entityForm.state} onChange={e => setEntityForm(f => ({ ...f, state: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} placeholder="e.g. BC" />
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 6, paddingBottom: 4 }}>
@@ -1318,7 +1323,7 @@ function InvestorProfile({ investorId, onBack, toast }) {
           </form>
         )}
         {entities.length > 0 ? (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 120px 60px 70px 40px", fontSize: 11, color: "#999", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 120px 60px 70px 40px", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
             <span>Entity Name</span><span>Type</span><span>Tax ID</span><span>State</span><span>Default</span><span></span>
           </div>
         ) : null}
@@ -1326,8 +1331,8 @@ function InvestorProfile({ investorId, onBack, toast }) {
           <div key={e.id} style={{ display: "grid", gridTemplateColumns: "1fr 100px 120px 60px 70px 40px", padding: "10px 0", borderBottom: "1px solid #F5F3F0", fontSize: 13, alignItems: "center" }}>
             <span style={{ fontWeight: 500 }}>{e.name}</span>
             <span style={{ color: "#666" }}>{e.type}</span>
-            <span style={{ color: "#999", fontSize: 11 }}>{e.taxId || "\u2014"}</span>
-            <span style={{ color: "#999" }}>{e.state || "\u2014"}</span>
+            <span style={{ color: "#767168", fontSize: 11 }}>{e.taxId || "\u2014"}</span>
+            <span style={{ color: "#767168" }}>{e.state || "\u2014"}</span>
             <span>{e.isDefault ? <span style={{ fontSize: 10, padding: "2px 6px", background: "#EFE", color: green, borderRadius: 3 }}>Default</span> : ""}</span>
             <span onClick={() => handleDeleteEntity(e.id)} style={{ fontSize: 14, color: "#CCC", cursor: "pointer" }}>&times;</span>
           </div>
@@ -1342,7 +1347,7 @@ function InvestorProfile({ investorId, onBack, toast }) {
           <div key={p.projectId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid #F0EDE8" }}>
             <div>
               <div style={{ fontSize: 14, fontWeight: 500 }}>{p.projectName}</div>
-              <div style={{ fontSize: 11, color: "#999" }}>{p.projectStatus}</div>
+              <div style={{ fontSize: 11, color: "#767168" }}>{p.projectStatus}</div>
             </div>
             <div style={{ display: "flex", gap: 24, fontSize: 13, color: "#666", alignItems: "center" }}>
               <span>${fmt(p.committed)} committed</span>
@@ -1365,7 +1370,7 @@ function InvestorProfile({ investorId, onBack, toast }) {
         {[...profile.documents.assigned, ...profile.documents.projectDocs, ...profile.documents.generalDocs].slice(0, 10).map((d, i) => (
           <div key={`${d.id}-${i}`} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #F5F3F0", fontSize: 13 }}>
             <span>{d.name}</span>
-            <span style={{ color: "#999", fontSize: 12 }}>{d.category} · {d.date}</span>
+            <span style={{ color: "#767168", fontSize: 12 }}>{d.category} · {d.date}</span>
           </div>
         ))}
       </div>
@@ -1379,7 +1384,7 @@ function InvestorProfile({ investorId, onBack, toast }) {
               {t.unread && <span style={{ width: 6, height: 6, borderRadius: "50%", background: red }} />}
               <span>{t.subject}</span>
             </div>
-            <span style={{ color: "#999", fontSize: 11 }}>{new Date(t.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })} · {t.targetType}</span>
+            <span style={{ color: "#767168", fontSize: 11 }}>{new Date(t.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })} · {t.targetType}</span>
           </div>
         )) : <span style={{ fontSize: 12, color: "#BBB", fontStyle: "italic" }}>No messages</span>}
       </div>
@@ -1473,8 +1478,8 @@ function ProjectUpdatesTab({ project, updateText, setUpdateText, handlePostUpdat
           {updates.length > 0 ? updates.map((u, i) => (
             <div key={u.id} style={{ padding: "12px 0", borderBottom: i < updates.length - 1 ? "1px solid #F5F3F0" : "none" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                <div style={{ fontSize: 11, color: "#999" }}>{u.date}</div>
-                {u.completionPct != null && <span style={{ fontSize: 10, color: "#999", padding: "2px 6px", border: "1px solid #E8E5DE", borderRadius: 3 }}>{u.completionPct}% complete</span>}
+                <div style={{ fontSize: 11, color: "#767168" }}>{u.date}</div>
+                {u.completionPct != null && <span style={{ fontSize: 10, color: "#767168", padding: "2px 6px", border: "1px solid #E8E5DE", borderRadius: 3 }}>{u.completionPct}% complete</span>}
               </div>
               <div style={{ fontSize: 13, color: "#444", lineHeight: 1.6 }}>{u.text}</div>
               {/* Show delta vs previous */}
@@ -1559,15 +1564,15 @@ function ProjectCashFlowsTab({ project, projectId, cashFlowsList, cfInvestors, s
       {/* Summary */}
       <div style={{ display: "flex", gap: 24, marginBottom: 16, padding: "12px 16px", background: "#FAFAF8", borderRadius: 4, border: "1px solid #E8E5DE" }}>
         <div>
-          <div style={{ fontSize: 10, color: "#999", textTransform: "uppercase", letterSpacing: ".06em" }}>Capital Called</div>
+          <div style={{ fontSize: 10, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em" }}>Capital Called</div>
           <div style={{ fontSize: 16, fontWeight: 500, color: red }}>${fmt(totalContributed)}</div>
         </div>
         <div>
-          <div style={{ fontSize: 10, color: "#999", textTransform: "uppercase", letterSpacing: ".06em" }}>Distributed</div>
+          <div style={{ fontSize: 10, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em" }}>Distributed</div>
           <div style={{ fontSize: 16, fontWeight: 500, color: green }}>${fmt(totalDistributed)}</div>
         </div>
         <div>
-          <div style={{ fontSize: 10, color: "#999", textTransform: "uppercase", letterSpacing: ".06em" }}>Net</div>
+          <div style={{ fontSize: 10, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em" }}>Net</div>
           <div style={{ fontSize: 16, fontWeight: 500, color: netCF >= 0 ? green : red }}>{netCF >= 0 ? "+" : "-"}${fmt(Math.abs(netCF))}</div>
         </div>
       </div>
@@ -1583,7 +1588,7 @@ function ProjectCashFlowsTab({ project, projectId, cashFlowsList, cfInvestors, s
       </div>
       {cashFlowsList.length > 0 ? (
         <>
-          <div style={{ display: "grid", gridTemplateColumns: "100px 1fr 1fr 100px 100px 80px", fontSize: 11, color: "#999", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "100px 1fr 1fr 100px 100px 80px", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
             <span>Date</span><span>Investor</span><span>Description</span><span style={{ textAlign: "right" }}>Amount</span><span style={{ textAlign: "right" }}>Type</span><span style={{ textAlign: "right" }}>Actions</span>
           </div>
           {cashFlowsList.map((cf, i) => (
@@ -1601,18 +1606,18 @@ function ProjectCashFlowsTab({ project, projectId, cashFlowsList, cfInvestors, s
                 </select>
                 <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
                   <button type="submit" style={{ fontSize: 10, padding: "3px 6px", background: green, color: "#fff", border: "none", borderRadius: 3, cursor: "pointer" }}>Save</button>
-                  <button type="button" onClick={() => setEditingCf(null)} style={{ fontSize: 10, padding: "3px 6px", background: "#fff", color: "#999", border: "1px solid #DDD", borderRadius: 3, cursor: "pointer" }}>X</button>
+                  <button type="button" onClick={() => setEditingCf(null)} style={{ fontSize: 10, padding: "3px 6px", background: "#fff", color: "#767168", border: "1px solid #DDD", borderRadius: 3, cursor: "pointer" }}>X</button>
                 </div>
               </form>
             ) : (
               <div key={cf.id || i} style={{ display: "grid", gridTemplateColumns: "100px 1fr 1fr 100px 100px 80px", padding: "10px 0", borderBottom: "1px solid #F5F3F0", fontSize: 13 }}>
-                <span style={{ color: "#999", fontSize: 12 }}>{new Date(cf.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}</span>
+                <span style={{ color: "#767168", fontSize: 12 }}>{new Date(cf.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}</span>
                 <span style={{ fontWeight: 500 }}>{cf.investorName || `User ${cf.userId}`}</span>
                 <span style={{ color: "#666" }}>{cf.description || cf.type}</span>
                 <span style={{ textAlign: "right", fontWeight: 500, color: cf.amount < 0 ? red : green }}>
                   {cf.amount < 0 ? `-$${fmt(Math.abs(cf.amount))}` : `+$${fmt(cf.amount)}`}
                 </span>
-                <span style={{ textAlign: "right", fontSize: 11, color: "#999", textTransform: "capitalize" }}>{(cf.type || "").replace(/_/g, " ")}</span>
+                <span style={{ textAlign: "right", fontSize: 11, color: "#767168", textTransform: "capitalize" }}>{(cf.type || "").replace(/_/g, " ")}</span>
                 <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
                   <span onClick={() => startEdit(cf)} style={{ fontSize: 11, color: "#666", cursor: "pointer" }}>Edit</span>
                   <span onClick={() => handleDelete(cf.id)} style={{ fontSize: 11, color: red, cursor: "pointer" }}>Del</span>
@@ -1735,13 +1740,13 @@ function InvestorCashFlowsSection({ investorId, investorName, projects, toast })
       <div style={sectionTitle}>Cash Flows ({cashFlows.length} records)</div>
       {cashFlows.length > 0 && (
         <div style={{ display: "flex", gap: 24, marginBottom: 16, padding: "10px 14px", background: "#FAFAF8", borderRadius: 4, border: "1px solid #E8E5DE" }}>
-          <div><div style={{ fontSize: 10, color: "#999", textTransform: "uppercase" }}>Total Contributed</div><div style={{ fontSize: 15, fontWeight: 500, color: red }}>${fmt(totalContributed)}</div></div>
-          <div><div style={{ fontSize: 10, color: "#999", textTransform: "uppercase" }}>Total Distributed</div><div style={{ fontSize: 15, fontWeight: 500, color: green }}>${fmt(totalDistributed)}</div></div>
+          <div><div style={{ fontSize: 10, color: "#767168", textTransform: "uppercase" }}>Total Contributed</div><div style={{ fontSize: 15, fontWeight: 500, color: red }}>${fmt(totalContributed)}</div></div>
+          <div><div style={{ fontSize: 10, color: "#767168", textTransform: "uppercase" }}>Total Distributed</div><div style={{ fontSize: 15, fontWeight: 500, color: green }}>${fmt(totalDistributed)}</div></div>
         </div>
       )}
       {cashFlows.length > 0 ? (
         <>
-          <div style={{ display: "grid", gridTemplateColumns: "90px 1fr 1fr 100px 90px 70px", fontSize: 11, color: "#999", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "90px 1fr 1fr 100px 90px 70px", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
             <span>Date</span><span>Project</span><span>Description</span><span style={{ textAlign: "right" }}>Amount</span><span style={{ textAlign: "right" }}>Type</span><span style={{ textAlign: "right" }}>Actions</span>
           </div>
           {cashFlows.map(cf => (
@@ -1756,16 +1761,16 @@ function InvestorCashFlowsSection({ investorId, investorName, projects, toast })
                 </select>
                 <div style={{ display: "flex", gap: 3, justifyContent: "flex-end" }}>
                   <button type="submit" style={{ fontSize: 9, padding: "3px 5px", background: green, color: "#fff", border: "none", borderRadius: 3, cursor: "pointer" }}>OK</button>
-                  <button type="button" onClick={() => setEditingId(null)} style={{ fontSize: 9, padding: "3px 5px", background: "#fff", color: "#999", border: "1px solid #DDD", borderRadius: 3, cursor: "pointer" }}>X</button>
+                  <button type="button" onClick={() => setEditingId(null)} style={{ fontSize: 9, padding: "3px 5px", background: "#fff", color: "#767168", border: "1px solid #DDD", borderRadius: 3, cursor: "pointer" }}>X</button>
                 </div>
               </form>
             ) : (
               <div key={cf.id} style={{ display: "grid", gridTemplateColumns: "90px 1fr 1fr 100px 90px 70px", padding: "8px 0", borderBottom: "1px solid #F5F3F0", fontSize: 12 }}>
-                <span style={{ color: "#999", fontSize: 11 }}>{new Date(cf.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}</span>
+                <span style={{ color: "#767168", fontSize: 11 }}>{new Date(cf.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}</span>
                 <span style={{ fontWeight: 500 }}>{cf.projectName}</span>
                 <span style={{ color: "#666" }}>{cf.description || cf.type}</span>
                 <span style={{ textAlign: "right", fontWeight: 500, color: cf.amount < 0 ? red : green }}>{cf.amount < 0 ? `-$${fmt(Math.abs(cf.amount))}` : `+$${fmt(cf.amount)}`}</span>
-                <span style={{ textAlign: "right", fontSize: 10, color: "#999", textTransform: "capitalize" }}>{(cf.type || "").replace(/_/g, " ")}</span>
+                <span style={{ textAlign: "right", fontSize: 10, color: "#767168", textTransform: "capitalize" }}>{(cf.type || "").replace(/_/g, " ")}</span>
                 <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
                   <span onClick={() => startEdit(cf)} style={{ fontSize: 11, color: "#666", cursor: "pointer" }}>Edit</span>
                   <span onClick={() => handleDelete(cf.id)} style={{ fontSize: 11, color: red, cursor: "pointer" }}>Del</span>
@@ -1869,7 +1874,7 @@ function GroupManager({ toast }) {
         {/* Group list */}
         <div style={{ width: 300, flexShrink: 0 }}>
           <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
-            {groups.length === 0 ? <div style={{ padding: 20, color: "#999", textAlign: "center", fontSize: 13 }}>No groups yet</div> : (() => {
+            {groups.length === 0 ? <div style={{ padding: 20, color: "#767168", textAlign: "center", fontSize: 13 }}>No groups yet</div> : (() => {
               const renderGroup = (g, indent = 0) => {
                 const children = childGroupsOf(g.id);
                 return [
@@ -1885,7 +1890,7 @@ function GroupManager({ toast }) {
                       <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 3, background: `${tierColors[g.tier] || "#999"}15`, color: tierColors[g.tier] || "#999" }}>{tierLabels[g.tier] || g.tier}</span>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ fontSize: 11, color: "#999" }}>{totalMembers(g)}</span>
+                      <span style={{ fontSize: 11, color: "#767168" }}>{totalMembers(g)}</span>
                       <span onClick={(e) => { e.stopPropagation(); handleDelete(g.id); }} style={{ fontSize: 14, color: "#CCC", cursor: "pointer" }}>&times;</span>
                     </div>
                   </div>,
@@ -1905,13 +1910,13 @@ function GroupManager({ toast }) {
                 <div style={{ width: 14, height: 14, borderRadius: "50%", background: groupDetail.color || "#CCC" }} />
                 <h2 style={{ fontSize: 18, fontWeight: 500 }}>{groupDetail.name}</h2>
                 <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 3, background: `${tierColors[groupDetail.tier] || "#999"}15`, color: tierColors[groupDetail.tier] || "#999" }}>{tierLabels[groupDetail.tier] || groupDetail.tier}</span>
-                <span style={{ fontSize: 12, color: "#999" }}>{groupDetail.members.length} members</span>
+                <span style={{ fontSize: 12, color: "#767168" }}>{groupDetail.members.length} members</span>
               </div>
               {groupDetail.parent && (
-                <div style={{ fontSize: 12, color: "#999", marginBottom: 12 }}>Parent: <strong onClick={() => openGroup(groupDetail.parent.id)} style={{ cursor: "pointer", color: red }}>{groupDetail.parent.name}</strong></div>
+                <div style={{ fontSize: 12, color: "#767168", marginBottom: 12 }}>Parent: <strong onClick={() => openGroup(groupDetail.parent.id)} style={{ cursor: "pointer", color: red }}>{groupDetail.parent.name}</strong></div>
               )}
               {groupDetail.children && groupDetail.children.length > 0 && (
-                <div style={{ fontSize: 12, color: "#999", marginBottom: 16 }}>
+                <div style={{ fontSize: 12, color: "#767168", marginBottom: 16 }}>
                   Sub-groups: {groupDetail.children.map((c, i) => (
                     <span key={c.id}><strong onClick={() => openGroup(c.id)} style={{ cursor: "pointer", color: red }}>{c.name}</strong> ({c.memberCount}){i < groupDetail.children.length - 1 ? ", " : ""}</span>
                   ))}
@@ -1928,7 +1933,7 @@ function GroupManager({ toast }) {
                         onMouseEnter={e => e.currentTarget.style.background = "#F8F7F4"}
                         onMouseLeave={e => e.currentTarget.style.background = "#fff"}>
                         <span style={{ fontWeight: 500 }}>{inv.name}</span>
-                        <span style={{ color: "#999", marginLeft: 8, fontSize: 12 }}>{inv.email}</span>
+                        <span style={{ color: "#767168", marginLeft: 8, fontSize: 12 }}>{inv.email}</span>
                       </div>
                     ))}
                   </div>
@@ -1940,7 +1945,7 @@ function GroupManager({ toast }) {
                 <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: i < groupDetail.members.length - 1 ? "1px solid #F5F3F0" : "none" }}>
                   <div>
                     <span style={{ fontSize: 14, fontWeight: 500 }}>{m.name}</span>
-                    <span style={{ fontSize: 12, color: "#999", marginLeft: 10 }}>{m.email}</span>
+                    <span style={{ fontSize: 12, color: "#767168", marginLeft: 10 }}>{m.email}</span>
                   </div>
                   <span onClick={() => handleRemoveMember(m.id)} style={{ fontSize: 12, color: red, cursor: "pointer" }}>Remove</span>
                 </div>
@@ -1948,7 +1953,7 @@ function GroupManager({ toast }) {
               {groupDetail.members.length === 0 && <div style={{ color: "#BBB", fontSize: 13, fontStyle: "italic" }}>No members — search above to add investors</div>}
             </div>
           ) : (
-            <div style={{ padding: 40, textAlign: "center", color: "#999" }}>Select a group to manage members</div>
+            <div style={{ padding: 40, textAlign: "center", color: "#767168" }}>Select a group to manage members</div>
           )}
         </div>
       </div>
@@ -2007,7 +2012,7 @@ function StaffManager({ toast }) {
       )}
 
       <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 120px 100px 120px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: "#999", textTransform: "uppercase", letterSpacing: ".06em" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 120px 100px 120px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em" }}>
           <span>Name</span><span>Email</span><span>Role</span><span>Status</span><span>Actions</span>
         </div>
         {staff.map(s => (
@@ -2024,7 +2029,7 @@ function StaffManager({ toast }) {
             </button>
           </div>
         ))}
-        {staff.length === 0 && <div style={{ padding: 24, color: "#999", textAlign: "center" }}>No staff members</div>}
+        {staff.length === 0 && <div style={{ padding: 24, color: "#767168", textAlign: "center" }}>No staff members</div>}
       </div>
     </>
   );
@@ -2056,23 +2061,23 @@ function SignatureManager({ toast }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 300 }}>Signatures</h1>
-          <p style={{ fontSize: 13, color: "#999", marginTop: 4 }}>{sigs.length} signature requests</p>
+          <p style={{ fontSize: 13, color: "#767168", marginTop: 4 }}>{sigs.length} signature requests</p>
         </div>
       </div>
-      {loading ? <p style={{ color: "#999" }}>Loading...</p> : sigs.length === 0 ? (
-        <div style={{ background: "#fff", borderRadius: 12, padding: 40, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", textAlign: "center", color: "#999", fontSize: 13 }}>
+      {loading ? <p style={{ color: "#767168" }}>Loading...</p> : sigs.length === 0 ? (
+        <div style={{ background: "#fff", borderRadius: 12, padding: 40, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", textAlign: "center", color: "#767168", fontSize: 13 }}>
           No signature requests yet. Use the Documents section to request signatures.
         </div>
       ) : (
         <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 120px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: "#999", textTransform: "uppercase", letterSpacing: ".06em" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 120px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em" }}>
             <span>Document</span><span>Created By</span><span>Signers</span><span>Status</span><span>Actions</span>
           </div>
           {sigs.map((sig, i) => (
             <div key={sig.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 120px", padding: "14px 20px", borderBottom: i < sigs.length - 1 ? "1px solid #F0EDE8" : "none", fontSize: 13, alignItems: "center" }}>
               <div>
                 <div style={{ fontWeight: 500 }}>{sig.document?.name || sig.subject}</div>
-                <div style={{ fontSize: 11, color: "#999", marginTop: 2 }}>{sig.subject}</div>
+                <div style={{ fontSize: 11, color: "#767168", marginTop: 2 }}>{sig.subject}</div>
               </div>
               <span style={{ color: "#666" }}>{sig.createdBy?.name}</span>
               <div>
@@ -2136,7 +2141,7 @@ function ProspectManager({ toast }) {
     new: "#2563EB", contacted: "#8B7128", qualified: green, converted: "#7C3AED", declined: "#999",
   };
 
-  if (loading && !prospects.length) return <div style={{ padding: 40, color: "#999", textAlign: "center" }}>Loading prospects...</div>;
+  if (loading && !prospects.length) return <div style={{ padding: 40, color: "#767168", textAlign: "center" }}>Loading prospects...</div>;
 
   return (
     <div>
@@ -2153,7 +2158,7 @@ function ProspectManager({ toast }) {
             { key: "contacted", label: "Contacted", count: stats.contacted, color: "#8B7128" },
             { key: "qualified", label: "Qualified", count: stats.qualified, color: green },
             { key: "converted", label: "Converted", count: stats.converted, color: "#7C3AED" },
-            { key: "declined", label: "Declined", count: stats.declined, color: "#999" },
+            { key: "declined", label: "Declined", count: stats.declined, color: "#767168" },
           ].map(s => (
             <button key={s.key} onClick={() => setFilterStatus(s.key)} style={{
               padding: "6px 14px", borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans,
@@ -2186,7 +2191,7 @@ function ProspectManager({ toast }) {
           </thead>
           <tbody>
             {prospects.length === 0 && (
-              <tr><td colSpan={6} style={{ padding: 40, textAlign: "center", color: "#999" }}>No prospects found</td></tr>
+              <tr><td colSpan={6} style={{ padding: 40, textAlign: "center", color: "#767168" }}>No prospects found</td></tr>
             )}
             {prospects.map(p => (
               <>
@@ -2206,7 +2211,7 @@ function ProspectManager({ toast }) {
                       fontWeight: 500, textTransform: "capitalize",
                     }}>{p.status}</span>
                   </td>
-                  <td style={{ padding: "12px 16px", color: "#999", fontSize: 12 }}>{new Date(p.createdAt).toLocaleDateString()}</td>
+                  <td style={{ padding: "12px 16px", color: "#767168", fontSize: 12 }}>{new Date(p.createdAt).toLocaleDateString()}</td>
                 </tr>
                 {expandedId === p.id && (
                   <tr key={`${p.id}-detail`}>
@@ -2334,7 +2339,7 @@ function AdminInbox({ user, toast }) {
         <p style={{ fontSize: 12, color: red, cursor: "pointer", marginBottom: 24 }} onClick={() => { setSelectedThread(null); setThreadDetail(null); setReply(""); }}>← Back to inbox</p>
         <div style={{ marginBottom: 24 }}>
           <h2 style={{ fontSize: 22, fontWeight: 400, marginBottom: 6 }}>{threadDetail.subject}</h2>
-          <div style={{ fontSize: 12, color: "#999" }}>
+          <div style={{ fontSize: 12, color: "#767168" }}>
             {threadDetail.messages.length} messages · Started by {threadDetail.creator.name}
             {threadDetail.project && <span> · {threadDetail.project}</span>}
             <span style={{ marginLeft: 8, padding: "2px 8px", background: "#F0EDE8", borderRadius: 3, fontSize: 10 }}>{threadDetail.targetType}</span>
@@ -2351,7 +2356,7 @@ function AdminInbox({ user, toast }) {
                       {m.sender.initials || m.sender.name.split(" ").map(n => n[0]).join("")}
                     </div>
                     <span style={{ fontSize: 13, fontWeight: 500 }}>{m.sender.name}</span>
-                    <span style={{ fontSize: 11, color: "#999" }}>{isInvestor ? "Investor" : "Staff"}</span>
+                    <span style={{ fontSize: 11, color: "#767168" }}>{isInvestor ? "Investor" : "Staff"}</span>
                   </div>
                   <span style={{ fontSize: 11, color: "#BBB" }}>{new Date(m.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
                 </div>
@@ -2427,7 +2432,7 @@ function AdminInbox({ user, toast }) {
                         onMouseEnter={e => e.currentTarget.style.background = "#F8F7F4"}
                         onMouseLeave={e => e.currentTarget.style.background = "#fff"}>
                         <div style={{ fontWeight: 500 }}>{inv.name}</div>
-                        <div style={{ fontSize: 11, color: "#999" }}>
+                        <div style={{ fontSize: 11, color: "#767168" }}>
                           {inv.email}
                           {inv.projects?.length > 0 && <span> · {inv.projects.map(p => p.projectName).join(", ")}</span>}
                         </div>
@@ -2451,7 +2456,7 @@ function AdminInbox({ user, toast }) {
                       onMouseLeave={e => e.currentTarget.style.background = "#fff"}>
                       <div>
                         <span style={{ fontWeight: 500 }}>{inv.name}</span>
-                        <span style={{ color: "#999", marginLeft: 8, fontSize: 12 }}>{inv.email}</span>
+                        <span style={{ color: "#767168", marginLeft: 8, fontSize: 12 }}>{inv.email}</span>
                       </div>
                       <div style={{ display: "flex", gap: 6 }}>
                         {inv.projects?.map(p => (
@@ -2489,7 +2494,7 @@ function AdminInbox({ user, toast }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 300 }}>Inbox</h1>
-          <p style={{ fontSize: 13, color: "#999", marginTop: 4 }}>{unreadCount} unread · {threads.length} conversations</p>
+          <p style={{ fontSize: 13, color: "#767168", marginTop: 4 }}>{unreadCount} unread · {threads.length} conversations</p>
         </div>
         <button onClick={() => setComposing(true)} style={btnStyle}>New Message</button>
       </div>
@@ -2504,10 +2509,10 @@ function AdminInbox({ user, toast }) {
         ))}
       </div>
 
-      {loading ? <p style={{ color: "#999" }}>Loading...</p> : (
+      {loading ? <p style={{ color: "#767168" }}>Loading...</p> : (
         <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
           {filtered.length === 0 ? (
-            <div style={{ padding: 40, textAlign: "center", color: "#999" }}>No messages</div>
+            <div style={{ padding: 40, textAlign: "center", color: "#767168" }}>No messages</div>
           ) : filtered.map((t, i) => (
             <div key={t.id} onClick={() => openThread(t)} style={{
               padding: "16px 20px", borderBottom: i < filtered.length - 1 ? "1px solid #F0EDE8" : "none",
@@ -2523,7 +2528,7 @@ function AdminInbox({ user, toast }) {
                     {t.lastMessage ? new Date(t.lastMessage.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}
                   </span>
                 </div>
-                <div style={{ fontSize: 12, color: "#999" }}>
+                <div style={{ fontSize: 12, color: "#767168" }}>
                   {t.creator.name}
                   {t.creator.role === "INVESTOR" && <span style={{ marginLeft: 6, padding: "1px 6px", background: "#F0EDE8", borderRadius: 3, fontSize: 10 }}>Investor</span>}
                   {t.messageCount > 1 && <span> · {t.messageCount} msgs</span>}
@@ -2565,7 +2570,7 @@ function AuditLogViewer() {
   return (
     <>
       <h1 style={{ fontSize: 28, fontWeight: 300, marginBottom: 24 }}>Audit Log</h1>
-      <p style={{ fontSize: 13, color: "#999", marginBottom: 24 }}>Compliance log of key system actions. Last 100 entries shown.</p>
+      <p style={{ fontSize: 13, color: "#767168", marginBottom: 24 }}>Compliance log of key system actions. Last 100 entries shown.</p>
 
       {/* Filter by action */}
       <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
@@ -2587,17 +2592,17 @@ function AuditLogViewer() {
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
             <thead>
               <tr style={{ background: "#FAFAF8", borderBottom: "1px solid #E8E5DE" }}>
-                <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 500, fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#999" }}>Timestamp</th>
-                <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 500, fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#999" }}>User</th>
-                <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 500, fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#999" }}>Action</th>
-                <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 500, fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#999" }}>Resource</th>
-                <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 500, fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#999" }}>IP</th>
+                <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 500, fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#767168" }}>Timestamp</th>
+                <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 500, fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#767168" }}>User</th>
+                <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 500, fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#767168" }}>Action</th>
+                <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 500, fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#767168" }}>Resource</th>
+                <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 500, fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#767168" }}>IP</th>
               </tr>
             </thead>
             <tbody>
               {logs.map((log, i) => (
                 <tr key={log.id} style={{ borderBottom: i < logs.length - 1 ? "1px solid #E8E5DE" : "none" }}>
-                  <td style={{ padding: "10px 14px", color: "#999", whiteSpace: "nowrap" }}>
+                  <td style={{ padding: "10px 14px", color: "#767168", whiteSpace: "nowrap" }}>
                     {new Date(log.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
                   </td>
                   <td style={{ padding: "10px 14px", fontWeight: 500 }}>{log.user}</td>
@@ -2609,7 +2614,7 @@ function AuditLogViewer() {
                       textTransform: "uppercase", letterSpacing: ".04em",
                     }}>{log.action.replace(/_/g, " ")}</span>
                   </td>
-                  <td style={{ padding: "10px 14px", color: "#999" }}>{log.resource || "\u2014"}</td>
+                  <td style={{ padding: "10px 14px", color: "#767168" }}>{log.resource || "\u2014"}</td>
                   <td style={{ padding: "10px 14px", color: "#CCC", fontSize: 11 }}>{log.ipAddress || "\u2014"}</td>
                 </tr>
               ))}

@@ -112,12 +112,12 @@ function InterestFormModal({ open, onClose, projectId, projectName }) {
   const selectStyle = { ...inputStyle, appearance: "none", cursor: "pointer" };
 
   return (
-    <div onClick={handleClose} style={{
+    <div onClick={handleClose} onKeyDown={e => { if (e.key === "Escape") handleClose(); }} style={{
       position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,.5)",
       display: "flex", alignItems: "center", justifyContent: "center",
       backdropFilter: "blur(4px)", animation: "fadeIn .15s ease",
     }}>
-      <div onClick={e => e.stopPropagation()} style={{
+      <div role="dialog" aria-modal="true" aria-label={projectName ? `Request access to ${projectName}` : "Express your interest"} onClick={e => e.stopPropagation()} style={{
         background: "#fff", borderRadius: 12, padding: 0, maxWidth: 520, width: "90%",
         maxHeight: "90vh", overflow: "auto", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)",
       }}>
@@ -142,11 +142,11 @@ function InterestFormModal({ open, onClose, projectId, projectName }) {
               <h3 style={{ fontSize: 20, fontWeight: 400, color: darkText, marginBottom: 4, fontFamily: sans }}>
                 {projectName ? `Request Access: ${projectName}` : "Express Your Interest"}
               </h3>
-              <p style={{ fontSize: 13, color: "#999", marginBottom: 0 }}>Complete the form below and our team will follow up.</p>
+              <p style={{ fontSize: 13, color: "#767168", marginBottom: 0 }}>Complete the form below and our team will follow up.</p>
             </div>
             <form onSubmit={handleSubmit} style={{ padding: "24px 32px 32px" }}>
               {error && (
-                <div style={{ fontSize: 12, color: red, padding: "10px 14px", border: `1px solid ${red}22`, borderRadius: 4, marginBottom: 16, background: `${red}08` }}>{error}</div>
+                <div role="alert" style={{ fontSize: 12, color: red, padding: "10px 14px", border: `1px solid ${red}22`, borderRadius: 4, marginBottom: 16, background: `${red}08` }}>{error}</div>
               )}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
                 <div>
@@ -206,7 +206,7 @@ function InterestFormModal({ open, onClose, projectId, projectName }) {
               }}>
                 {submitting ? "Submitting..." : "Submit Interest"}
               </button>
-              <p style={{ fontSize: 11, color: "#BBB", textAlign: "center", marginTop: 12 }}>
+              <p style={{ fontSize: 11, color: "#888", textAlign: "center", marginTop: 12 }}>
                 Your information is kept confidential and will only be used to contact you regarding investment opportunities.
               </p>
             </form>
@@ -259,7 +259,7 @@ function ProjectDetailPage({ project, onBack, onOpenInterest }) {
               { label: "Property Type", value: project.propertyType },
             ].map((m, i) => (
               <div key={i} style={{ padding: "20px", background: "#fff", borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
-                <div style={{ fontSize: 10, color: "#999", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 6 }}>{m.label}</div>
+                <div style={{ fontSize: 10, color: "#767168", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 6 }}>{m.label}</div>
                 <div style={{ fontSize: 20, fontWeight: 400, color: darkText }}>{m.value}</div>
               </div>
             ))}
@@ -277,7 +277,7 @@ function ProjectDetailPage({ project, onBack, onOpenInterest }) {
             <div style={{ padding: "32px", background: "#F5F3EF", borderRadius: 6, border: "1px solid #ECEAE5", textAlign: "center" }}>
               <span style={{ fontSize: 24, color: "#CCC", display: "block", marginBottom: 8 }}>&#9906;</span>
               <p style={{ fontSize: 14, color: "#777" }}>{project.location}</p>
-              <p style={{ fontSize: 12, color: "#AAA" }}>Interactive map coming soon</p>
+              <p style={{ fontSize: 12, color: "#888" }}>Interactive map coming soon</p>
             </div>
           </div>
 
@@ -308,7 +308,7 @@ function ProjectDetailPage({ project, onBack, onOpenInterest }) {
               <div style={{ background: "#F0EDE8", borderRadius: 20, height: 6, overflow: "hidden", marginBottom: 8 }}>
                 <div style={{ width: `${project.completionPct}%`, height: "100%", background: "linear-gradient(90deg, #EA2028, #ff4a4a)", borderRadius: 20, transition: "width .6s ease" }} />
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#999" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#767168" }}>
                 <span>Progress</span>
                 <span style={{ color: darkText, fontWeight: 500 }}>{project.completionPct}% Complete</span>
               </div>
@@ -328,7 +328,7 @@ function ProjectDetailPage({ project, onBack, onOpenInterest }) {
               borderRadius: 8, fontSize: 14, cursor: "pointer", fontFamily: sans, fontWeight: 500,
               letterSpacing: ".02em", marginBottom: 16, boxShadow: "0 1px 3px rgba(234,32,40,.3)",
             }}>Request Access to Data Room</button>
-            <div style={{ fontSize: 12, color: "#BBB", textAlign: "center" }}>Accredited investors only</div>
+            <div style={{ fontSize: 12, color: "#888", textAlign: "center" }}>Accredited investors only</div>
           </div>
 
           {/* Document teasers */}
@@ -342,7 +342,7 @@ function ProjectDetailPage({ project, onBack, onOpenInterest }) {
                 <span style={{ fontSize: 16, color: "#CCC" }}>&#128196;</span>
                 <div>
                   <div style={{ fontSize: 13, color: "#666" }}>{doc}</div>
-                  <div style={{ fontSize: 10, color: "#BBB" }}>Account required to download</div>
+                  <div style={{ fontSize: 10, color: "#888" }}>Account required to download</div>
                 </div>
               </div>
             ))}
@@ -400,7 +400,7 @@ export default function ProspectPortal({ onNavigateLogin }) {
           }}>{item.label}</span>
         ))}
         <span onClick={() => openInterest(null, null)} style={{
-          fontSize: 13, color: "#999", cursor: "pointer", fontFamily: sans,
+          fontSize: 13, color: "#767168", cursor: "pointer", fontFamily: sans,
         }}>Contact</span>
         <button onClick={onNavigateLogin} style={{
           padding: "8px 20px", background: "transparent", border: `1px solid ${red}`,
@@ -477,7 +477,7 @@ export default function ProspectPortal({ onNavigateLogin }) {
         ].map((s, i) => (
           <div key={i} style={{ textAlign: "center", minWidth: 120 }}>
             <div style={{ fontSize: 32, fontWeight: 300, color: darkText, marginBottom: 4 }}>{s.value}</div>
-            <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: "#AAA" }}>{s.label}</div>
+            <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: "#888" }}>{s.label}</div>
           </div>
         ))}
       </section>
@@ -533,11 +533,11 @@ export default function ProspectPortal({ onNavigateLogin }) {
                 </div>
                 <div style={{ padding: "20px 24px" }}>
                   <h3 style={{ fontSize: 18, fontWeight: 500, color: darkText, marginBottom: 4 }}>{p.name}</h3>
-                  <p style={{ fontSize: 13, color: "#999", marginBottom: 16 }}>{p.location} &middot; {p.type}</p>
+                  <p style={{ fontSize: 13, color: "#767168", marginBottom: 16 }}>{p.location} &middot; {p.type}</p>
                   <div style={{ display: "flex", gap: 32, fontSize: 12, color: "#777" }}>
-                    <div><span style={{ color: "#BBB" }}>Target:</span> {fmtCurrency(p.totalRaise)}</div>
-                    <div><span style={{ color: "#BBB" }}>Min:</span> {fmtCurrency(p.minInvestment)}</div>
-                    {p.units && <div><span style={{ color: "#BBB" }}>Units:</span> {p.units}</div>}
+                    <div><span style={{ color: "#888" }}>Target:</span> {fmtCurrency(p.totalRaise)}</div>
+                    <div><span style={{ color: "#888" }}>Min:</span> {fmtCurrency(p.minInvestment)}</div>
+                    {p.units && <div><span style={{ color: "#888" }}>Units:</span> {p.units}</div>}
                   </div>
                 </div>
               </div>
@@ -567,10 +567,10 @@ export default function ProspectPortal({ onNavigateLogin }) {
               <div style={{
                 width: 100, height: 100, borderRadius: "50%", background: "#ECEAE5",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                margin: "0 auto 16px", fontSize: 28, color: "#999", fontWeight: 300, fontFamily: sans,
+                margin: "0 auto 16px", fontSize: 28, color: "#767168", fontWeight: 300, fontFamily: sans,
               }}>{person.initials}</div>
               <div style={{ fontSize: 16, fontWeight: 500, color: darkText, marginBottom: 2 }}>{person.name}</div>
-              <div style={{ fontSize: 13, color: "#999" }}>{person.title}</div>
+              <div style={{ fontSize: 13, color: "#767168" }}>{person.title}</div>
             </div>
           ))}
         </div>
@@ -582,10 +582,10 @@ export default function ProspectPortal({ onNavigateLogin }) {
         background: "#FAFAF8",
       }}>
         <div style={{ maxWidth: 800, margin: "0 auto", textAlign: "center" }}>
-          <p style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".14em", color: "#BBB", marginBottom: 20 }}>Partners & Affiliates</p>
+          <p style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".14em", color: "#888", marginBottom: 20 }}>Partners & Affiliates</p>
           <div style={{ display: "flex", justifyContent: "center", gap: 48, flexWrap: "wrap" }}>
             {["Farris LLP", "Smythe CPA", "RHA Architecture", "Magnum Projects"].map((partner, i) => (
-              <span key={i} style={{ fontSize: 14, color: "#AAA", fontWeight: 400, letterSpacing: ".02em" }}>{partner}</span>
+              <span key={i} style={{ fontSize: 14, color: "#888", fontWeight: 400, letterSpacing: ".02em" }}>{partner}</span>
             ))}
           </div>
         </div>
@@ -651,14 +651,14 @@ export default function ProspectPortal({ onNavigateLogin }) {
             </div>
             <div style={{ padding: "20px 24px" }}>
               <h3 style={{ fontSize: 18, fontWeight: 500, color: darkText, marginBottom: 4 }}>{p.name}</h3>
-              <p style={{ fontSize: 13, color: "#999", marginBottom: 16 }}>{p.location} &middot; {p.type}</p>
+              <p style={{ fontSize: 13, color: "#767168", marginBottom: 16 }}>{p.location} &middot; {p.type}</p>
               <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8, fontSize: 12 }}>
-                <div><span style={{ color: "#BBB" }}>Target Raise:</span> <span style={{ color: "#555" }}>{fmtCurrency(p.totalRaise)}</span></div>
-                <div><span style={{ color: "#BBB" }}>Min Investment:</span> <span style={{ color: "#555" }}>{fmtCurrency(p.minInvestment)}</span></div>
+                <div><span style={{ color: "#888" }}>Target Raise:</span> <span style={{ color: "#555" }}>{fmtCurrency(p.totalRaise)}</span></div>
+                <div><span style={{ color: "#888" }}>Min Investment:</span> <span style={{ color: "#555" }}>{fmtCurrency(p.minInvestment)}</span></div>
               </div>
               {p.status === "Under Construction" && (
                 <div style={{ marginTop: 12 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#999", marginBottom: 4 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#767168", marginBottom: 4 }}>
                     <span>Construction</span><span>{p.completionPct}%</span>
                   </div>
                   <div style={{ background: "#F0EDE8", borderRadius: 20, height: 6, overflow: "hidden" }}>
@@ -723,7 +723,7 @@ export default function ProspectPortal({ onNavigateLogin }) {
                 <div style={{
                   width: 120, height: 120, borderRadius: "50%", background: "#ECEAE5",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  margin: "0 auto 20px", fontSize: 32, color: "#999", fontWeight: 300, fontFamily: sans,
+                  margin: "0 auto 20px", fontSize: 32, color: "#767168", fontWeight: 300, fontFamily: sans,
                 }}>{person.initials}</div>
                 <div style={{ fontSize: 18, fontWeight: 500, color: darkText, marginBottom: 4 }}>{person.name}</div>
                 <div style={{ fontSize: 13, color: red, marginBottom: 12 }}>{person.title}</div>
@@ -747,7 +747,7 @@ export default function ProspectPortal({ onNavigateLogin }) {
             ].map((partner, i) => (
               <div key={i} style={{ padding: "24px 16px", border: "1px solid #ECEAE5", borderRadius: 6, background: "#fff" }}>
                 <div style={{ fontSize: 15, fontWeight: 500, color: darkText, marginBottom: 4 }}>{partner.name}</div>
-                <div style={{ fontSize: 11, color: "#AAA" }}>{partner.role}</div>
+                <div style={{ fontSize: 11, color: "#888" }}>{partner.role}</div>
               </div>
             ))}
           </div>
@@ -771,7 +771,7 @@ export default function ProspectPortal({ onNavigateLogin }) {
   const footer = (
     <footer style={{
       padding: "28px 48px", display: "flex", justifyContent: "space-between",
-      fontSize: 11, color: "#AAA", borderTop: "1px solid #ECEAE5", background: "#fff",
+      fontSize: 11, color: "#888", borderTop: "1px solid #ECEAE5", background: "#fff",
       flexWrap: "wrap", gap: 8,
     }}>
       <span>&copy; 2026 Northstar Pacific Development Group</span>
@@ -799,6 +799,9 @@ export default function ProspectPortal({ onNavigateLogin }) {
     <div style={{ fontFamily: sans, color: darkText, minHeight: "100vh", display: "flex", flexDirection: "column", background: "#fff" }}>
       <style>{`
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        *:focus-visible { outline: 2px solid #EA2028; outline-offset: 2px; border-radius: 4px; }
+        button:active { transform: scale(0.97); }
+        button { transition: transform .1s ease; }
         @media (max-width: 768px) {
           .prospect-desktop-nav { display: none !important; }
           .prospect-mobile-toggle { display: block !important; }

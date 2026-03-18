@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, createContext, useContext } from "react";
+import { useState, useCallback, useEffect, useRef, createContext, useContext, useMemo } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { login as apiLogin, logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, downloadDocument, fetchThreads, fetchThread, createThread, replyToThread, updateProfile, fetchSignatureRequests, signDocument, fetchNotificationPreferences, updateNotificationPreferences, fetchCapitalAccount, fetchCashFlows, calculateWaterfallApi, fetchEntities, createEntity, updateEntity, deleteEntity, runFinancialModel, changePassword, forgotPassword, resetPassword, fetchLoginHistory, setupMFA, verifyMFASetup, verifyMFA, disableMFA, getMFAStatus, regenerateBackupCodes, setToken, fmt, fmtCurrency } from "./api.js";
 import AdminPanel from "./Admin.jsx";
@@ -37,7 +37,7 @@ export const NorthstarWordmark = ({ height = 20, color = darkText }) => (
 
 const themes = {
   dark: { bg: "#0A0A0F", surface: "#0C0C0C", line: "#1A1A1A", t1: "#E8E4DE", t2: "#8C887F", t3: "#4A4843", hover: "#0F0F0F", headerBg: "#0A0A0FF0", avatarGrad: "linear-gradient(135deg, #EA2028, #c41920)" },
-  light: { bg: "#F8F7F4", surface: "#FFFFFF", line: "#ECEAE5", t1: "#1A1816", t2: "#5C5850", t3: "#9C978D", hover: "#F0EDE8", headerBg: "#FFFFFFFA", avatarGrad: "linear-gradient(135deg, #EA2028, #c41920)" },
+  light: { bg: "#F8F7F4", surface: "#FFFFFF", line: "#ECEAE5", t1: "#1A1816", t2: "#5C5850", t3: "#767168", hover: "#F0EDE8", headerBg: "#FFFFFFFA", avatarGrad: "linear-gradient(135deg, #EA2028, #c41920)" },
 };
 
 const ThemeContext = createContext(themes.dark);
@@ -51,7 +51,7 @@ function ToastContainer({ toasts, onDismiss }) {
   return (
     <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 1000, display: "flex", flexDirection: "column", gap: 8 }}>
       {toasts.map(t => (
-        <div key={t.id} onClick={() => onDismiss(t.id)} style={{
+        <div key={t.id} role="alert" aria-live="polite" onClick={() => onDismiss(t.id)} style={{
           background: surface, border: `1px solid ${t.type === "success" ? green : t.type === "error" ? red : line}`,
           borderRadius: 10, padding: "12px 20px", minWidth: 280, maxWidth: 400,
           fontFamily: sans, fontSize: 13, color: t1, cursor: "pointer",
@@ -80,8 +80,17 @@ function useToast() {
 }
 
 // ─── MODAL ───────────────────────────────────────────────
-function Modal({ open, onClose, children }) {
+function Modal({ open, onClose, children, ariaLabel }) {
   const { bg, surface, line, t1, t2, t3 } = useTheme();
+  const modalRef = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handleKeyDown);
+    // Focus trap: focus the modal on open
+    setTimeout(() => modalRef.current?.focus(), 50);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open, onClose]);
   if (!open) return null;
   return (
     <div onClick={onClose} style={{
@@ -89,10 +98,10 @@ function Modal({ open, onClose, children }) {
       display: "flex", alignItems: "center", justifyContent: "center",
       backdropFilter: "blur(4px)", animation: "fadeIn .15s ease",
     }}>
-      <div onClick={e => e.stopPropagation()} style={{
+      <div ref={modalRef} role="dialog" aria-modal="true" aria-label={ariaLabel || "Dialog"} tabIndex={-1} onClick={e => e.stopPropagation()} style={{
         background: surface, border: `1px solid ${line}`, borderRadius: 12,
         padding: "32px", maxWidth: 520, width: "90%", maxHeight: "80vh", overflow: "auto",
-        boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)",
+        boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", outline: "none",
       }}>
         {children}
       </div>
@@ -167,10 +176,13 @@ function Table({ columns, rows, onRowClick, sortable, sortKey: externalSortKey, 
   return (
     <div style={{ border: `1px solid ${line}`, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+        <caption style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap" }}>
+          {columns.map(c => c.label).join(", ")} data table
+        </caption>
         <thead>
           <tr style={{ borderBottom: `1px solid ${line}`, background: surface }}>
             {columns.map(c => (
-              <th key={c.key} onClick={() => c.sortKey !== false && handleSort(c.key)} style={{
+              <th key={c.key} scope="col" onClick={() => c.sortKey !== false && handleSort(c.key)} style={{
                 padding: "13px 16px", textAlign: c.align || "left", fontWeight: 400, fontSize: 10,
                 letterSpacing: ".08em", textTransform: "uppercase", color: t3, width: c.width,
                 cursor: sortable && c.sortKey !== false ? "pointer" : "default", userSelect: "none",
@@ -204,7 +216,7 @@ function Table({ columns, rows, onRowClick, sortable, sortKey: externalSortKey, 
 // ─── LOADING SPINNER ─────────────────────────────────────
 function LoadingSpinner({ size = 24, color = red }) {
   return (
-    <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+    <div role="status" aria-label="Loading" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
       <style>{`@keyframes northstarSpin { to { transform: rotate(360deg); } }`}</style>
       <div style={{
         width: size, height: size,
@@ -221,7 +233,7 @@ function LoadingSpinner({ size = 24, color = red }) {
 function ErrorBanner({ message, onRetry }) {
   const th = useTheme();
   return (
-    <div style={{
+    <div role="alert" style={{
       padding: "14px 20px", borderRadius: 4,
       background: `${red}10`, border: `1px solid ${red}30`,
       display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -251,7 +263,7 @@ function EmptyState({ icon, title, subtitle }) {
 function LoadingPage() {
   const th = useTheme();
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 20px", gap: 16 }}>
+    <div aria-busy="true" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 20px", gap: 16 }}>
       <LoadingSpinner size={32} />
       <span style={{ fontSize: 13, color: th.t3 }}>Loading...</span>
     </div>
@@ -284,6 +296,172 @@ function ProgressBar({ value, color }) {
   );
 }
 
+// ─── RESPONSIVE TABLE ───────────────────────────────────
+function ResponsiveTable({ columns, rows, onRowClick, sortable, emptyMessage }) {
+  const th = useTheme();
+  // Primary column is the first one
+  const primaryCol = columns[0];
+  const secondaryCols = columns.slice(1);
+  return (
+    <div className="responsive-table">
+      <Table columns={columns} rows={rows} onRowClick={onRowClick} sortable={sortable} />
+      <div className="mobile-cards" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {rows.length === 0 ? (
+          <div style={{ padding: 32, textAlign: "center", color: th.t3, fontSize: 13 }}>{emptyMessage || "No data"}</div>
+        ) : rows.map((row, i) => (
+          <div key={i} onClick={() => onRowClick?.(row, i)} style={{
+            background: th.surface, borderRadius: 10, padding: "16px 20px",
+            border: `1px solid ${th.line}`, cursor: onRowClick ? "pointer" : "default",
+            boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)",
+            transition: "transform .15s, box-shadow .15s",
+          }}
+            onMouseEnter={e => { if (onRowClick) { e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,.08)"; } }}
+            onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)"; }}>
+            {/* Primary header */}
+            <div style={{ fontSize: 14, fontWeight: 500, color: th.t1, marginBottom: 12, paddingBottom: 10, borderBottom: `1px solid ${th.line}` }}>
+              {primaryCol.render ? primaryCol.render(row) : row[primaryCol.key]}
+            </div>
+            {/* Label-value grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 16px" }}>
+              {secondaryCols.map(c => (
+                <div key={c.key}>
+                  <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: ".08em", color: th.t3, marginBottom: 2 }}>{c.label}</div>
+                  <div style={{ fontSize: 13, color: th.t1 }}>{c.render ? c.render(row) : row[c.key]}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── SKELETON LOADING ───────────────────────────────────
+function SkeletonBlock({ width = "100%", height = 16, style = {} }) {
+  const th = useTheme();
+  return (
+    <div style={{
+      width, height, borderRadius: 6,
+      background: `linear-gradient(90deg, ${th.line}00 0%, ${th.line} 50%, ${th.line}00 100%)`,
+      backgroundSize: "200% 100%",
+      animation: "shimmer 1.5s infinite",
+      ...style,
+    }} />
+  );
+}
+
+function OverviewSkeleton() {
+  const th = useTheme();
+  return (
+    <div aria-busy="true">
+      {/* Hero */}
+      <div style={{ marginBottom: 32 }}>
+        <SkeletonBlock width={120} height={12} style={{ marginBottom: 12 }} />
+        <SkeletonBlock width={280} height={28} style={{ marginBottom: 8 }} />
+        <SkeletonBlock width={220} height={14} />
+      </div>
+      {/* Stat cards */}
+      <div className="stat-grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 48 }}>
+        {[0,1,2,3].map(i => (
+          <div key={i} style={{ background: th.surface, padding: "20px 24px", borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+            <SkeletonBlock width={80} height={10} style={{ marginBottom: 12 }} />
+            <SkeletonBlock width={120} height={26} style={{ marginBottom: 8 }} />
+            <SkeletonBlock width={100} height={11} />
+          </div>
+        ))}
+      </div>
+      {/* Project cards */}
+      <div className="project-grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 20, marginBottom: 48 }}>
+        {[0,1].map(i => (
+          <div key={i} style={{ background: th.surface, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+            <SkeletonBlock height={140} style={{ borderRadius: 0 }} />
+            <div style={{ padding: 20 }}>
+              <SkeletonBlock width={160} height={16} style={{ marginBottom: 16 }} />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+                {[0,1,2].map(j => <SkeletonBlock key={j} height={32} />)}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* Chart skeleton */}
+      <SkeletonBlock height={180} style={{ borderRadius: 12, marginBottom: 48 }} />
+    </div>
+  );
+}
+
+function DocumentsSkeleton() {
+  const th = useTheme();
+  return (
+    <div aria-busy="true">
+      <div style={{ marginBottom: 40 }}>
+        <SkeletonBlock width={180} height={36} style={{ marginBottom: 8 }} />
+        <SkeletonBlock width={240} height={14} />
+      </div>
+      <div style={{ borderRadius: 12, overflow: "hidden", background: th.surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+        {[0,1,2,3,4].map(i => (
+          <div key={i} style={{ padding: "16px 20px", borderBottom: i < 4 ? `1px solid ${th.line}` : "none", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ flex: 1 }}>
+              <SkeletonBlock width={200} height={14} style={{ marginBottom: 6 }} />
+              <SkeletonBlock width={280} height={11} />
+            </div>
+            <SkeletonBlock width={70} height={24} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MessagesSkeleton() {
+  const th = useTheme();
+  return (
+    <div aria-busy="true">
+      <div style={{ marginBottom: 40 }}>
+        <SkeletonBlock width={180} height={36} style={{ marginBottom: 8 }} />
+        <SkeletonBlock width={200} height={14} />
+      </div>
+      <div style={{ borderRadius: 12, overflow: "hidden", background: th.surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+        {[0,1,2,3].map(i => (
+          <div key={i} style={{ display: "flex", gap: 14, padding: "18px 20px", borderBottom: i < 3 ? `1px solid ${th.line}` : "none" }}>
+            <SkeletonBlock width={7} height={7} style={{ borderRadius: "50%", marginTop: 7, flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <SkeletonBlock width={220} height={14} style={{ marginBottom: 8 }} />
+              <SkeletonBlock width={160} height={12} style={{ marginBottom: 6 }} />
+              <SkeletonBlock width="80%" height={12} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── ANIMATED NUMBER ────────────────────────────────────
+function AnimatedNumber({ value, prefix = "", suffix = "", duration = 800 }) {
+  const [display, setDisplay] = useState(0);
+  const animRef = useRef();
+
+  useEffect(() => {
+    const target = typeof value === "number" ? value : parseFloat(String(value).replace(/[^0-9.-]/g, ""));
+    if (isNaN(target)) { setDisplay(value); return; }
+
+    const start = Date.now();
+    function tick() {
+      const elapsed = Date.now() - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplay(Math.floor(target * eased));
+      if (progress < 1) animRef.current = requestAnimationFrame(tick);
+    }
+    animRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(animRef.current);
+  }, [value, duration]);
+
+  return <>{prefix}{typeof display === "number" ? display.toLocaleString() : display}{suffix}</>;
+}
+
 // ─── PAGE: OVERVIEW ──────────────────────────────────────
 function Overview({ onNavigate, investor, projects, myProjects, allDistributions, msgs }) {
   const { bg, surface, line, t1, t2, t3, hover } = useTheme();
@@ -309,18 +487,18 @@ function Overview({ onNavigate, investor, projects, myProjects, allDistributions
         const totalDistributed = allDistributions.reduce((s, d) => s + d.amount, 0);
         const gainLoss = totalValue + totalDistributed - totalContributed;
         return (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 48 }}>
+          <div className="stat-grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 48 }}>
             {[
-              { label: "Total Contributed", value: `$${fmt(totalContributed)}`, sub: `across ${myProjects.length} projects`, accent: red },
-              { label: "Current Value", value: `$${fmt(totalValue)}`, sub: gainLoss >= 0 ? `+$${fmt(gainLoss)} gain` : `-$${fmt(Math.abs(gainLoss))} loss`, subColor: gainLoss >= 0 ? green : red, accent: green },
-              { label: "Total Distributed", value: `$${fmt(totalDistributed)}`, sub: `${allDistributions.length} payments`, accent: "#D4A574" },
+              { label: "Total Contributed", value: `$${fmt(totalContributed)}`, rawValue: totalContributed, prefix: "$", sub: `across ${myProjects.length} projects`, accent: red },
+              { label: "Current Value", value: `$${fmt(totalValue)}`, rawValue: totalValue, prefix: "$", sub: gainLoss >= 0 ? `+$${fmt(gainLoss)} gain` : `-$${fmt(Math.abs(gainLoss))} loss`, subColor: gainLoss >= 0 ? green : red, accent: green },
+              { label: "Total Distributed", value: `$${fmt(totalDistributed)}`, rawValue: totalDistributed, prefix: "$", sub: `${allDistributions.length} payments`, accent: "#D4A574" },
               { label: "Weighted IRR", value: `${(myProjects.reduce((s, p) => s + (p.irr || 0) * (p.investorCommitted || 0), 0) / (totalContributed || 1)).toFixed(1)}%`, sub: "blended across projects", accent: "#5B8DEF" },
             ].map((s, i) => (
-              <div key={i} style={{ background: surface, padding: "20px 24px", borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", borderLeft: `3px solid ${s.accent}`, transition: "transform .15s, box-shadow .15s", cursor: "default" }}
-                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,.08)"; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)"; }}>
+              <div key={i} role="region" aria-label={`${s.label}: ${s.value}`} style={{ background: surface, padding: "20px 24px", borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", borderLeft: `3px solid ${s.accent}`, transition: "transform .15s, box-shadow .15s, border-color .2s", cursor: "default", border: "1px solid transparent", borderLeftWidth: 3, borderLeftColor: s.accent }}
+                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,.08)"; e.currentTarget.style.borderColor = `${s.accent}33`; e.currentTarget.style.borderLeftColor = s.accent; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.borderLeftColor = s.accent; }}>
                 <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: t3, marginBottom: 8, fontWeight: 500 }}>{s.label}</div>
-                <div style={{ fontSize: 26, fontWeight: 300, color: t1 }}>{s.value}</div>
+                <div style={{ fontSize: 26, fontWeight: 300, color: t1 }}>{s.rawValue != null ? <AnimatedNumber value={s.rawValue} prefix={s.prefix || ""} /> : s.value}</div>
                 <div style={{ fontSize: 11, color: s.subColor || t3, marginTop: 4 }}>{s.sub}</div>
               </div>
             ))}
@@ -333,14 +511,14 @@ function Overview({ onNavigate, investor, projects, myProjects, allDistributions
         <span>Active Projects</span>
         <span style={{ fontSize: 11, color: red, cursor: "pointer", letterSpacing: "normal", textTransform: "none", fontWeight: 500 }} onClick={() => onNavigate("portfolio")}>View All →</span>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 20, marginBottom: 48 }}>
+      <div className="project-grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 20, marginBottom: 48 }}>
         {myProjects.map((p) => {
           const projectImgMap = { Porthaven: "https://northstardevelopment.ca/public/images/porthaven-1.jpg", Livy: "https://northstardevelopment.ca/public/images/livy-2.jpeg", Estrella: "https://northstardevelopment.ca/public/images/estrella-1.jpg", "Panorama Building 6": "https://northstardevelopment.ca/public/images/panorama-1.jpg" };
           const img = projectImgMap[p.name];
           return (
-          <div key={p.id} style={{ background: surface, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", cursor: "pointer", transition: "transform .15s, box-shadow .15s" }}
-            onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = "0 8px 32px rgba(0,0,0,.1)"; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)"; }}
+          <div key={p.id} style={{ background: surface, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", cursor: "pointer", transition: "transform .15s, box-shadow .15s, border-color .2s", border: "1px solid transparent" }}
+            onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = "0 8px 32px rgba(0,0,0,.1)"; e.currentTarget.style.borderColor = `${red}22`; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)"; e.currentTarget.style.borderColor = "transparent"; }}
             onClick={() => onNavigate("portfolio")}>
             {/* Hero image */}
             {img && (
@@ -383,7 +561,7 @@ function Overview({ onNavigate, investor, projects, myProjects, allDistributions
 
       {/* Performance charts side by side */}
       <SectionHeader title="Value Tracking" right="Trailing 12 months" />
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 48 }}>
+      <div className="chart-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 48 }}>
         {myProjects.map(p => (
           <div key={p.id} style={{ borderRadius: 12, padding: "24px", background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
             <div style={{ fontSize: 13, fontFamily: serif, fontWeight: 500, marginBottom: 4 }}>{p.name}</div>
@@ -484,7 +662,7 @@ function Portfolio({ myProjects, investor }) {
           </div>
           <p style={{ fontSize: 14, color: t2 }}>{project.location} · {project.type}</p>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 40 }}>
+        <div className="stat-grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 40 }}>
           {[
             { label: "Your Committed", value: `$${fmt(project.investorCommitted)}`, accent: red },
             { label: "Current Value", value: `$${fmt(project.currentValue)}`, accent: green },
@@ -550,7 +728,7 @@ function Portfolio({ myProjects, investor }) {
           </>
         )}
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48, marginBottom: 40 }}>
+        <div className="chart-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48, marginBottom: 40 }}>
           <div>
             <SectionHeader title="About" />
             <p style={{ fontSize: 13, color: t2, lineHeight: 1.7, marginBottom: 20 }}>{project.description}</p>
@@ -688,7 +866,7 @@ function CapTablePage({ myProjects, investor }) {
         ))}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 40 }}>
+      <div className="stat-grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 40 }}>
         {[
           { label: "Total Raise", value: fmtCurrency(project.totalRaise), accent: red },
           { label: "Capital Called", value: fmtCurrency(project.capTable.reduce((s, r) => s + r.called, 0)), accent: green },
@@ -711,7 +889,7 @@ function CapTablePage({ myProjects, investor }) {
         )} style={{ fontSize: 11, padding: "5px 12px", borderRadius: 2, border: `1px solid ${line}`, color: t3, cursor: "pointer" }}>Export CSV</span>
       </div>
 
-      <Table
+      <ResponsiveTable
         sortable
         columns={[
           { key: "holder", label: "Holder", render: r => <span style={{ fontWeight: r.holder === investor.name ? 500 : 400, color: r.holder === investor.name ? t1 : t2 }}>{r.holder}</span> },
@@ -729,6 +907,7 @@ function CapTablePage({ myProjects, investor }) {
           )},
         ]}
         rows={project.capTable}
+        emptyMessage="No cap table data"
       />
 
       {/* Waterfall */}
@@ -1015,7 +1194,7 @@ function DocumentsPage({ toast, allDocuments, myProjects, investor }) {
       )}
 
       {/* Sign Modal */}
-      <Modal open={!!signModal} onClose={() => setSignModal(null)}>
+      <Modal open={!!signModal} onClose={() => setSignModal(null)} ariaLabel="Sign document">
         {signModal && (
           <>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
@@ -1043,7 +1222,7 @@ function DocumentsPage({ toast, allDocuments, myProjects, investor }) {
       </Modal>
 
       {/* Review Modal */}
-      <Modal open={!!reviewDoc} onClose={() => setReviewDoc(null)}>
+      <Modal open={!!reviewDoc} onClose={() => setReviewDoc(null)} ariaLabel="Review document">
         {reviewDoc && (
           <>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
@@ -1102,7 +1281,7 @@ function DistributionsPage({ allDistributions, myProjects }) {
       {allDistributions.length === 0 ? (
         <EmptyState icon="$" title="No distributions have been made yet" subtitle="Distribution payments will appear here when they are processed." />
       ) : (
-        <Table
+        <ResponsiveTable
           sortable
           columns={[
             { key: "project", label: "Project", render: r => <span style={{ fontFamily: serif, fontWeight: 500 }}>{r.project}</span> },
@@ -1113,6 +1292,7 @@ function DistributionsPage({ allDistributions, myProjects }) {
             { key: "status", label: "Status", align: "right", sortKey: false, render: () => <span style={{ fontSize: 11, color: green }}>Paid</span> },
           ]}
           rows={allDistributions}
+          emptyMessage="No distributions yet"
         />
       )}
     </>
@@ -1269,7 +1449,7 @@ function MessagesPage({ toast, investor }) {
         <span onClick={() => setComposing(true)} style={{ fontSize: 13, padding: "10px 20px", borderRadius: 4, cursor: "pointer", background: red, color: "#fff", fontWeight: 500 }}>New Message</span>
       </div>
       {loading ? (
-        <LoadingPage />
+        <MessagesSkeleton />
       ) : threads.length === 0 ? (
         <div style={{ textAlign: "center", padding: 60 }}>
           <EmptyState title="No messages yet" subtitle="Start a conversation with Northstar." />
@@ -1392,7 +1572,7 @@ function FinancialModelerPage({ myProjects, investor }) {
       {result && (
         <>
           {/* Summary cards */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 40 }}>
+          <div className="stat-grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 40 }}>
             {[
               { label: "LP IRR", value: result.lpIRR != null ? `${(result.lpIRR * 100).toFixed(1)}%` : "--", accent: red },
               { label: "LP MOIC", value: `${result.lpMOIC}x`, accent: green },
@@ -1802,7 +1982,7 @@ function ProfilePage({ investor, toast, onUpdate }) {
         <p style={{ fontSize: 14, color: t2, marginTop: 6 }}>Manage your account information</p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48 }}>
+      <div className="profile-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48 }}>
         {/* Profile form */}
         <form onSubmit={handleSave}>
           <div style={{ borderRadius: 12, padding: "28px 24px", background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
@@ -2114,7 +2294,7 @@ function LoginPage({ onLogin, onShowProspects }) {
               ].map((s, i) => (
                 <div key={i} style={{ animation: `slideUp ${.8 + i * .15}s ease` }}>
                   <div style={{ fontSize: 30, fontWeight: 300, color: darkText, marginBottom: 4 }}>{s.value}</div>
-                  <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: "#AAA" }}>{s.label}</div>
+                  <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: "#888" }}>{s.label}</div>
                 </div>
               ))}
             </div>
@@ -2162,7 +2342,7 @@ function LoginPage({ onLogin, onShowProspects }) {
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={red} strokeWidth="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M12 16v2"/><path d="M8 11V7a4 4 0 118 0v4"/></svg>
                   </div>
                   <h2 style={{ fontSize: 20, fontWeight: 400, marginBottom: 4, color: darkText }}>Two-Factor Authentication</h2>
-                  <p style={{ fontSize: 13, color: "#999" }}>Enter the code from your authenticator app</p>
+                  <p style={{ fontSize: 13, color: "#767168" }}>Enter the code from your authenticator app</p>
                 </div>
                 {error && (
                   <div style={{ fontSize: 12, color: red, padding: "10px 14px", border: `1px solid ${red}22`, borderRadius: 4, marginBottom: 16, background: `${red}08` }}>{error}</div>
@@ -2222,7 +2402,7 @@ function LoginPage({ onLogin, onShowProspects }) {
                 <div style={{ textAlign: "center", marginBottom: 32 }}>
                   <NorthstarIcon size={40} color={red} />
                   <h2 style={{ fontSize: 20, fontWeight: 400, marginBottom: 4, marginTop: 16, color: darkText }}>Investor Portal</h2>
-                  <p style={{ fontSize: 13, color: "#999" }}>Sign in to access your account</p>
+                  <p style={{ fontSize: 13, color: "#767168" }}>Sign in to access your account</p>
                 </div>
                 {error && (
                   <div style={{ fontSize: 12, color: red, padding: "10px 14px", border: `1px solid ${red}22`, borderRadius: 4, marginBottom: 16, background: `${red}08` }}>
@@ -2259,7 +2439,7 @@ function LoginPage({ onLogin, onShowProspects }) {
                   <span onClick={() => setShowForgot(true)} style={{ fontSize: 12, color: red, cursor: "pointer" }}>Forgot password?</span>
                 </div>
                 <div style={{ marginTop: 14, padding: "14px 16px", border: "1px solid #ECEAE5", borderRadius: 4, background: cream }}>
-                  <div style={{ fontSize: 9, color: "#AAA", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 10 }}>Quick Demo Login</div>
+                  <div style={{ fontSize: 9, color: "#888", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 10 }}>Quick Demo Login</div>
                   <div style={{ display: "flex", gap: 8 }}>
                     <button type="button" onClick={() => { setEmail("j.chen@pacificventures.ca"); setPassword("northstar2025"); setTimeout(() => document.querySelector("form")?.requestSubmit(), 100); }}
                       style={{ flex: 1, padding: "10px", background: "#fff", border: "1px solid #DDD", borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: darkText, fontWeight: 500 }}>
@@ -2273,7 +2453,7 @@ function LoginPage({ onLogin, onShowProspects }) {
                 </div>
               </form>
             )}
-            <p style={{ fontSize: 12, color: "#999", textAlign: "center", marginTop: 20 }}>
+            <p style={{ fontSize: 12, color: "#767168", textAlign: "center", marginTop: 20 }}>
               Interested in investing? <span onClick={onShowProspects} style={{ color: red, cursor: "pointer", fontWeight: 500 }}>Learn more →</span>
             </p>
           </div>
@@ -2297,7 +2477,7 @@ function LoginPage({ onLogin, onShowProspects }) {
                 <p style={{ fontSize: 13, color: "#666", lineHeight: 1.6, marginBottom: 20 }}>
                   If an account exists with that email, we have sent a password reset link. Please check your inbox.
                 </p>
-                <p style={{ fontSize: 11, color: "#999", fontStyle: "italic" }}>
+                <p style={{ fontSize: 11, color: "#767168", fontStyle: "italic" }}>
                   (Demo mode — check the server console for the reset link)
                 </p>
                 <button onClick={() => { setShowForgot(false); setForgotSent(false); setForgotEmail(""); }}
@@ -2330,7 +2510,7 @@ function LoginPage({ onLogin, onShowProspects }) {
       )}
 
       {/* ── Footer ── */}
-      <div className="login-footer" style={{ padding: "20px 48px", display: "flex", justifyContent: "space-between", fontSize: 11, color: "#AAA", borderTop: "1px solid #ECEAE5" }}>
+      <div className="login-footer" style={{ padding: "20px 48px", display: "flex", justifyContent: "space-between", fontSize: 11, color: "#888", borderTop: "1px solid #ECEAE5" }}>
         <span>© 2026 Northstar Pacific Development Group</span>
         <span>710 – 1199 W Pender St, Vancouver BC V6E 2R1</span>
       </div>
@@ -2417,6 +2597,7 @@ export default function App() {
     return window.location.hash === "#/login";
   });
   const toast = useToast();
+  const [announcement, setAnnouncement] = useState("");
   const th = themes[themeMode];
 
   // Listen for hash changes
@@ -2554,6 +2735,12 @@ export default function App() {
     <div style={{ background: th.bg, color: th.t1, fontFamily: sans, minHeight: "100vh", transition: "background .3s, color .3s" }}>
       <style>{`
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        *:focus-visible { outline: 2px solid #EA2028; outline-offset: 2px; border-radius: 4px; }
+        button:active, [role="button"]:active { transform: scale(0.97); }
+        button, [role="button"] { transition: transform .1s ease; }
+        .skip-link { position: absolute; left: -9999px; top: auto; width: 1px; height: 1px; overflow: hidden; z-index: 100; }
+        .skip-link:focus { position: fixed; top: 8px; left: 8px; width: auto; height: auto; padding: 8px 16px; background: #EA2028; color: #fff; border-radius: 6px; font-size: 13px; font-family: 'DM Sans', sans-serif; text-decoration: none; z-index: 10000; }
         .app-topbar { padding: 0 48px; }
         .app-topbar .user-name { display: inline; }
         .app-subnav { padding: 0 48px; }
@@ -2573,7 +2760,21 @@ export default function App() {
           .app-main { padding: 24px 20px 80px; }
           .app-footer { padding: 16px 20px; flex-direction: column; gap: 4px; text-align: center; }
         }
+        @media (max-width: 768px) {
+          .responsive-table table { display: none; }
+          .responsive-table .mobile-cards { display: block; }
+          .stat-grid-4 { grid-template-columns: repeat(2, 1fr) !important; }
+          .project-grid-2 { grid-template-columns: 1fr !important; }
+          .chart-grid-2 { grid-template-columns: 1fr !important; }
+          .profile-grid-2 { grid-template-columns: 1fr !important; }
+        }
+        @media (min-width: 769px) {
+          .responsive-table .mobile-cards { display: none; }
+        }
       `}</style>
+
+      {/* Skip to content link */}
+      <a href="#main-content" className="skip-link">Skip to main content</a>
 
       {/* Top bar: logo + user actions */}
       <header className="app-topbar" style={{
@@ -2591,10 +2792,10 @@ export default function App() {
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <span className="theme-toggle" onClick={toggleTheme} style={{ fontSize: 14, cursor: "pointer", padding: "4px 8px", borderRadius: 6, border: `1px solid ${th.line}`, transition: "border-color .15s", lineHeight: 1 }}
+          <button className="theme-toggle" onClick={toggleTheme} aria-label={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"} style={{ fontSize: 14, cursor: "pointer", padding: "4px 8px", borderRadius: 6, border: `1px solid ${th.line}`, transition: "border-color .15s", lineHeight: 1, background: "transparent", color: "inherit" }}
             title={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}>
             {themeMode === "dark" ? "\u2600" : "\u263D"}
-          </span>
+          </button>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span className="user-name" style={{ fontSize: 12, color: th.t3, fontWeight: 400 }}>{investor.name}</span>
             <div style={{
@@ -2604,24 +2805,30 @@ export default function App() {
               justifyContent: "center", fontSize: 12, fontWeight: 600, color: "#fff",
             }}>{investor.initials}</div>
           </div>
-          <span onClick={handleLogout} style={{ fontSize: 12, color: th.t3, cursor: "pointer", padding: "5px 14px", border: `1px solid ${th.line}`, borderRadius: 6, transition: "color .15s, border-color .15s" }}
+          <button onClick={handleLogout} aria-label="Sign out of your account" style={{ fontSize: 12, color: th.t3, cursor: "pointer", padding: "5px 14px", border: `1px solid ${th.line}`, borderRadius: 6, transition: "color .15s, border-color .15s", background: "transparent", fontFamily: sans }}
             onMouseEnter={e => { e.currentTarget.style.color = red; e.currentTarget.style.borderColor = red; }}
             onMouseLeave={e => { e.currentTarget.style.color = th.t3; e.currentTarget.style.borderColor = th.line; }}>
             Sign Out
-          </span>
+          </button>
         </div>
       </header>
 
       {/* Navigation bar */}
-      <nav className="app-subnav" style={{
+      <nav className="app-subnav" role="navigation" aria-label="Main navigation" style={{
         position: "sticky", top: 60, zIndex: 9,
         background: th.headerBg, backdropFilter: "blur(16px)",
         borderBottom: `1px solid ${th.line}`,
         transition: "background .3s, border-color .3s",
       }}>
-        <div className="app-subnav-inner" style={{ maxWidth: 1080, margin: "0 auto", gap: 4 }}>
+        <div className="app-subnav-inner" style={{ maxWidth: 1080, margin: "0 auto", gap: 4 }}
+          onKeyDown={e => {
+            const items = navItems.map(n => n.id);
+            const idx = items.indexOf(view);
+            if (e.key === "ArrowRight" && idx < items.length - 1) { e.preventDefault(); setView(items[idx + 1]); setAnnouncement(`Navigated to ${navItems[idx + 1].label}`); }
+            if (e.key === "ArrowLeft" && idx > 0) { e.preventDefault(); setView(items[idx - 1]); setAnnouncement(`Navigated to ${navItems[idx - 1].label}`); }
+          }}>
           {navItems.map(n => (
-            <span key={n.id} onClick={() => setView(n.id)} style={{
+            <span key={n.id} role="link" tabIndex={0} aria-current={view === n.id ? "page" : undefined} onClick={() => { setView(n.id); setAnnouncement(`Navigated to ${n.label}`); }} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setView(n.id); setAnnouncement(`Navigated to ${n.label}`); } }} style={{
               fontSize: 13, fontWeight: view === n.id ? 500 : 400, cursor: "pointer", userSelect: "none",
               color: view === n.id ? red : th.t3,
               padding: "8px 16px",
@@ -2641,13 +2848,13 @@ export default function App() {
       </nav>
 
       {/* Mobile nav */}
-      <nav className="app-nav-mobile" style={{
+      <nav className="app-nav-mobile" role="tablist" aria-label="Main navigation" style={{
         position: "sticky", top: 60, zIndex: 9,
         background: th.headerBg, backdropFilter: "blur(16px)",
         padding: "0 8px",
       }}>
         {navItems.map(n => (
-          <span key={n.id} onClick={() => setView(n.id)} style={{
+          <span key={n.id} role="tab" tabIndex={0} aria-selected={view === n.id} onClick={() => { setView(n.id); setAnnouncement(`Navigated to ${n.label}`); }} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setView(n.id); setAnnouncement(`Navigated to ${n.label}`); } }} style={{
             fontSize: 12, padding: "8px 14px", cursor: "pointer", userSelect: "none",
             color: view === n.id ? red : th.t3,
             background: view === n.id ? "#EA20280D" : "transparent",
@@ -2662,9 +2869,16 @@ export default function App() {
         ))}
       </nav>
 
-      <main className="app-main" style={{ maxWidth: 1080, margin: "0 auto" }}>
-        {pages[view]}
+      <main id="main-content" className="app-main" role="main" aria-label="Dashboard content" style={{ maxWidth: 1080, margin: "0 auto" }}>
+        <div key={view} style={{ animation: "fadeIn .25s ease" }}>
+          {pages[view]}
+        </div>
       </main>
+
+      {/* Screen reader announcements */}
+      <div role="status" aria-live="polite" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap" }}>
+        {announcement}
+      </div>
 
       <footer className="app-footer" style={{ borderTop: `1px solid ${th.line}`, display: "flex", justifyContent: "space-between", fontSize: 11, color: th.t3 }}>
         <span>© 2026 Northstar Pacific Development Group</span>
