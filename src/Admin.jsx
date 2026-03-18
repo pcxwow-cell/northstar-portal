@@ -84,6 +84,70 @@ function useSortable(defaultSort = "", defaultDir = "asc") {
   return { sortBy, sortDir, onSort, sortData };
 }
 
+// ─── PEOPLE SECTION (consolidated: Investors + Groups + Staff) ───
+function PeopleSection({ profileId, setProfileId, peopleTab, setPeopleTab, toast }) {
+  const subTabs = [
+    { id: "investors", label: "Investors" },
+    { id: "groups", label: "Groups" },
+    { id: "staff", label: "Staff" },
+  ];
+
+  return (
+    <>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <h1 style={{ fontSize: 28, fontWeight: 300 }}>People</h1>
+      </div>
+      <div style={{ display: "flex", gap: 4, marginBottom: 24, background: "#F0EDE8", borderRadius: 8, padding: 3, width: "fit-content" }}>
+        {subTabs.map(t => (
+          <span key={t.id} onClick={() => { setPeopleTab(t.id); setProfileId(null); }} style={{
+            fontSize: 13, padding: "8px 20px", cursor: "pointer",
+            color: peopleTab === t.id ? "#1A1816" : "#888", fontWeight: peopleTab === t.id ? 500 : 400,
+            background: peopleTab === t.id ? "#fff" : "transparent",
+            borderRadius: 6, boxShadow: peopleTab === t.id ? "0 1px 3px rgba(0,0,0,.08)" : "none",
+            transition: "all .15s",
+          }}>{t.label}</span>
+        ))}
+      </div>
+      {peopleTab === "investors" && (
+        profileId
+          ? <InvestorProfile investorId={profileId} onBack={() => setProfileId(null)} toast={toast} />
+          : <InvestorManager toast={toast} onViewProfile={(id) => setProfileId(id)} hideHeader />
+      )}
+      {peopleTab === "groups" && <GroupManager toast={toast} hideHeader />}
+      {peopleTab === "staff" && <StaffManager toast={toast} hideHeader />}
+    </>
+  );
+}
+
+// ─── DOCUMENTS SECTION (consolidated: Documents + Signatures) ───
+function DocumentsSection({ docsTab, setDocsTab, toast }) {
+  const subTabs = [
+    { id: "documents", label: "All Documents" },
+    { id: "signatures", label: "Signatures" },
+  ];
+
+  return (
+    <>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <h1 style={{ fontSize: 28, fontWeight: 300 }}>Documents</h1>
+      </div>
+      <div style={{ display: "flex", gap: 4, marginBottom: 24, background: "#F0EDE8", borderRadius: 8, padding: 3, width: "fit-content" }}>
+        {subTabs.map(t => (
+          <span key={t.id} onClick={() => setDocsTab(t.id)} style={{
+            fontSize: 13, padding: "8px 20px", cursor: "pointer",
+            color: docsTab === t.id ? "#1A1816" : "#888", fontWeight: docsTab === t.id ? 500 : 400,
+            background: docsTab === t.id ? "#fff" : "transparent",
+            borderRadius: 6, boxShadow: docsTab === t.id ? "0 1px 3px rgba(0,0,0,.08)" : "none",
+            transition: "all .15s",
+          }}>{t.label}</span>
+        ))}
+      </div>
+      {docsTab === "documents" && <DocumentManager toast={toast} hideHeader />}
+      {docsTab === "signatures" && <SignatureManager toast={toast} hideHeader />}
+    </>
+  );
+}
+
 export default function AdminPanel({ user, onLogout }) {
   const [view, setView] = useState("dashboard");
   const [toast, setToast] = useState(null);
@@ -92,11 +156,8 @@ export default function AdminPanel({ user, onLogout }) {
   const navItems = [
     { id: "dashboard", label: "Dashboard" },
     { id: "projects", label: "Projects" },
-    { id: "investors", label: "Investors" },
+    { id: "people", label: "People" },
     { id: "documents", label: "Documents" },
-    { id: "signatures", label: "Signatures" },
-    { id: "groups", label: "Groups" },
-    { id: "staff", label: "Staff" },
     { id: "prospects", label: "Prospects" },
     { id: "statements", label: "Statements" },
     { id: "inbox", label: "Inbox" },
@@ -106,19 +167,20 @@ export default function AdminPanel({ user, onLogout }) {
   // Sub-view navigation
   const [profileId, setProfileId] = useState(null);
   const [projectDetailId, setProjectDetailId] = useState(null);
+  const [peopleTab, setPeopleTab] = useState("investors");
+  const [docsTab, setDocsTab] = useState("documents");
 
   const pages = {
-    dashboard: <Dashboard onNavigate={setView} />,
+    dashboard: <Dashboard onNavigate={(v) => {
+      if (v === "investors") { setView("people"); setPeopleTab("investors"); }
+      else if (v === "documents") { setView("documents"); setDocsTab("documents"); }
+      else setView(v);
+    }} />,
     projects: projectDetailId
       ? <ProjectDetail projectId={projectDetailId} onBack={() => setProjectDetailId(null)} toast={showToast} />
       : <ProjectManager toast={showToast} onViewProject={(id) => setProjectDetailId(id)} />,
-    investors: profileId
-      ? <InvestorProfile investorId={profileId} onBack={() => setProfileId(null)} toast={showToast} />
-      : <InvestorManager toast={showToast} onViewProfile={(id) => setProfileId(id)} />,
-    documents: <DocumentManager toast={showToast} />,
-    signatures: <SignatureManager toast={showToast} />,
-    groups: <GroupManager toast={showToast} />,
-    staff: <StaffManager toast={showToast} />,
+    people: <PeopleSection profileId={profileId} setProfileId={setProfileId} peopleTab={peopleTab} setPeopleTab={setPeopleTab} toast={showToast} />,
+    documents: <DocumentsSection docsTab={docsTab} setDocsTab={setDocsTab} toast={showToast} />,
     prospects: <ProspectManager toast={showToast} />,
     statements: <StatementManager toast={showToast} />,
     inbox: <AdminInbox user={user} toast={showToast} />,
@@ -418,7 +480,7 @@ function ProjectManager({ toast, onViewProject }) {
 }
 
 // ─── INVESTOR MANAGER (search, filter, sort, invite, edit, KPI editing) ───
-function InvestorManager({ toast, onViewProfile }) {
+function InvestorManager({ toast, onViewProfile, hideHeader }) {
   const [investors, setInvestors] = useState([]);
   const [projects, setProjects] = useState([]);
   const [search, setSearch] = useState("");
@@ -472,8 +534,10 @@ function InvestorManager({ toast, onViewProfile }) {
 
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+      {!hideHeader && <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <h1 style={{ fontSize: 28, fontWeight: 300 }}>Investors</h1>
+      </div>}
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
         <button onClick={() => setShowInvite(!showInvite)} style={btnStyle}>{showInvite ? "Cancel" : "Invite Investor"}</button>
       </div>
 
@@ -1085,7 +1149,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
 }
 
 // ─── DOCUMENT MANAGER (dashboard + detail + upload) ───
-function DocumentManager({ toast }) {
+function DocumentManager({ toast, hideHeader }) {
   const [docs, setDocs] = useState([]);
   const [projects, setProjects] = useState([]);
   const [projectFilter, setProjectFilter] = useState("");
@@ -1296,11 +1360,14 @@ function DocumentManager({ toast }) {
   // Document list dashboard
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+      {!hideHeader && <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 300 }}>Documents</h1>
           <p style={{ fontSize: 13, color: "#767168", marginTop: 4 }}>{docs.length} documents</p>
         </div>
+      </div>}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <p style={{ fontSize: 13, color: "#767168" }}>{hideHeader ? `${docs.length} documents` : ""}</p>
         <button onClick={() => setShowUpload(true)} style={btnStyle}>Upload Document</button>
       </div>
 
@@ -1915,7 +1982,7 @@ function InvestorCashFlowsSection({ investorId, investorName, projects, toast })
 }
 
 // ─── GROUP MANAGER ───
-function GroupManager({ toast }) {
+function GroupManager({ toast, hideHeader }) {
   const [groups, setGroups] = useState([]);
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState("#EA2028");
@@ -1970,7 +2037,7 @@ function GroupManager({ toast }) {
 
   return (
     <>
-      <h1 style={{ fontSize: 28, fontWeight: 300, marginBottom: 24 }}>Investor Groups</h1>
+      {!hideHeader && <h1 style={{ fontSize: 28, fontWeight: 300, marginBottom: 24 }}>Investor Groups</h1>}
 
       {/* Create group */}
       <form onSubmit={handleCreate} className="admin-form-row" style={{ display: "flex", gap: 10, marginBottom: 24, alignItems: "flex-end", flexWrap: "wrap" }}>
@@ -2176,7 +2243,7 @@ const PRESETS = {
   ),
 };
 
-function StaffManager({ toast }) {
+function StaffManager({ toast, hideHeader }) {
   const [staff, setStaff] = useState([]);
   const [showAdd, setShowAdd] = useState(false);
   const [name, setName] = useState(""); const [email, setEmail] = useState(""); const [role, setRole] = useState("ADMIN");
@@ -2229,8 +2296,10 @@ function StaffManager({ toast }) {
 
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+      {!hideHeader && <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <h1 style={{ fontSize: 28, fontWeight: 300 }}>Company Staff</h1>
+      </div>}
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
         <button onClick={() => setShowAdd(!showAdd)} style={btnStyle}>{showAdd ? "Cancel" : "Add Staff"}</button>
       </div>
 
@@ -2498,7 +2567,7 @@ function StatementManager({ toast }) {
 }
 
 // ─── ADMIN INBOX (threads + compose with searchable recipient picker) ───
-function SignatureManager({ toast }) {
+function SignatureManager({ toast, hideHeader }) {
   const [sigs, setSigs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sigSearch, setSigSearch] = useState("");
@@ -2528,12 +2597,12 @@ function SignatureManager({ toast }) {
 
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+      {!hideHeader && <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 300 }}>Signatures</h1>
           <p style={{ fontSize: 13, color: "#767168", marginTop: 4 }}>{sigs.length} signature requests</p>
         </div>
-      </div>
+      </div>}
       <div style={{ marginBottom: 20 }}>
         <SearchBox value={sigSearch} onChange={setSigSearch} placeholder="Search signatures..." />
       </div>
