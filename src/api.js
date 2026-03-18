@@ -45,12 +45,13 @@ async function apiFetch(path, options = {}) {
     // Detect unreachable backend:
     // - Vite proxy returns 500 with ECONNREFUSED when backend is down
     // - Vercel returns 404 HTML page when no API route exists
-    if (res.status === 500 || res.status === 404) {
+    if (res.status === 500 || res.status === 404 || res.status === 405) {
       const contentType = res.headers.get("content-type") || "";
       const body = await res.text();
       const isApiDown = body.includes("ECONNREFUSED") || body.includes("proxy error") || body === ""
         || (res.status === 404 && contentType.includes("text/html")) // Vercel 404 page
-        || (res.status === 404 && !contentType.includes("application/json")); // No JSON = no backend
+        || (res.status === 404 && !contentType.includes("application/json")) // No JSON = no backend
+        || (res.status === 405) // Vercel rewrite returns 405 for POST to static file
       if (isApiDown) {
         setDemoMode(true);
         throw new TypeError("API unreachable");
