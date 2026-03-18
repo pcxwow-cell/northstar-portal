@@ -40,6 +40,50 @@ function AdminEmpty({ title, subtitle }) {
   );
 }
 
+// ─── SORTABLE HEADER ───
+function SortableHeader({ columns, sortBy, sortDir, onSort }) {
+  return columns.map(col => (
+    <span key={col.key} onClick={() => onSort(col.key)} style={{
+      fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#767168",
+      cursor: "pointer", userSelect: "none", display: "flex", alignItems: "center", gap: 4,
+    }}>
+      {col.label}
+      {sortBy === col.key && <span style={{ fontSize: 8 }}>{sortDir === "asc" ? "▲" : "▼"}</span>}
+    </span>
+  ));
+}
+
+// ─── SEARCH BOX ───
+function SearchBox({ value, onChange, placeholder = "Search..." }) {
+  return (
+    <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+      style={{ padding: "8px 14px", border: "1px solid #DDD", borderRadius: 8, fontSize: 13, fontFamily: "'DM Sans', sans-serif", width: 260, boxSizing: "border-box" }} />
+  );
+}
+
+// ─── SORTABLE HOOK ───
+function useSortable(defaultSort = "", defaultDir = "asc") {
+  const [sortBy, setSortBy] = useState(defaultSort);
+  const [sortDir, setSortDir] = useState(defaultDir);
+  function onSort(key) {
+    if (sortBy === key) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortBy(key); setSortDir("asc"); }
+  }
+  function sortData(data) {
+    if (!sortBy) return data;
+    return [...data].sort((a, b) => {
+      let va = a[sortBy], vb = b[sortBy];
+      if (va == null) return 1; if (vb == null) return -1;
+      if (typeof va === "string") va = va.toLowerCase();
+      if (typeof vb === "string") vb = vb.toLowerCase();
+      if (va < vb) return sortDir === "asc" ? -1 : 1;
+      if (va > vb) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+  }
+  return { sortBy, sortDir, onSort, sortData };
+}
+
 export default function AdminPanel({ user, onLogout }) {
   const [view, setView] = useState("dashboard");
   const [toast, setToast] = useState(null);
@@ -64,7 +108,7 @@ export default function AdminPanel({ user, onLogout }) {
   const [projectDetailId, setProjectDetailId] = useState(null);
 
   const pages = {
-    dashboard: <Dashboard />,
+    dashboard: <Dashboard onNavigate={setView} />,
     projects: projectDetailId
       ? <ProjectDetail projectId={projectDetailId} onBack={() => setProjectDetailId(null)} toast={showToast} />
       : <ProjectManager toast={showToast} onViewProject={(id) => setProjectDetailId(id)} />,
@@ -150,25 +194,26 @@ export default function AdminPanel({ user, onLogout }) {
 }
 
 // ─── DASHBOARD ───
-function Dashboard() {
+function Dashboard({ onNavigate }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   useEffect(() => { fetchDashboard().then(setData).catch(e => setError(e.message)); }, []);
   if (error) return <AdminError message={error} onRetry={() => { setError(null); fetchDashboard().then(setData).catch(e => setError(e.message)); }} />;
   if (!data) return <AdminSpinner />;
+  const statCards = [
+    { label: "Projects", value: data.projectCount, accent: red, nav: "projects" },
+    { label: "Investors", value: data.investorCount, accent: green, nav: "investors" },
+    { label: "Documents", value: data.docCount, accent: "#D4A574", nav: "documents" },
+    { label: "Unread Messages", value: data.unreadMessages, accent: "#5B8DEF", nav: "inbox" },
+  ];
   return (
     <>
       <h1 style={{ fontSize: 28, fontWeight: 300, marginBottom: 32 }}>Admin Dashboard</h1>
       <div className="admin-stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 40 }}>
-        {[
-          { label: "Projects", value: data.projectCount, accent: red },
-          { label: "Investors", value: data.investorCount, accent: green },
-          { label: "Documents", value: data.docCount, accent: "#D4A574" },
-          { label: "Unread Messages", value: data.unreadMessages, accent: "#5B8DEF" },
-        ].map((s, i) => (
-          <div key={i} style={{ background: "#fff", borderRadius: 10, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", borderLeft: `3px solid ${s.accent}`, transition: "transform .15s, box-shadow .15s" }}
-            onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,.08)"; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)"; }}>
+        {statCards.map((s, i) => (
+          <div key={i} onClick={() => onNavigate(s.nav)} style={{ background: "#fff", borderRadius: 10, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", borderLeft: `3px solid ${s.accent}`, transition: "transform .15s, box-shadow .15s", cursor: "pointer" }}
+            onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,.08)"; e.currentTarget.style.background = "#FAFAF8"; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)"; e.currentTarget.style.background = "#fff"; }}>
             <div style={{ fontSize: 28, fontWeight: 300, marginBottom: 4 }}>{s.value}</div>
             <div style={{ fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".08em" }}>{s.label}</div>
           </div>
@@ -435,13 +480,15 @@ function InvestorManager({ toast, onViewProfile }) {
 
       {/* Column headers */}
       <div className="admin-table-scroll" style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 100px 120px 120px 140px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em" }}>
-          <span onClick={() => toggleSort("name")} style={{ cursor: "pointer" }}>Name {sortBy === "name" ? (sortDir === "asc" ? "↑" : "↓") : ""}</span>
-          <span onClick={() => toggleSort("email")} style={{ cursor: "pointer" }}>Email {sortBy === "email" ? (sortDir === "asc" ? "↑" : "↓") : ""}</span>
-          <span>Status</span>
-          <span>Committed</span>
-          <span>Value</span>
-          <span>Actions</span>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 100px 120px 120px 140px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE" }}>
+          <SortableHeader columns={[
+            { key: "name", label: "Name" },
+            { key: "email", label: "Email" },
+            { key: "status", label: "Status" },
+            { key: "committed", label: "Committed" },
+            { key: "value", label: "Value" },
+          ]} sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} />
+          <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#767168" }}>Actions</span>
         </div>
 
         {investors.map((inv) => (
@@ -1063,6 +1110,7 @@ function DocumentManager({ toast }) {
   }
 
   const categories = ["Reporting", "Property Update", "Offering", "Capital Call", "Legal", "Tax", "Distribution"];
+  const docSort = useSortable("name");
 
   async function openSignModal() {
     setShowSignModal(true);
@@ -1235,10 +1283,17 @@ function DocumentManager({ toast }) {
       {/* Document table */}
       {loading ? <p style={{ color: "#767168" }}>Loading...</p> : (
         <div className="admin-table-scroll" style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 100px 100px 80px 80px 80px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em" }}>
-            <span>Document</span><span>Project</span><span>Category</span><span>Investors</span><span>Viewed</span><span>Downloaded</span>
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 100px 100px 80px 80px 80px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE" }}>
+            <SortableHeader columns={[
+              { key: "name", label: "Document" },
+              { key: "project", label: "Project" },
+              { key: "category", label: "Category" },
+              { key: "totalInvestors", label: "Investors" },
+              { key: "viewed", label: "Viewed" },
+              { key: "downloaded", label: "Downloaded" },
+            ]} sortBy={docSort.sortBy} sortDir={docSort.sortDir} onSort={docSort.onSort} />
           </div>
-          {docs.map((d, i) => (
+          {docSort.sortData(docs).map((d, i) => (
             <div key={d.id} onClick={() => openDoc(d)} style={{
               display: "grid", gridTemplateColumns: "2fr 100px 100px 80px 80px 80px",
               padding: "14px 20px", borderBottom: i < docs.length - 1 ? "1px solid #F0EDE8" : "none",
@@ -1247,7 +1302,7 @@ function DocumentManager({ toast }) {
               onMouseEnter={e => e.currentTarget.style.background = "#FAFAF8"}
               onMouseLeave={e => e.currentTarget.style.background = "#fff"}>
               <div>
-                <div style={{ fontWeight: 500 }}>{d.name}</div>
+                <div style={{ fontWeight: 500, display: "flex", alignItems: "center", gap: 6 }}>{d.name}{d.date && (Date.now() - new Date(d.date).getTime()) < 7 * 86400000 && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 2, background: `${red}18`, color: red, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em" }}>NEW</span>}</div>
                 <div style={{ fontSize: 11, color: "#BBB" }}>{d.date} · {d.size}</div>
               </div>
               <span style={{ fontSize: 12, color: "#666" }}>{d.project}</span>
@@ -2409,6 +2464,8 @@ function StatementManager({ toast }) {
 function SignatureManager({ toast }) {
   const [sigs, setSigs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [sigSearch, setSigSearch] = useState("");
+  const sigSort = useSortable("subject");
 
   useEffect(() => { loadSigs(); }, []);
   async function loadSigs() {
@@ -2426,6 +2483,12 @@ function SignatureManager({ toast }) {
   const statusColor = (s) => s === "signed" ? green : s === "pending" ? "#B8860B" : s === "cancelled" ? "#999" : red;
   const statusBg = (s) => s === "signed" ? "#EFE" : s === "pending" ? "#FFF8E1" : s === "cancelled" ? "#F5F5F5" : "#FEE";
 
+  const filteredSigs = sigs.filter(sig => {
+    if (!sigSearch) return true;
+    const q = sigSearch.toLowerCase();
+    return (sig.document?.name || "").toLowerCase().includes(q) || (sig.subject || "").toLowerCase().includes(q) || (sig.createdBy?.name || "").toLowerCase().includes(q) || (sig.status || "").toLowerCase().includes(q);
+  }).map(sig => ({ ...sig, createdByName: sig.createdBy?.name, signerCount: sig.signers?.length || 0 }));
+
   return (
     <>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
@@ -2434,17 +2497,26 @@ function SignatureManager({ toast }) {
           <p style={{ fontSize: 13, color: "#767168", marginTop: 4 }}>{sigs.length} signature requests</p>
         </div>
       </div>
-      {loading ? <p style={{ color: "#767168" }}>Loading...</p> : sigs.length === 0 ? (
+      <div style={{ marginBottom: 20 }}>
+        <SearchBox value={sigSearch} onChange={setSigSearch} placeholder="Search signatures..." />
+      </div>
+      {loading ? <p style={{ color: "#767168" }}>Loading...</p> : filteredSigs.length === 0 ? (
         <div style={{ background: "#fff", borderRadius: 12, padding: 40, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", textAlign: "center", color: "#767168", fontSize: 13 }}>
-          No signature requests yet. Use the Documents section to request signatures.
+          {sigSearch ? "No matching signature requests." : "No signature requests yet. Use the Documents section to request signatures."}
         </div>
       ) : (
         <div className="admin-table-scroll" style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 120px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em" }}>
-            <span>Document</span><span>Created By</span><span>Signers</span><span>Status</span><span>Actions</span>
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 120px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE" }}>
+            <SortableHeader columns={[
+              { key: "subject", label: "Document" },
+              { key: "createdByName", label: "Created By" },
+              { key: "signerCount", label: "Signers" },
+              { key: "status", label: "Status" },
+            ]} sortBy={sigSort.sortBy} sortDir={sigSort.sortDir} onSort={sigSort.onSort} />
+            <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#767168" }}>Actions</span>
           </div>
-          {sigs.map((sig, i) => (
-            <div key={sig.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 120px", padding: "14px 20px", borderBottom: i < sigs.length - 1 ? "1px solid #F0EDE8" : "none", fontSize: 13, alignItems: "center" }}>
+          {sigSort.sortData(filteredSigs).map((sig, i) => (
+            <div key={sig.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 120px", padding: "14px 20px", borderBottom: i < filteredSigs.length - 1 ? "1px solid #F0EDE8" : "none", fontSize: 13, alignItems: "center" }}>
               <div>
                 <div style={{ fontWeight: 500 }}>{sig.document?.name || sig.subject}</div>
                 <div style={{ fontSize: 11, color: "#767168", marginTop: 2 }}>{sig.subject}</div>
@@ -2478,6 +2550,8 @@ function ProspectManager({ toast }) {
   const [filterStatus, setFilterStatus] = useState("all");
   const [expandedId, setExpandedId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [prospectSearch, setProspectSearch] = useState("");
+  const prospectSort = useSortable("name");
 
   async function load() {
     setLoading(true);
@@ -2549,21 +2623,38 @@ function ProspectManager({ toast }) {
         </div>
       )}
 
+      {/* Search */}
+      <div style={{ marginBottom: 20 }}>
+        <SearchBox value={prospectSearch} onChange={setProspectSearch} placeholder="Search prospects..." />
+      </div>
+
       {/* Table */}
+      {(() => {
+        const filteredProspects = prospectSort.sortData(prospects.filter(p => {
+          if (!prospectSearch) return true;
+          const q = prospectSearch.toLowerCase();
+          return (p.name || "").toLowerCase().includes(q) || (p.email || "").toLowerCase().includes(q) || (p.investmentRange || "").toLowerCase().includes(q) || (p.interestedProject?.name || "").toLowerCase().includes(q) || (p.status || "").toLowerCase().includes(q);
+        }).map(p => ({ ...p, projectName: p.interestedProject?.name || "General" })));
+        return (
       <div style={{ borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", background: "#fff" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr style={{ background: "#FAFAF8", borderBottom: "1px solid #E8E5DE" }}>
-              {["Name", "Email", "Interest Range", "Project", "Status", "Date"].map(h => (
-                <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontWeight: 500, color: "#888", fontSize: 11, textTransform: "uppercase", letterSpacing: ".04em" }}>{h}</th>
+              {[{ key: "name", label: "Name" }, { key: "email", label: "Email" }, { key: "investmentRange", label: "Interest Range" }, { key: "projectName", label: "Project" }, { key: "status", label: "Status" }, { key: "createdAt", label: "Date" }].map(col => (
+                <th key={col.key} onClick={() => prospectSort.onSort(col.key)} style={{ padding: "10px 16px", textAlign: "left", fontWeight: 500, color: "#888", fontSize: 11, textTransform: "uppercase", letterSpacing: ".04em", cursor: "pointer", userSelect: "none" }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    {col.label}
+                    {prospectSort.sortBy === col.key && <span style={{ fontSize: 8 }}>{prospectSort.sortDir === "asc" ? "▲" : "▼"}</span>}
+                  </span>
+                </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {prospects.length === 0 && (
+            {filteredProspects.length === 0 && (
               <tr><td colSpan={6} style={{ padding: 40, textAlign: "center", color: "#767168" }}>No prospects found</td></tr>
             )}
-            {prospects.map(p => (
+            {filteredProspects.map(p => (
               <>
                 <tr key={p.id} onClick={() => setExpandedId(expandedId === p.id ? null : p.id)} style={{
                   borderBottom: "1px solid #F0EDEA", cursor: "pointer", transition: "background .1s",
@@ -2615,6 +2706,8 @@ function ProspectManager({ toast }) {
           </tbody>
         </table>
       </div>
+        );
+      })()}
     </div>
   );
 }
@@ -2886,10 +2979,11 @@ function AdminInbox({ user, toast }) {
           ) : filtered.map((t, i) => (
             <div key={t.id} onClick={() => openThread(t)} style={{
               padding: "16px 20px", borderBottom: i < filtered.length - 1 ? "1px solid #F0EDE8" : "none",
-              cursor: "pointer", display: "flex", gap: 12, background: t.unread ? `${red}04` : "transparent",
+              cursor: "pointer", display: "flex", gap: 12, background: t.unread ? `${red}06` : "transparent",
+              borderLeft: t.unread ? `3px solid ${red}` : "3px solid transparent",
             }}
               onMouseEnter={e => e.currentTarget.style.background = "#FAFAF8"}
-              onMouseLeave={e => e.currentTarget.style.background = t.unread ? `${red}04` : "transparent"}>
+              onMouseLeave={e => e.currentTarget.style.background = t.unread ? `${red}06` : "transparent"}>
               <div style={{ width: 7, height: 7, borderRadius: "50%", background: t.unread ? red : "transparent", marginTop: 7, flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
@@ -2925,6 +3019,8 @@ function AuditLogViewer() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [actionFilter, setActionFilter] = useState("all");
+  const [auditSearch, setAuditSearch] = useState("");
+  const auditSort = useSortable("createdAt", "desc");
 
   const actionTypes = ["all", "login", "logout", "document_download", "document_upload", "signature_request", "signature_sign", "profile_update", "investor_invite", "project_update", "cash_flow_record", "prospect_submit"];
 
@@ -2937,10 +3033,21 @@ function AuditLogViewer() {
 
   useEffect(() => { loadLogs(); }, [actionFilter]);
 
+  const filteredLogs = auditSort.sortData(logs.filter(log => {
+    if (!auditSearch) return true;
+    const q = auditSearch.toLowerCase();
+    return (log.user || "").toLowerCase().includes(q) || (log.action || "").toLowerCase().includes(q) || (log.resource || "").toLowerCase().includes(q) || (log.ipAddress || "").toLowerCase().includes(q);
+  }));
+
   return (
     <>
       <h1 style={{ fontSize: 28, fontWeight: 300, marginBottom: 24 }}>Audit Log</h1>
       <p style={{ fontSize: 13, color: "#767168", marginBottom: 24 }}>Compliance log of key system actions. Last 100 entries shown.</p>
+
+      {/* Search */}
+      <div style={{ marginBottom: 20 }}>
+        <SearchBox value={auditSearch} onChange={setAuditSearch} placeholder="Search audit log..." />
+      </div>
 
       {/* Filter by action */}
       <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
@@ -2955,23 +3062,26 @@ function AuditLogViewer() {
       </div>
 
       {error && <AdminError message={error} onRetry={loadLogs} />}
-      {loading ? <AdminSpinner /> : logs.length === 0 ? (
-        <AdminEmpty title="No audit log entries" subtitle="Actions will appear here as users interact with the system." />
+      {loading ? <AdminSpinner /> : filteredLogs.length === 0 ? (
+        <AdminEmpty title="No audit log entries" subtitle={auditSearch ? "No entries match your search." : "Actions will appear here as users interact with the system."} />
       ) : (
         <div style={{ borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
             <thead>
               <tr style={{ background: "#FAFAF8", borderBottom: "1px solid #E8E5DE" }}>
-                <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 500, fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#767168" }}>Timestamp</th>
-                <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 500, fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#767168" }}>User</th>
-                <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 500, fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#767168" }}>Action</th>
-                <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 500, fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#767168" }}>Resource</th>
-                <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 500, fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#767168" }}>IP</th>
+                {[{ key: "createdAt", label: "Timestamp" }, { key: "user", label: "User" }, { key: "action", label: "Action" }, { key: "resource", label: "Resource" }, { key: "ipAddress", label: "IP" }].map(col => (
+                  <th key={col.key} onClick={() => auditSort.onSort(col.key)} style={{ padding: "10px 14px", textAlign: "left", fontWeight: 500, fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#767168", cursor: "pointer", userSelect: "none" }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      {col.label}
+                      {auditSort.sortBy === col.key && <span style={{ fontSize: 8 }}>{auditSort.sortDir === "asc" ? "▲" : "▼"}</span>}
+                    </span>
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
-              {logs.map((log, i) => (
-                <tr key={log.id} style={{ borderBottom: i < logs.length - 1 ? "1px solid #E8E5DE" : "none" }}>
+              {filteredLogs.map((log, i) => (
+                <tr key={log.id} style={{ borderBottom: i < filteredLogs.length - 1 ? "1px solid #E8E5DE" : "none" }}>
                   <td style={{ padding: "10px 14px", color: "#767168", whiteSpace: "nowrap" }}>
                     {new Date(log.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
                   </td>
