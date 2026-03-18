@@ -87,19 +87,47 @@ export default function AdminPanel({ user, onLogout }) {
         *:focus-visible { outline: 2px solid #EA2028; outline-offset: 2px; border-radius: 4px; }
         button:active { transform: scale(0.97); }
         button { transition: transform .1s ease; }
+
+        .admin-header { padding: 0 32px; }
+        .admin-nav { padding: 8px 32px; flex-wrap: nowrap; }
+        .admin-main { padding: 32px; }
+        .admin-user-name { display: inline; }
+
+        @media (max-width: 900px) {
+          .admin-header { padding: 0 16px; }
+          .admin-nav { padding: 6px 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+          .admin-main { padding: 20px 16px; }
+          .admin-user-name { display: none; }
+          .admin-stat-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .admin-table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+          .admin-table-scroll > div { min-width: 600px; }
+          .admin-detail-grid { grid-template-columns: 1fr !important; }
+          .admin-form-row { flex-direction: column !important; }
+          .admin-form-row > div { width: 100% !important; }
+          .admin-perm-grid { grid-template-columns: 1fr !important; }
+          h1 { font-size: 22px !important; }
+        }
+
+        @media (max-width: 600px) {
+          .admin-header { padding: 0 12px; }
+          .admin-nav { padding: 4px 8px; gap: 2px !important; }
+          .admin-nav span { font-size: 11px !important; padding: 6px 10px !important; }
+          .admin-main { padding: 16px 12px; }
+          .admin-stat-grid { grid-template-columns: 1fr !important; }
+        }
       `}</style>
-      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px", height: 60, background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
+      <header className="admin-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 56, background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ width: 24, height: 24, background: red, borderRadius: 4 }} />
           <span style={{ fontSize: 15, fontWeight: 600, letterSpacing: ".08em" }}>NORTHSTAR</span>
           <span style={{ fontSize: 11, padding: "2px 8px", background: "#FEE", borderRadius: 20, color: red, fontWeight: 500 }}>ADMIN</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <span style={{ fontSize: 13, color: "#666" }}>{user.name}</span>
+          <span className="admin-user-name" style={{ fontSize: 13, color: "#666" }}>{user.name}</span>
           <button onClick={onLogout} aria-label="Sign out of admin panel" style={{ ...btnOutline, fontSize: 12, borderRadius: 6 }}>Sign Out</button>
         </div>
       </header>
-      <nav role="navigation" aria-label="Admin navigation" style={{ display: "flex", gap: 4, background: "#fff", borderBottom: "1px solid #ECEAE5", padding: "8px 32px" }}>
+      <nav className="admin-nav" role="navigation" aria-label="Admin navigation" style={{ display: "flex", gap: 4, background: "#fff", borderBottom: "1px solid #ECEAE5" }}>
         {navItems.map(n => (
           <span key={n.id} role="link" tabIndex={0} aria-current={view === n.id ? "page" : undefined} onClick={() => setView(n.id)} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setView(n.id); } }} style={{
             fontSize: 13, padding: "8px 16px", cursor: "pointer",
@@ -113,7 +141,7 @@ export default function AdminPanel({ user, onLogout }) {
             onMouseLeave={e => { if (view !== n.id) e.currentTarget.style.background = "transparent"; }}>{n.label}</span>
         ))}
       </nav>
-      <main role="main" aria-label="Admin content" style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 32px 80px" }}>{pages[view]}</main>
+      <main className="admin-main" role="main" aria-label="Admin content" style={{ maxWidth: 1000, margin: "0 auto" }}>{pages[view]}</main>
       {toast && (
         <div role="alert" aria-live="polite" style={{ position: "fixed", bottom: 24, right: 24, padding: "12px 20px", background: toast.type === "error" ? "#FEE" : "#EFE", border: `1px solid ${toast.type === "error" ? red : green}`, borderRadius: 10, fontSize: 13, color: toast.type === "error" ? red : green, zIndex: 100, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>{toast.msg}</div>
       )}
@@ -131,7 +159,7 @@ function Dashboard() {
   return (
     <>
       <h1 style={{ fontSize: 28, fontWeight: 300, marginBottom: 32 }}>Admin Dashboard</h1>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 40 }}>
+      <div className="admin-stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 40 }}>
         {[
           { label: "Projects", value: data.projectCount, accent: red },
           { label: "Investors", value: data.investorCount, accent: green },
@@ -377,7 +405,7 @@ function InvestorManager({ toast, onViewProfile }) {
 
       {/* Invite form */}
       {showInvite && (
-        <form onSubmit={handleInvite} style={{ background: "#fff", borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", marginBottom: 24, display: "flex", gap: 12, alignItems: "flex-end" }}>
+        <form onSubmit={handleInvite} className="admin-form-row" style={{ background: "#fff", borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", marginBottom: 24, display: "flex", gap: 12, alignItems: "flex-end" }}>
           <div style={{ flex: 1 }}>
             <label style={{ display: "block", fontSize: 11, color: "#888", marginBottom: 4 }}>Full Name</label>
             <input value={inviteName} onChange={e => setInviteName(e.target.value)} required style={inputStyle} placeholder="James Chen" />
@@ -406,7 +434,7 @@ function InvestorManager({ toast, onViewProfile }) {
       </div>
 
       {/* Column headers */}
-      <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+      <div className="admin-table-scroll" style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 100px 120px 120px 140px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em" }}>
           <span onClick={() => toggleSort("name")} style={{ cursor: "pointer" }}>Name {sortBy === "name" ? (sortDir === "asc" ? "↑" : "↓") : ""}</span>
           <span onClick={() => toggleSort("email")} style={{ cursor: "pointer" }}>Email {sortBy === "email" ? (sortDir === "asc" ? "↑" : "↓") : ""}</span>
@@ -631,7 +659,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
       </div>
 
       {/* KPI cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12, marginBottom: 24 }}>
+      <div className="admin-stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12, marginBottom: 24 }}>
         {[
           { label: "Status", value: project.status },
           { label: "Completion", value: `${project.completion}%` },
@@ -718,7 +746,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
               </div>
             </div>
             {orgChart.length > 0 ? (
-              <>
+              <div className="admin-table-scroll">
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 30px", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
                   <span>Role</span><span>Name</span><span>Company</span><span></span>
                 </div>
@@ -730,7 +758,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
                     <span onClick={() => setOrgChart(oc => oc.filter((_, j) => j !== i))} style={{ fontSize: 16, color: "#CCC", cursor: "pointer", textAlign: "center" }}>&times;</span>
                   </div>
                 ))}
-              </>
+              </div>
             ) : <p style={{ color: "#BBB", fontSize: 13, fontStyle: "italic" }}>No org chart entries. Click "Add Row" to start.</p>}
           </div>
         </>
@@ -781,6 +809,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
           {project.capTable.length > 0 && (
             <>
               <div style={{ fontSize: 13, fontWeight: 600, color: "#666", marginTop: 24, marginBottom: 14 }}>Cap Table</div>
+              <div className="admin-table-scroll">
               <div style={{ display: "grid", gridTemplateColumns: "1fr 120px 100px 100px 80px 80px", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
                 <span>Holder</span><span>Class</span><span>Committed</span><span>Called</span><span>Unfunded</span><span>Ownership</span>
               </div>
@@ -794,6 +823,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
                   <span>{e.ownership}%</span>
                 </div>
               ))}
+              </div>
             </>
           )}
         </div>
@@ -861,7 +891,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
       {tab === "model" && (
         <div style={section}>
           <div style={{ fontSize: 16, fontWeight: 500, marginBottom: 20 }}>Financial Scenario Model</div>
-          <div style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "flex-end" }}>
+          <div className="admin-form-row" style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "flex-end" }}>
             <div style={{ flex: 1 }}>
               <label style={{ fontSize: 11, color: "#888" }}>Exit Value ($)</label>
               <input type="number" value={fmExitValue} onChange={e => setFmExitValue(e.target.value)} placeholder={`e.g. ${fmt(project.totalRaise * 2)}`} style={{ ...inputStyle, marginTop: 4 }} />
@@ -885,7 +915,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
           {fmResult && (
             <>
               {/* Summary cards */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
+              <div className="admin-stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
                 {[
                   { label: "LP IRR", value: fmResult.lpIRR != null ? `${(fmResult.lpIRR * 100).toFixed(1)}%` : "--" },
                   { label: "LP MOIC", value: `${fmResult.lpMOIC}x` },
@@ -924,6 +954,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
 
               {/* Year-by-year */}
               <div style={{ fontSize: 13, fontWeight: 600, color: "#666", marginBottom: 12 }}>Year-by-Year Cash Flow</div>
+              <div className="admin-table-scroll">
               <div style={{ display: "grid", gridTemplateColumns: "80px 120px 120px 120px", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
                 <span>Year</span><span style={{ textAlign: "right" }}>Cash Flow</span><span style={{ textAlign: "right" }}>Cumulative</span><span style={{ textAlign: "right" }}>Balance</span>
               </div>
@@ -939,11 +970,13 @@ function ProjectDetail({ projectId, onBack, toast }) {
                   <span style={{ textAlign: "right", color: "#666" }}>${fmt(Math.round(y.balance))}</span>
                 </div>
               ))}
+              </div>
 
               {/* Sensitivity table */}
               {fmResult.sensitivity && (
                 <>
                   <div style={{ fontSize: 13, fontWeight: 600, color: "#666", marginBottom: 12, marginTop: 24 }}>Sensitivity Analysis</div>
+                  <div className="admin-table-scroll">
                   <div style={{ display: "grid", gridTemplateColumns: "80px 120px 120px 100px 80px", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
                     <span>Scenario</span><span style={{ textAlign: "right" }}>Exit Value</span><span style={{ textAlign: "right" }}>LP Return</span><span style={{ textAlign: "right" }}>LP IRR</span><span style={{ textAlign: "right" }}>LP MOIC</span>
                   </div>
@@ -956,6 +989,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
                       <span style={{ textAlign: "right" }}>{s.lpMOIC}x</span>
                     </div>
                   ))}
+                  </div>
                 </>
               )}
             </>
@@ -1110,7 +1144,7 @@ function DocumentManager({ toast }) {
         )}
 
         {/* Access audit table */}
-        <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+        <div className="admin-table-scroll" style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 120px 120px 120px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em" }}>
             <span>Investor</span><span>Email</span><span>Viewed</span><span>Downloaded</span><span>Acknowledged</span>
           </div>
@@ -1144,7 +1178,7 @@ function DocumentManager({ toast }) {
             <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Document Name</label>
             <input value={uploadName} onChange={e => setUploadName(e.target.value)} placeholder="Q3 2025 — Porthaven Quarterly Report" style={inputStyle} required />
           </div>
-          <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
+          <div className="admin-form-row" style={{ display: "flex", gap: 12, marginBottom: 20 }}>
             <div style={{ flex: 1 }}>
               <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Category</label>
               <select value={uploadCategory} onChange={e => setUploadCategory(e.target.value)} style={inputStyle}>
@@ -1200,7 +1234,7 @@ function DocumentManager({ toast }) {
 
       {/* Document table */}
       {loading ? <p style={{ color: "#767168" }}>Loading...</p> : (
-        <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+        <div className="admin-table-scroll" style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
           <div style={{ display: "grid", gridTemplateColumns: "2fr 100px 100px 80px 80px 80px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em" }}>
             <span>Document</span><span>Project</span><span>Category</span><span>Investors</span><span>Viewed</span><span>Downloaded</span>
           </div>
@@ -1324,6 +1358,7 @@ function InvestorProfile({ investorId, onBack, toast }) {
             </div>
           </form>
         )}
+        <div className="admin-table-scroll">
         {entities.length > 0 ? (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 120px 60px 70px 40px", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
             <span>Entity Name</span><span>Type</span><span>Tax ID</span><span>State</span><span>Default</span><span></span>
@@ -1339,6 +1374,7 @@ function InvestorProfile({ investorId, onBack, toast }) {
             <span onClick={() => handleDeleteEntity(e.id)} style={{ fontSize: 14, color: "#CCC", cursor: "pointer" }}>&times;</span>
           </div>
         ))}
+        </div>
         {entities.length === 0 && !showEntityForm && <span style={{ fontSize: 12, color: "#BBB", fontStyle: "italic" }}>No entities</span>}
       </div>
 
@@ -1589,7 +1625,7 @@ function ProjectCashFlowsTab({ project, projectId, cashFlowsList, cfInvestors, s
         </div>
       </div>
       {cashFlowsList.length > 0 ? (
-        <>
+        <div className="admin-table-scroll">
           <div style={{ display: "grid", gridTemplateColumns: "100px 1fr 1fr 100px 100px 80px", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
             <span>Date</span><span>Investor</span><span>Description</span><span style={{ textAlign: "right" }}>Amount</span><span style={{ textAlign: "right" }}>Type</span><span style={{ textAlign: "right" }}>Actions</span>
           </div>
@@ -1627,7 +1663,7 @@ function ProjectCashFlowsTab({ project, projectId, cashFlowsList, cfInvestors, s
               </div>
             )
           ))}
-        </>
+        </div>
       ) : <p style={{ color: "#BBB", fontSize: 13, fontStyle: "italic" }}>No cash flows recorded</p>}
 
       {/* Record Cash Flow Modal */}
@@ -1747,7 +1783,7 @@ function InvestorCashFlowsSection({ investorId, investorName, projects, toast })
         </div>
       )}
       {cashFlows.length > 0 ? (
-        <>
+        <div className="admin-table-scroll">
           <div style={{ display: "grid", gridTemplateColumns: "90px 1fr 1fr 100px 90px 70px", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
             <span>Date</span><span>Project</span><span>Description</span><span style={{ textAlign: "right" }}>Amount</span><span style={{ textAlign: "right" }}>Type</span><span style={{ textAlign: "right" }}>Actions</span>
           </div>
@@ -1780,7 +1816,7 @@ function InvestorCashFlowsSection({ investorId, investorName, projects, toast })
               </div>
             )
           ))}
-        </>
+        </div>
       ) : <span style={{ fontSize: 12, color: "#BBB", fontStyle: "italic" }}>No cash flows</span>}
     </div>
   );
@@ -1845,7 +1881,7 @@ function GroupManager({ toast }) {
       <h1 style={{ fontSize: 28, fontWeight: 300, marginBottom: 24 }}>Investor Groups</h1>
 
       {/* Create group */}
-      <form onSubmit={handleCreate} style={{ display: "flex", gap: 10, marginBottom: 24, alignItems: "flex-end", flexWrap: "wrap" }}>
+      <form onSubmit={handleCreate} className="admin-form-row" style={{ display: "flex", gap: 10, marginBottom: 24, alignItems: "flex-end", flexWrap: "wrap" }}>
         <div style={{ flex: 1, minWidth: 140 }}>
           <label style={{ fontSize: 11, color: "#888" }}>Group Name</label>
           <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Class A LPs" style={inputStyle} required />
@@ -2107,7 +2143,7 @@ function StaffManager({ toast }) {
       </div>
 
       {showAdd && (
-        <form onSubmit={handleAdd} style={{ background: "#fff", borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", marginBottom: 24, display: "flex", gap: 12, alignItems: "flex-end" }}>
+        <form onSubmit={handleAdd} className="admin-form-row" style={{ background: "#fff", borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", marginBottom: 24, display: "flex", gap: 12, alignItems: "flex-end" }}>
           <div style={{ flex: 1 }}>
             <label style={{ fontSize: 11, color: "#888" }}>Full Name</label>
             <input value={name} onChange={e => setName(e.target.value)} required style={inputStyle} placeholder="Jane Smith" />
@@ -2127,7 +2163,7 @@ function StaffManager({ toast }) {
         </form>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: selectedStaff ? "1fr 1fr" : "1fr", gap: 24 }}>
+      <div className="admin-perm-grid" style={{ display: "grid", gridTemplateColumns: selectedStaff ? "1fr 1fr" : "1fr", gap: 24 }}>
         {/* Staff list */}
         <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
           <div style={{ padding: "12px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em" }}>
@@ -2308,7 +2344,7 @@ function StatementManager({ toast }) {
       </div>
 
       {/* Workflow status cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 24 }}>
+      <div className="admin-stat-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 24 }}>
         {[
           { label: "Drafts", count: drafts, color: "#B8860B", action: drafts > 0 ? "Approve All" : null, onClick: handleBulkApprove },
           { label: "Approved", count: approved, color: green, action: approved > 0 ? "Send All" : null, onClick: handleBulkSend },
@@ -2403,7 +2439,7 @@ function SignatureManager({ toast }) {
           No signature requests yet. Use the Documents section to request signatures.
         </div>
       ) : (
-        <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+        <div className="admin-table-scroll" style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 120px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em" }}>
             <span>Document</span><span>Created By</span><span>Signers</span><span>Status</span><span>Actions</span>
           </div>

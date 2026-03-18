@@ -709,7 +709,8 @@ function Portfolio({ myProjects, investor }) {
         {cashFlows.length > 0 && (
           <>
             <SectionHeader title="Cash Flow History" />
-            <div style={{ borderRadius: 12, overflow: "hidden", marginBottom: 40, background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+            <div className="cashflow-grid" style={{ borderRadius: 12, overflow: "hidden", marginBottom: 40, background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+              <div>
               <div style={{ display: "grid", gridTemplateColumns: "120px 1fr 120px 100px", padding: "10px 20px", borderBottom: `1px solid ${line}`, background: `${line}33` }}>
                 <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".08em", color: t3 }}>Date</span>
                 <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".08em", color: t3 }}>Description</span>
@@ -726,6 +727,7 @@ function Portfolio({ myProjects, investor }) {
                   <span style={{ fontSize: 11, textAlign: "right", color: t3, textTransform: "capitalize" }}>{(cf.type || "").replace(/_/g, " ")}</span>
                 </div>
               ))}
+              </div>
             </div>
           </>
         )}
@@ -916,7 +918,7 @@ function CapTablePage({ myProjects, investor }) {
       {project.waterfall.tiers.length > 0 && (
         <div style={{ marginTop: 48 }}>
           <SectionHeader title="Distribution Waterfall" right={`${project.waterfall.prefReturn}% pref · ${project.waterfall.carry}% carry`} />
-          <div style={{ borderRadius: 12, overflow: "hidden", background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+          <div className="waterfall-grid" style={{ borderRadius: 12, overflow: "hidden", background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
             {project.waterfall.tiers.map((tier, i) => (
               <div key={i} style={{ display: "grid", gridTemplateColumns: "200px 1fr 1fr 120px", padding: "16px 20px", borderBottom: i < project.waterfall.tiers.length - 1 ? `1px solid ${line}` : "none", alignItems: "center" }}>
                 <div style={{ fontFamily: serif, fontSize: 14 }}>{tier.name}</div>
@@ -942,7 +944,7 @@ function CapTablePage({ myProjects, investor }) {
       {/* Waterfall Scenario Calculator */}
       <div style={{ marginTop: 48 }}>
         <SectionHeader title="Run Waterfall Scenario" />
-        <div style={{ borderRadius: 12, padding: "24px", marginBottom: 40, background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+        <div className="waterfall-grid" style={{ borderRadius: 12, padding: "24px", marginBottom: 40, background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
           <div style={{ display: "flex", gap: 12, alignItems: "flex-end", marginBottom: 20 }}>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 11, color: t3, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>Total Distributable Amount ($)</div>
@@ -1259,7 +1261,7 @@ function DistributionsPage({ allDistributions, myProjects }) {
         <p style={{ fontSize: 14, color: t2, marginTop: 6 }}>${fmt(total)} total distributed · {allDistributions.length} payments</p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, marginBottom: 40 }}>
+      <div className="inline-stats-3" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, marginBottom: 40 }}>
         {[
           { label: "Total Distributed", value: `$${fmt(total)}`, accent: red },
           { label: "Projects", value: [...new Set(allDistributions.map(d => d.project))].join(", ") || "—", accent: green },
@@ -1611,7 +1613,7 @@ function FinancialModelerPage({ myProjects, investor }) {
 
           {/* Year-by-year */}
           <SectionHeader title="Year-by-Year Cash Flow" />
-          <div style={{ borderRadius: 12, overflow: "hidden", marginBottom: 40, background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+          <div className="modeler-grid" style={{ borderRadius: 12, overflow: "hidden", marginBottom: 40, background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
             <div style={{ display: "grid", gridTemplateColumns: "100px 1fr 1fr 1fr", padding: "10px 20px", borderBottom: `1px solid ${line}`, background: `${line}33` }}>
               {["Year", "Cash Flow", "Cumulative", "Balance"].map(h => (
                 <span key={h} style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".08em", color: t3, textAlign: h === "Year" ? "left" : "right" }}>{h}</span>
@@ -1635,7 +1637,7 @@ function FinancialModelerPage({ myProjects, investor }) {
           {result.sensitivity && (
             <>
               <SectionHeader title="Sensitivity Analysis" right="IRR at different exit values" />
-              <div style={{ borderRadius: 12, overflow: "hidden", marginBottom: 40, background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+              <div className="modeler-grid" style={{ borderRadius: 12, overflow: "hidden", marginBottom: 40, background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
                 <div style={{ display: "grid", gridTemplateColumns: "80px 1fr 1fr 100px 80px", padding: "10px 20px", borderBottom: `1px solid ${line}`, background: `${line}33` }}>
                   {["", "Exit Value", "LP Return", "LP IRR", "MOIC"].map(h => (
                     <span key={h} style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".08em", color: t3, textAlign: h === "" ? "left" : "right" }}>{h}</span>
@@ -1872,7 +1874,7 @@ function SecuritySection({ toast, inputStyle }) {
               <span style={{ fontSize: 13, color: t1, fontWeight: 600 }}>Save these backup codes</span>
             </div>
             <p style={{ fontSize: 12, color: t2, marginBottom: 12 }}>Each code can only be used once. Store them somewhere safe — you will not be able to see them again.</p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, padding: 16, background: bg, borderRadius: 8, border: `1px solid ${line}`, marginBottom: 16 }}>
+            <div className="inline-stats-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, padding: 16, background: bg, borderRadius: 8, border: `1px solid ${line}`, marginBottom: 16 }}>
               {mfaBackupCodes.map((code, i) => (
                 <div key={i} style={{ fontFamily: "monospace", fontSize: 14, padding: "4px 0", letterSpacing: ".08em" }}>{code}</div>
               ))}
@@ -1896,7 +1898,7 @@ function SecuritySection({ toast, inputStyle }) {
           </div>
         )}
         {showHistory && loginHistory.length > 0 && (
-          <div style={{ borderTop: `1px solid ${line}`, paddingTop: 12 }}>
+          <div className="login-history-grid" style={{ borderTop: `1px solid ${line}`, paddingTop: 12 }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 120px 80px", fontSize: 10, color: t3, textTransform: "uppercase", letterSpacing: ".06em", padding: "6px 0", borderBottom: `1px solid ${line}` }}>
               <span>Date/Time</span><span>IP Address</span><span>Status</span>
             </div>
@@ -2043,7 +2045,7 @@ function ProfilePage({ investor, toast, onUpdate }) {
         </div>
         {showEntityForm && (
           <form onSubmit={handleCreateEntity} style={{ borderRadius: 12, padding: "20px 24px", background: surface, marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+            <div className="entity-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
               <div>
                 <label style={{ fontSize: 11, color: t3, display: "block", marginBottom: 4 }}>Entity Name</label>
                 <input value={entityForm.name} onChange={e => setEntityForm(f => ({ ...f, name: e.target.value }))} required style={inputStyle} placeholder="e.g. Chen Family Trust" />
@@ -2783,9 +2785,40 @@ export default function App() {
           .responsive-table table { display: none; }
           .responsive-table .mobile-cards { display: block; }
           .stat-grid-4 { grid-template-columns: repeat(2, 1fr) !important; }
+          .stat-grid-3 { grid-template-columns: 1fr !important; }
           .project-grid-2 { grid-template-columns: 1fr !important; }
           .chart-grid-2 { grid-template-columns: 1fr !important; }
           .profile-grid-2 { grid-template-columns: 1fr !important; }
+          .login-grid { grid-template-columns: 1fr !important; gap: 32px !important; }
+          .login-hero { display: none !important; }
+
+          /* Universal: all card-style containers with fixed-column grids become scrollable */
+          .cashflow-grid, .waterfall-grid, .captable-grid, .modeler-grid, .dist-grid, .data-grid, .login-history-grid {
+            overflow-x: auto; -webkit-overflow-scrolling: touch;
+            margin-left: -4px; margin-right: -4px; padding: 0 4px;
+          }
+          .cashflow-grid > div, .waterfall-grid > div, .captable-grid > div,
+          .modeler-grid > div, .dist-grid > div, .data-grid > div, .login-history-grid > div { min-width: 480px; }
+
+          /* Multi-col stat/info grids collapse */
+          .inline-stats-3 { grid-template-columns: 1fr !important; }
+          .inline-stats-2 { grid-template-columns: 1fr !important; }
+          .project-stats { grid-template-columns: repeat(2, 1fr) !important; }
+          .entity-grid { grid-template-columns: 1fr !important; }
+          .security-grid { grid-template-columns: 1fr !important; }
+          .action-grid { grid-template-columns: 1fr !important; }
+          .onboarding-steps { flex-direction: column !important; gap: 8px !important; }
+
+          /* Reduce font sizes on small screens */
+          h1 { font-size: 22px !important; }
+          h2 { font-size: 18px !important; }
+        }
+        @media (max-width: 480px) {
+          .stat-grid-4 { grid-template-columns: 1fr !important; }
+          .project-stats { grid-template-columns: 1fr !important; }
+          .app-main { padding: 16px 12px 72px; }
+          .app-topbar { padding: 0 12px; }
+          .app-nav-mobile { padding: 0 8px; }
         }
         @media (min-width: 769px) {
           .responsive-table .mobile-cards { display: none; }
