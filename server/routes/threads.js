@@ -1,6 +1,7 @@
 const { Router } = require("express");
 const prisma = require("../prisma");
 const { notifyMany } = require("../services/notifications");
+const { validate, createThreadSchema, replyThreadSchema } = require("../middleware/validate");
 const router = Router();
 
 const threadIncludes = {
@@ -120,10 +121,9 @@ router.get("/:id", async (req, res, next) => {
 });
 
 // POST /api/v1/threads — create a new thread
-router.post("/", async (req, res, next) => {
+router.post("/", validate(createThreadSchema), async (req, res, next) => {
   try {
     const { subject, body, targetType, targetProjectId, recipientIds } = req.body;
-    if (!subject || !body) return res.status(400).json({ error: "Subject and message are required" });
 
     const userId = req.user.id;
     const userRole = req.user.role;
@@ -179,10 +179,9 @@ router.post("/", async (req, res, next) => {
 });
 
 // POST /api/v1/threads/:id/reply — add a message to a thread
-router.post("/:id/reply", async (req, res, next) => {
+router.post("/:id/reply", validate(replyThreadSchema), async (req, res, next) => {
   try {
     const { body } = req.body;
-    if (!body) return res.status(400).json({ error: "Message body is required" });
 
     const threadId = parseInt(req.params.id);
     const thread = await prisma.messageThread.findUnique({ where: { id: threadId } });

@@ -6,6 +6,7 @@ const storage = require("../storage");
 const { requireRole } = require("../middleware/auth");
 const { notifyMany } = require("../services/notifications");
 const audit = require("../services/audit");
+const { validate, uploadDocumentSchema } = require("../middleware/validate");
 const router = Router();
 
 // Multer config — store in memory, then pass to storage adapter
@@ -109,12 +110,11 @@ router.get("/:id/download", async (req, res, next) => {
 });
 
 // POST /api/v1/documents/upload — admin uploads a document
-router.post("/upload", requireRole("ADMIN", "GP"), upload.single("file"), async (req, res, next) => {
+router.post("/upload", requireRole("ADMIN", "GP"), upload.single("file"), validate(uploadDocumentSchema), async (req, res, next) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No file provided" });
 
     const { name, category, projectId, status } = req.body;
-    if (!name || !category) return res.status(400).json({ error: "Name and category are required" });
 
     // Generate storage key: documents/<projectId or general>/<timestamp>-<filename>
     const prefix = projectId ? `project-${projectId}` : "general";

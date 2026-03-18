@@ -35,6 +35,8 @@ model User {
   auditLogs            AuditLog[]
   entities             InvestorEntity[]
   loginHistory         LoginHistory[]
+  failedLoginAttempts  Int       @default(0) @map("failed_login_attempts")
+  lockedUntil          DateTime? @map("locked_until")
   resetToken           String?   @map("reset_token")
   resetTokenExpiry     DateTime? @map("reset_token_expiry")
   mfaSecret            String?   @map("mfa_secret")

@@ -4,15 +4,13 @@ const esign = require("../services/esign");
 const { requireRole } = require("../middleware/auth");
 const { notify } = require("../services/notifications");
 const audit = require("../services/audit");
+const { validate, signatureRequestSchema } = require("../middleware/validate");
 const router = Router();
 
 // POST /api/v1/signatures/request — create signature request (ADMIN/GP)
-router.post("/request", requireRole("ADMIN", "GP"), async (req, res, next) => {
+router.post("/request", requireRole("ADMIN", "GP"), validate(signatureRequestSchema), async (req, res, next) => {
   try {
     const { documentId, signerIds, subject, message } = req.body;
-    if (!documentId || !signerIds?.length) {
-      return res.status(400).json({ error: "documentId and signerIds are required" });
-    }
 
     // Validate document exists
     const doc = await prisma.document.findUnique({

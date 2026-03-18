@@ -3,16 +3,13 @@ const router = express.Router();
 const prisma = require("../prisma");
 const { authenticate, requireRole } = require("../middleware/auth");
 const audit = require("../services/audit");
+const { validate, prospectSchema } = require("../middleware/validate");
 
 // ─── POST /api/v1/prospects — PUBLIC (no auth) ───
 // Create a new prospect lead
-router.post("/", async (req, res) => {
+router.post("/", validate(prospectSchema), async (req, res) => {
   try {
     const { name, email, phone, entityType, accreditationStatus, investmentRange, interestedProjectId, message } = req.body;
-
-    if (!name || !email) {
-      return res.status(400).json({ error: "Name and email are required" });
-    }
 
     const prospect = await prisma.prospect.create({
       data: {

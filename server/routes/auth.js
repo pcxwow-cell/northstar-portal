@@ -6,15 +6,13 @@ const { signToken, signMfaToken, verifyMfaToken, authenticate } = require("../mi
 const audit = require("../services/audit");
 const { validatePassword } = require("../services/password");
 const mfa = require("../services/mfa");
+const { validate, loginSchema, changePasswordSchema, forgotPasswordSchema, resetPasswordSchema } = require("../middleware/validate");
 const router = Router();
 
 // POST /api/v1/auth/login
-router.post("/login", async (req, res, next) => {
+router.post("/login", validate(loginSchema), async (req, res, next) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ error: "Email and password required" });
-    }
 
     const user = await prisma.user.findUnique({ where: { email } });
 
@@ -37,12 +35,42 @@ router.post("/login", async (req, res, next) => {
       return res.status(401).json({ error: "Invalid email or password" });
     }
 
+    // Check if account is locked
+    if (user.lockedUntil && new Date(user.lockedUntil) > new Date()) {
+      await recordLogin(user.id, false);
+      const minutesLeft = Math.ceil((new Date(user.lockedUntil) - new Date()) / 60000);
+      return res.status(403).json({
+        error: `Account locked. Try again in ${minutesLeft} minute${minutesLeft !== 1 ? "s" : ""}.`,
+        lockedUntil: user.lockedUntil,
+      });
+    }
+
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
       await recordLogin(user.id, false);
+      const newAttempts = user.failedLoginAttempts + 1;
+      const updateData = { failedLoginAttempts: newAttempts };
+      if (newAttempts >= 5) {
+        updateData.lockedUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+        audit.log(req, "account_locked", `user:${user.id}`, { email: user.email, failedAttempts: newAttempts });
+      }
+      await prisma.user.update({ where: { id: user.id }, data: updateData });
+      if (newAttempts >= 5) {
+        return res.status(403).json({
+          error: "Account locked. Try again in 15 minutes.",
+          lockedUntil: updateData.lockedUntil,
+        });
+      }
       return res.status(401).json({ error: "Invalid email or password" });
     }
 
+    // Successful login — reset failed attempts
+    if (user.failedLoginAttempts > 0 || user.lockedUntil) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { failedLoginAttempts: 0, lockedUntil: null },
+      });
+    }
     await recordLogin(user.id, true);
 
     // If MFA is enabled, return a temporary token and require MFA verification
@@ -109,12 +137,9 @@ router.put("/profile", authenticate, async (req, res, next) => {
 });
 
 // PUT /api/v1/auth/change-password — self-service password change
-router.put("/change-password", authenticate, async (req, res, next) => {
+router.put("/change-password", authenticate, validate(changePasswordSchema), async (req, res, next) => {
   try {
     const { currentPassword, newPassword } = req.body;
-    if (!currentPassword || !newPassword) {
-      return res.status(400).json({ error: "Current password and new password are required" });
-    }
 
     const user = await prisma.user.findUnique({ where: { id: req.user.id } });
     if (!user) return res.status(404).json({ error: "User not found" });
@@ -142,11 +167,9 @@ router.put("/change-password", authenticate, async (req, res, next) => {
 });
 
 // POST /api/v1/auth/forgot-password
-router.post("/forgot-password", async (req, res, next) => {
+router.post("/forgot-password", validate(forgotPasswordSchema), async (req, res, next) => {
   try {
     const { email } = req.body;
-    // Always return success (don't reveal if email exists)
-    if (!email) return res.json({ success: true });
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (user) {
@@ -181,12 +204,9 @@ router.post("/forgot-password", async (req, res, next) => {
 });
 
 // POST /api/v1/auth/reset-password
-router.post("/reset-password", async (req, res, next) => {
+router.post("/reset-password", validate(resetPasswordSchema), async (req, res, next) => {
   try {
     const { token, newPassword } = req.body;
-    if (!token || !newPassword) {
-      return res.status(400).json({ error: "Token and new password are required" });
-    }
 
     const user = await prisma.user.findFirst({
       where: { resetToken: token },

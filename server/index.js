@@ -78,6 +78,10 @@ if (process.env.NODE_ENV === "production") {
 // 404
 app.use((req, res) => res.status(404).json({ error: "Not found" }));
 
+// Error tracking (sends to Sentry if SENTRY_DSN is set, otherwise logs)
+const { errorTrackingMiddleware } = require("./services/errorTracking");
+app.use(errorTrackingMiddleware);
+
 // Error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);

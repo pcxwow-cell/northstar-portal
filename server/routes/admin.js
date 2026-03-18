@@ -4,6 +4,7 @@ const crypto = require("crypto");
 const prisma = require("../prisma");
 const { requireRole } = require("../middleware/auth");
 const audit = require("../services/audit");
+const { validate, createProjectSchema, inviteInvestorSchema } = require("../middleware/validate");
 const router = Router();
 
 // All admin routes require ADMIN or GP role
@@ -24,11 +25,10 @@ router.get("/dashboard", async (req, res, next) => {
 });
 
 // ─── PROJECTS CRUD ───
-router.post("/projects", async (req, res, next) => {
+router.post("/projects", validate(createProjectSchema), async (req, res, next) => {
   try {
     const { name, location, type, status, description, sqft, units, totalRaise,
             estimatedCompletion, unitsSold, revenue, prefReturnPct, gpCatchupPct, carryPct, orgChart } = req.body;
-    if (!name) return res.status(400).json({ error: "Project name is required" });
     const project = await prisma.project.create({
       data: {
         name,
@@ -328,10 +328,9 @@ router.post("/documents/:id/assign", async (req, res, next) => {
 // ─── USER MANAGEMENT ───
 
 // POST /admin/investors/invite — create a new investor with temporary password
-router.post("/investors/invite", async (req, res, next) => {
+router.post("/investors/invite", validate(inviteInvestorSchema), async (req, res, next) => {
   try {
     const { name, email, initials } = req.body;
-    if (!name || !email) return res.status(400).json({ error: "Name and email are required" });
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) return res.status(409).json({ error: "Email already registered" });
@@ -386,6 +385,18 @@ router.post("/investors/:id/approve", async (req, res, next) => {
       data: { status: "ACTIVE" },
     });
     res.json({ id: user.id, name: user.name, status: user.status });
+  } catch (err) { next(err); }
+});
+
+// POST /admin/investors/:id/unlock — manually unlock a locked account
+router.post("/investors/:id/unlock", async (req, res, next) => {
+  try {
+    const user = await prisma.user.update({
+      where: { id: parseInt(req.params.id) },
+      data: { failedLoginAttempts: 0, lockedUntil: null },
+    });
+    audit.log(req, "account_unlocked", `user:${user.id}`, { email: user.email, unlockedBy: req.user.email });
+    res.json({ id: user.id, name: user.name, status: "unlocked" });
   } catch (err) { next(err); }
 });
 

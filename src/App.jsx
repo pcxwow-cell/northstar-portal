@@ -1958,6 +1958,7 @@ function LoginPage({ onLogin, onShowProspects }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [lockedUntil, setLockedUntil] = useState(null);
   const [showForgot, setShowForgot] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
@@ -1987,6 +1988,10 @@ function LoginPage({ onLogin, onShowProspects }) {
       }
       onLogin(result);
     } catch (err) {
+      // Check for lockout response
+      if (err.lockedUntil) {
+        setLockedUntil(new Date(err.lockedUntil));
+      }
       setError(err.message || "Invalid email or password");
       setLoading(false);
     }
@@ -2220,7 +2225,14 @@ function LoginPage({ onLogin, onShowProspects }) {
                   <p style={{ fontSize: 13, color: "#999" }}>Sign in to access your account</p>
                 </div>
                 {error && (
-                  <div style={{ fontSize: 12, color: red, padding: "10px 14px", border: `1px solid ${red}22`, borderRadius: 4, marginBottom: 16, background: `${red}08` }}>{error}</div>
+                  <div style={{ fontSize: 12, color: red, padding: "10px 14px", border: `1px solid ${red}22`, borderRadius: 4, marginBottom: 16, background: `${red}08` }}>
+                    {error}
+                    {lockedUntil && new Date(lockedUntil) > new Date() && (
+                      <div style={{ marginTop: 6, fontSize: 11, color: "#888" }}>
+                        Account locked for security. Try again in {Math.ceil((new Date(lockedUntil) - new Date()) / 60000)} minutes.
+                      </div>
+                    )}
+                  </div>
                 )}
                 <div style={{ marginBottom: 16 }}>
                   <label style={{ display: "block", fontSize: 11, color: "#888", fontWeight: 500, marginBottom: 6 }}>Email</label>

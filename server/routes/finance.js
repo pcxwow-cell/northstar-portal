@@ -4,6 +4,7 @@ const prisma = require("../prisma");
 const { requireRole } = require("../middleware/auth");
 const { calculateXIRR, calculateMOIC, calculateWaterfall, capitalAccountStatement } = require("../services/finance");
 const audit = require("../services/audit");
+const { validate, recordCashFlowSchema } = require("../middleware/validate");
 
 // ─── POST /calculate-irr ────────────────────────────────
 // Body: { cashFlows: [{date, amount}] }
@@ -79,18 +80,9 @@ router.get("/capital-account/:userId/:projectId", async (req, res) => {
 });
 
 // ─── POST /record-cashflow (ADMIN) ──────────────────────
-router.post("/record-cashflow", requireRole("ADMIN", "GP"), async (req, res) => {
+router.post("/record-cashflow", requireRole("ADMIN", "GP"), validate(recordCashFlowSchema), async (req, res) => {
   try {
     const { userId, projectId, date, amount, type, description } = req.body;
-    if (!userId || !projectId || !date || amount == null || !type) {
-      return res.status(400).json({ error: "userId, projectId, date, amount, and type are required" });
-    }
-
-    // Validate type
-    const validTypes = ["capital_call", "distribution", "return_of_capital", "income"];
-    if (!validTypes.includes(type)) {
-      return res.status(400).json({ error: `type must be one of: ${validTypes.join(", ")}` });
-    }
 
     const cashFlow = await prisma.cashFlow.create({
       data: {
