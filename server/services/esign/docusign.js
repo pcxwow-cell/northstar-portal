@@ -25,9 +25,14 @@ let accessToken = null;
 let tokenExpiry = 0;
 
 function getPrivateKey() {
+  // Support private key as env var (for Railway/cloud) or file path
+  if (process.env.DOCUSIGN_PRIVATE_KEY) {
+    // Env var stores the key with \n escaped — restore real newlines
+    return Buffer.from(process.env.DOCUSIGN_PRIVATE_KEY.replace(/\\n/g, "\n"));
+  }
   const keyPath = path.resolve(PRIVATE_KEY_PATH);
   if (!fs.existsSync(keyPath)) {
-    throw new Error(`DocuSign private key not found at ${keyPath}`);
+    throw new Error(`DocuSign private key not found. Set DOCUSIGN_PRIVATE_KEY env var or place PEM file at ${keyPath}`);
   }
   return fs.readFileSync(keyPath);
 }
