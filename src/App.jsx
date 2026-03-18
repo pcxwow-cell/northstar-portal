@@ -2118,9 +2118,9 @@ export default function App() {
   const [themeMode, setThemeMode] = useState(() => localStorage.getItem("northstar_theme") || "light");
   const [view, setView] = useState("overview");
   const [msgs, setMsgs] = useState([]);
-  const [showProspectPortal, setShowProspectPortal] = useState(() => {
-    const hash = window.location.hash;
-    return hash === "#/invest" || hash === "#/opportunities" || hash === "#/about";
+  // Default to prospect portal for unauthenticated visitors, login only on #/login
+  const [showLogin, setShowLogin] = useState(() => {
+    return window.location.hash === "#/login";
   });
   const toast = useToast();
   const th = themes[themeMode];
@@ -2129,10 +2129,10 @@ export default function App() {
   useEffect(() => {
     function onHashChange() {
       const hash = window.location.hash;
-      if (hash === "#/invest" || hash === "#/opportunities" || hash === "#/about") {
-        setShowProspectPortal(true);
-      } else if (hash === "#/login") {
-        setShowProspectPortal(false);
+      if (hash === "#/login") {
+        setShowLogin(true);
+      } else {
+        setShowLogin(false);
       }
     }
     window.addEventListener("hashchange", onHashChange);
@@ -2209,10 +2209,10 @@ export default function App() {
           <NorthstarIcon size={40} color={red} />
           <LoadingSpinner size={28} />
         </div>
-      ) : showProspectPortal ? (
-        <ProspectPortal onNavigateLogin={() => { setShowProspectPortal(false); window.location.hash = "#/login"; }} />
+      ) : showLogin ? (
+        <LoginPage onLogin={handleLogin} onShowProspects={() => { setShowLogin(false); window.location.hash = ""; }} />
       ) : (
-        <LoginPage onLogin={handleLogin} onShowProspects={() => { setShowProspectPortal(true); window.location.hash = "#/invest"; }} />
+        <ProspectPortal onNavigateLogin={() => { setShowLogin(true); window.location.hash = "#/login"; }} />
       )}
     </ThemeContext.Provider>
   );
