@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchDashboard, fetchAdminProjects, updateProject, postUpdate, fetchAdminInvestors, sendMessage, uploadDocument, inviteInvestor, updateInvestor, approveInvestor, deactivateInvestor, resetInvestorPassword, assignInvestorProject, updateInvestorKPI, fetchThreads, fetchThread, createThread, replyToThread, fetchInvestorProfile, fetchGroups, createGroup, updateGroup, deleteGroup, fetchGroupDetail, addGroupMembers, removeGroupMember, fetchStaff, createStaff, updateStaff, fetchAdminDocuments, fetchAdminDocumentDetail, fetchAdminProjectDetail, updateWaterfall, fetchSignatureRequests, createSignatureRequest, cancelSignatureRequest, fetchProspects, updateProspectStatus, fetchProspectStats, fetchCashFlows, recordCashFlow, recalculateProject, fetchAuditLog, createProject, fetchEntities, createEntity, updateEntity, deleteEntity, runFinancialModel, updateCashFlow, deleteCashFlow, fetchProjectCashFlows, fmt, fmtCurrency } from "./api.js";
+import { fetchDashboard, fetchAdminProjects, updateProject, postUpdate, fetchAdminInvestors, sendMessage, uploadDocument, inviteInvestor, updateInvestor, approveInvestor, deactivateInvestor, resetInvestorPassword, assignInvestorProject, updateInvestorKPI, fetchThreads, fetchThread, createThread, replyToThread, fetchInvestorProfile, fetchGroups, createGroup, updateGroup, deleteGroup, fetchGroupDetail, addGroupMembers, removeGroupMember, fetchStaff, createStaff, updateStaff, fetchAdminDocuments, fetchAdminDocumentDetail, fetchAdminProjectDetail, updateWaterfall, fetchSignatureRequests, createSignatureRequest, cancelSignatureRequest, fetchProspects, updateProspectStatus, fetchProspectStats, fetchCashFlows, recordCashFlow, recalculateProject, fetchAuditLog, createProject, fetchEntities, createEntity, updateEntity, deleteEntity, runFinancialModel, updateCashFlow, deleteCashFlow, fetchProjectCashFlows, fetchUserFlags, updateUserFlags, fetchFeatureDefaults, fmt, fmtCurrency } from "./api.js";
 
 const sans = "'DM Sans', -apple-system, sans-serif";
 const red = "#EA2028";
@@ -54,6 +54,7 @@ export default function AdminPanel({ user, onLogout }) {
     { id: "groups", label: "Groups" },
     { id: "staff", label: "Staff" },
     { id: "prospects", label: "Prospects" },
+    { id: "statements", label: "Statements" },
     { id: "inbox", label: "Inbox" },
     { id: "audit", label: "Audit Log" },
   ];
@@ -75,6 +76,7 @@ export default function AdminPanel({ user, onLogout }) {
     groups: <GroupManager toast={showToast} />,
     staff: <StaffManager toast={showToast} />,
     prospects: <ProspectManager toast={showToast} />,
+    statements: <StatementManager toast={showToast} />,
     inbox: <AdminInbox user={user} toast={showToast} />,
     audit: <AuditLogViewer />,
   };
@@ -1962,10 +1964,97 @@ function GroupManager({ toast }) {
 }
 
 // ─── STAFF MANAGER ───
+// ─── TOGGLE SWITCH COMPONENT ───
+function Toggle({ checked, onChange, label }) {
+  return (
+    <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: 13 }}>
+      <div onClick={() => onChange(!checked)} style={{
+        width: 36, height: 20, borderRadius: 10, position: "relative", transition: "background .2s",
+        background: checked ? red : "#DDD", cursor: "pointer",
+      }}>
+        <div style={{
+          width: 16, height: 16, borderRadius: "50%", background: "#fff", position: "absolute", top: 2,
+          left: checked ? 18 : 2, transition: "left .2s", boxShadow: "0 1px 3px rgba(0,0,0,.2)",
+        }} />
+      </div>
+      <span style={{ color: checked ? darkText : "#999" }}>{label}</span>
+    </label>
+  );
+}
+
+// Permission groups for intuitive UI
+const PERMISSION_GROUPS = {
+  "Navigation Access": {
+    description: "Control which pages this user can access",
+    flags: [
+      { key: "dashboard", label: "Dashboard" },
+      { key: "projects", label: "Projects" },
+      { key: "investors", label: "Investors" },
+      { key: "documents", label: "Documents" },
+      { key: "inbox", label: "Inbox / Messages" },
+      { key: "signatures", label: "Signatures" },
+      { key: "finance", label: "Financial Tools" },
+      { key: "prospects", label: "Prospects" },
+      { key: "audit", label: "Audit Log" },
+      { key: "settings", label: "Settings" },
+    ],
+  },
+  "Staff Management": {
+    description: "Who can manage other users",
+    flags: [
+      { key: "staff", label: "Manage Staff" },
+      { key: "inviteUsers", label: "Invite New Users" },
+      { key: "deactivateUsers", label: "Deactivate Users" },
+      { key: "groups", label: "Manage Groups" },
+    ],
+  },
+  "Content Actions": {
+    description: "What actions this user can perform",
+    flags: [
+      { key: "uploadDocuments", label: "Upload Documents" },
+      { key: "editKPIs", label: "Edit Project KPIs" },
+      { key: "manageWaterfall", label: "Configure Waterfall" },
+      { key: "exportData", label: "Export Data (CSV/PDF)" },
+      { key: "bulkOperations", label: "Bulk Operations" },
+    ],
+  },
+  "Audit & Compliance": {
+    description: "Access to sensitive operational data",
+    flags: [
+      { key: "viewAuditLog", label: "View Audit Log" },
+    ],
+  },
+};
+
+// Permission presets
+const PRESETS = {
+  "Full Admin": Object.fromEntries(
+    Object.values(PERMISSION_GROUPS).flatMap(g => g.flags.map(f => [f.key, true]))
+  ),
+  "Project Manager": {
+    dashboard: true, projects: true, investors: true, documents: true, inbox: true, signatures: true,
+    finance: true, prospects: false, audit: false, settings: false, staff: false, inviteUsers: false,
+    deactivateUsers: false, groups: false, uploadDocuments: true, editKPIs: true, manageWaterfall: false,
+    exportData: true, bulkOperations: false, viewAuditLog: false,
+  },
+  "Accounting": {
+    dashboard: true, projects: true, investors: true, documents: true, inbox: false, signatures: false,
+    finance: true, prospects: false, audit: true, settings: false, staff: false, inviteUsers: false,
+    deactivateUsers: false, groups: false, uploadDocuments: true, editKPIs: false, manageWaterfall: false,
+    exportData: true, bulkOperations: false, viewAuditLog: true,
+  },
+  "Read Only": Object.fromEntries(
+    Object.values(PERMISSION_GROUPS).flatMap(g => g.flags.map(f => [f.key, ["dashboard", "projects", "investors", "documents"].includes(f.key)]))
+  ),
+};
+
 function StaffManager({ toast }) {
   const [staff, setStaff] = useState([]);
   const [showAdd, setShowAdd] = useState(false);
   const [name, setName] = useState(""); const [email, setEmail] = useState(""); const [role, setRole] = useState("ADMIN");
+  const [selectedStaff, setSelectedStaff] = useState(null);
+  const [staffFlags, setStaffFlags] = useState(null);
+  const [loadingFlags, setLoadingFlags] = useState(false);
 
   useEffect(() => { loadStaff(); }, []);
   function loadStaff() { fetchStaff().then(setStaff); }
@@ -1981,6 +2070,33 @@ function StaffManager({ toast }) {
 
   async function handleUpdate(id, data) {
     try { await updateStaff(id, data); toast("Updated"); loadStaff(); } catch (e) { toast(e.message, "error"); }
+  }
+
+  async function openPermissions(s) {
+    setSelectedStaff(s);
+    setLoadingFlags(true);
+    try {
+      const data = await fetchUserFlags(s.id);
+      setStaffFlags(data.overrides || {});
+    } catch { setStaffFlags({}); }
+    finally { setLoadingFlags(false); }
+  }
+
+  async function toggleFlag(key, value) {
+    const updated = { ...staffFlags, [key]: value };
+    setStaffFlags(updated);
+    try {
+      await updateUserFlags(selectedStaff.id, { [key]: value });
+    } catch (e) { toast(e.message, "error"); }
+  }
+
+  async function applyPreset(presetName) {
+    const preset = PRESETS[presetName];
+    setStaffFlags(preset);
+    try {
+      await updateUserFlags(selectedStaff.id, preset);
+      toast(`Applied "${presetName}" preset`);
+    } catch (e) { toast(e.message, "error"); }
   }
 
   return (
@@ -2011,25 +2127,243 @@ function StaffManager({ toast }) {
         </form>
       )}
 
-      <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 120px 100px 120px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em" }}>
-          <span>Name</span><span>Email</span><span>Role</span><span>Status</span><span>Actions</span>
+      <div style={{ display: "grid", gridTemplateColumns: selectedStaff ? "1fr 1fr" : "1fr", gap: 24 }}>
+        {/* Staff list */}
+        <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+          <div style={{ padding: "12px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em" }}>
+            {staff.length} Staff Members — click to manage permissions
+          </div>
+          {staff.map(s => (
+            <div key={s.id} onClick={() => openPermissions(s)} style={{
+              padding: "14px 20px", borderBottom: "1px solid #F0EDE8", cursor: "pointer", transition: "background .15s",
+              background: selectedStaff?.id === s.id ? "#FFF5F5" : "#fff",
+              borderLeft: selectedStaff?.id === s.id ? `3px solid ${red}` : "3px solid transparent",
+            }}
+              onMouseEnter={e => { if (selectedStaff?.id !== s.id) e.currentTarget.style.background = "#FAFAF8"; }}
+              onMouseLeave={e => { if (selectedStaff?.id !== s.id) e.currentTarget.style.background = "#fff"; }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontWeight: 500, fontSize: 14 }}>{s.name}</div>
+                  <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>{s.email}</div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <select value={s.role} onChange={e => { e.stopPropagation(); handleUpdate(s.id, { role: e.target.value }); }} onClick={e => e.stopPropagation()} style={{ ...inputStyle, padding: "4px 8px", fontSize: 11, width: "auto" }}>
+                    <option value="ADMIN">Admin</option>
+                    <option value="GP">GP</option>
+                  </select>
+                  <span style={{ padding: "2px 8px", borderRadius: 3, fontSize: 10, background: s.status === "ACTIVE" ? "#EFE" : "#FEE", color: s.status === "ACTIVE" ? green : red }}>{s.status}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+          {staff.length === 0 && <div style={{ padding: 24, color: "#767168", textAlign: "center" }}>No staff members</div>}
         </div>
-        {staff.map(s => (
-          <div key={s.id} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 120px 100px 120px", padding: "14px 20px", borderBottom: "1px solid #F0EDE8", alignItems: "center", fontSize: 13 }}>
-            <span style={{ fontWeight: 500 }}>{s.name}</span>
-            <span style={{ color: "#666" }}>{s.email}</span>
-            <select value={s.role} onChange={e => handleUpdate(s.id, { role: e.target.value })} style={{ ...inputStyle, padding: "4px 8px", fontSize: 12 }}>
-              <option value="ADMIN">Admin</option>
-              <option value="GP">GP</option>
-            </select>
-            <span style={{ padding: "2px 8px", borderRadius: 3, fontSize: 11, background: s.status === "ACTIVE" ? "#EFE" : "#FEE", color: s.status === "ACTIVE" ? green : red }}>{s.status}</span>
-            <button onClick={() => handleUpdate(s.id, { status: s.status === "ACTIVE" ? "INACTIVE" : "ACTIVE" })} style={{ ...btnOutline, padding: "4px 10px", fontSize: 11 }}>
-              {s.status === "ACTIVE" ? "Deactivate" : "Activate"}
-            </button>
+
+        {/* Permissions panel */}
+        {selectedStaff && (
+          <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+            <div style={{ padding: "16px 20px", borderBottom: "1px solid #E8E5DE", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 500 }}>Permissions: {selectedStaff.name}</div>
+                <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>Role: {selectedStaff.role}</div>
+              </div>
+              <button onClick={() => setSelectedStaff(null)} style={{ ...btnOutline, padding: "4px 12px", fontSize: 11 }}>Close</button>
+            </div>
+
+            {/* Quick presets */}
+            <div style={{ padding: "14px 20px", borderBottom: "1px solid #F0EDE8", background: "#FAFAF8" }}>
+              <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 10 }}>Quick Presets</div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {Object.keys(PRESETS).map(p => (
+                  <button key={p} onClick={() => applyPreset(p)} style={{
+                    ...btnOutline, padding: "5px 12px", fontSize: 11, borderRadius: 16,
+                    background: "#fff", borderColor: "#DDD",
+                  }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = red; e.currentTarget.style.color = red; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = "#DDD"; e.currentTarget.style.color = darkText; }}>
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {loadingFlags ? <AdminSpinner /> : (
+              <div style={{ maxHeight: 480, overflowY: "auto" }}>
+                {Object.entries(PERMISSION_GROUPS).map(([groupName, group]) => (
+                  <div key={groupName} style={{ padding: "14px 20px", borderBottom: "1px solid #F0EDE8" }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>{groupName}</div>
+                    <div style={{ fontSize: 11, color: "#999", marginBottom: 12 }}>{group.description}</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                      {group.flags.map(f => (
+                        <Toggle key={f.key} label={f.label} checked={staffFlags?.[f.key] !== false} onChange={v => toggleFlag(f.key, v)} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+// ─── STATEMENT MANAGER ───
+function StatementManager({ toast }) {
+  const [statements, setStatements] = useState([]);
+  const [filter, setFilter] = useState("all");
+  const [generating, setGenerating] = useState(false);
+  const [preview, setPreview] = useState(null);
+
+  useEffect(() => { loadStatements(); }, [filter]);
+
+  async function loadStatements() {
+    try {
+      const qs = filter !== "all" ? `?status=${filter}` : "";
+      const data = await (await fetch(`/api/v1/statements${qs}`, { headers: { Authorization: `Bearer ${localStorage.getItem("northstar_token")}` } })).json();
+      setStatements(Array.isArray(data) ? data : []);
+    } catch { setStatements([]); }
+  }
+
+  async function handleGenerate() {
+    setGenerating(true);
+    try {
+      const res = await fetch("/api/v1/statements/generate", {
+        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("northstar_token")}` },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      toast(`Generated ${data.count} draft statement(s)`);
+      loadStatements();
+    } catch (e) { toast(e.message, "error"); }
+    finally { setGenerating(false); }
+  }
+
+  async function handleApprove(id) {
+    try {
+      await fetch(`/api/v1/statements/${id}/approve`, { method: "POST", headers: { Authorization: `Bearer ${localStorage.getItem("northstar_token")}` } });
+      toast("Statement approved");
+      loadStatements();
+    } catch (e) { toast(e.message, "error"); }
+  }
+
+  async function handleSend(id) {
+    try {
+      await fetch(`/api/v1/statements/${id}/send`, { method: "POST", headers: { Authorization: `Bearer ${localStorage.getItem("northstar_token")}` } });
+      toast("Statement sent");
+      loadStatements();
+    } catch (e) { toast(e.message, "error"); }
+  }
+
+  async function handleReject(id) {
+    try {
+      await fetch(`/api/v1/statements/${id}/reject`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("northstar_token")}` }, body: JSON.stringify({ reason: "Needs revision" }) });
+      toast("Statement reverted to draft");
+      loadStatements();
+    } catch (e) { toast(e.message, "error"); }
+  }
+
+  async function handleBulkApprove() {
+    const ids = statements.filter(s => s.status === "DRAFT").map(s => s.id);
+    if (ids.length === 0) return toast("No drafts to approve", "error");
+    try {
+      await fetch("/api/v1/statements/bulk-approve", {
+        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("northstar_token")}` },
+        body: JSON.stringify({ ids }),
+      });
+      toast(`Approved ${ids.length} statement(s)`);
+      loadStatements();
+    } catch (e) { toast(e.message, "error"); }
+  }
+
+  async function handleBulkSend() {
+    const ids = statements.filter(s => s.status === "APPROVED").map(s => s.id);
+    if (ids.length === 0) return toast("No approved statements to send", "error");
+    try {
+      await fetch("/api/v1/statements/bulk-send", {
+        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("northstar_token")}` },
+        body: JSON.stringify({ ids }),
+      });
+      toast(`Sent ${ids.length} statement(s)`);
+      loadStatements();
+    } catch (e) { toast(e.message, "error"); }
+  }
+
+  const statusColors = { DRAFT: { bg: "#FFF8E1", text: "#B8860B" }, APPROVED: { bg: "#E8F5E9", text: green }, SENT: { bg: "#E3F2FD", text: "#1565C0" } };
+  const drafts = statements.filter(s => s.status === "DRAFT").length;
+  const approved = statements.filter(s => s.status === "APPROVED").length;
+  const sent = statements.filter(s => s.status === "SENT").length;
+
+  return (
+    <>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <div>
+          <h1 style={{ fontSize: 28, fontWeight: 300 }}>Statements</h1>
+          <p style={{ fontSize: 13, color: "#767168", marginTop: 4 }}>Generate, review, and send capital account statements</p>
+        </div>
+        <button onClick={handleGenerate} disabled={generating} style={btnStyle}>
+          {generating ? "Generating..." : "Generate All"}
+        </button>
+      </div>
+
+      {/* Workflow status cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 24 }}>
+        {[
+          { label: "Drafts", count: drafts, color: "#B8860B", action: drafts > 0 ? "Approve All" : null, onClick: handleBulkApprove },
+          { label: "Approved", count: approved, color: green, action: approved > 0 ? "Send All" : null, onClick: handleBulkSend },
+          { label: "Sent", count: sent, color: "#1565C0", action: null },
+        ].map((c, i) => (
+          <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontSize: 28, fontWeight: 300, color: c.color }}>{c.count}</div>
+                <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>{c.label}</div>
+              </div>
+              {c.action && <button onClick={c.onClick} style={{ ...btnOutline, padding: "6px 14px", fontSize: 11, color: c.color, borderColor: c.color }}>{c.action}</button>}
+            </div>
           </div>
         ))}
-        {staff.length === 0 && <div style={{ padding: 24, color: "#767168", textAlign: "center" }}>No staff members</div>}
+      </div>
+
+      {/* Filter tabs */}
+      <div style={{ display: "flex", gap: 0, marginBottom: 16, background: "#fff", borderRadius: 8, overflow: "hidden", border: "1px solid #E8E5DE" }}>
+        {["all", "DRAFT", "APPROVED", "SENT"].map(f => (
+          <button key={f} onClick={() => setFilter(f)} style={{
+            padding: "8px 20px", fontSize: 12, border: "none", cursor: "pointer", fontFamily: sans, flex: 1,
+            background: filter === f ? red : "#fff", color: filter === f ? "#fff" : "#666",
+            transition: "background .15s, color .15s",
+          }}>{f === "all" ? "All" : f.charAt(0) + f.slice(1).toLowerCase()}</button>
+        ))}
+      </div>
+
+      {/* Statement list */}
+      <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+        {statements.length === 0 ? (
+          <AdminEmpty title="No statements" subtitle="Click 'Generate All' to create draft statements for all investors" />
+        ) : statements.map((s, i) => (
+          <div key={s.id} style={{ padding: "14px 20px", borderBottom: i < statements.length - 1 ? "1px solid #F0EDE8" : "none", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <div style={{ fontWeight: 500, fontSize: 14 }}>{s.investorName}</div>
+              <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>{s.projectName} · Created {new Date(s.createdAt).toLocaleDateString()}</div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{
+                padding: "3px 10px", borderRadius: 4, fontSize: 11, fontWeight: 500,
+                background: statusColors[s.status]?.bg || "#F5F5F5",
+                color: statusColors[s.status]?.text || "#666",
+              }}>{s.status}</span>
+              {s.status === "DRAFT" && <button onClick={() => handleApprove(s.id)} style={{ ...btnOutline, padding: "4px 12px", fontSize: 11, color: green, borderColor: green }}>Approve</button>}
+              {s.status === "APPROVED" && (
+                <>
+                  <button onClick={() => handleSend(s.id)} style={{ ...btnStyle, padding: "4px 12px", fontSize: 11 }}>Send</button>
+                  <button onClick={() => handleReject(s.id)} style={{ ...btnOutline, padding: "4px 12px", fontSize: 11, color: "#999" }}>Reject</button>
+                </>
+              )}
+              {s.status === "SENT" && s.sentAt && <span style={{ fontSize: 11, color: "#999" }}>Sent {new Date(s.sentAt).toLocaleDateString()}</span>}
+            </div>
+          </div>
+        ))}
       </div>
     </>
   );
