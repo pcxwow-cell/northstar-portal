@@ -113,10 +113,29 @@ const signatureRequestSchema = z.object({
   message: z.string().optional(),
 });
 
+const calculateIrrSchema = z.object({
+  cashFlows: z.array(z.object({
+    date: z.string().min(1, 'Date is required'),
+    amount: z.number({ required_error: 'Amount is required' }),
+  })).min(2, 'At least 2 cash flows required for IRR calculation'),
+});
+
+const calculateWaterfallSchema = z.object({
+  totalDistributable: z.number().min(0, 'Must be non-negative'),
+  structure: z.object({
+    prefReturnPct: z.number().min(0).max(100, 'Must be 0-100%'),
+    gpCatchupPct: z.number().min(0).max(100, 'Must be 0-100%'),
+    carryPct: z.number().min(0).max(100, 'Must be 0-100%'),
+    lpCapital: z.number().min(0, 'Must be non-negative'),
+    holdPeriodYears: z.number().min(0.01).max(100, 'Must be 0.01-100 years'),
+  }),
+});
+
 module.exports = {
   validate,
   loginSchema, changePasswordSchema, forgotPasswordSchema, resetPasswordSchema,
   createProjectSchema, inviteInvestorSchema, recordCashFlowSchema,
   prospectSchema, createThreadSchema, replyThreadSchema,
   uploadDocumentSchema, signatureRequestSchema,
+  calculateIrrSchema, calculateWaterfallSchema,
 };

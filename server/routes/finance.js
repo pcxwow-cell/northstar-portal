@@ -4,16 +4,13 @@ const prisma = require("../prisma");
 const { requireRole } = require("../middleware/auth");
 const { calculateXIRR, calculateMOIC, calculateWaterfall, capitalAccountStatement } = require("../services/finance");
 const audit = require("../services/audit");
-const { validate, recordCashFlowSchema } = require("../middleware/validate");
+const { validate, recordCashFlowSchema, calculateIrrSchema, calculateWaterfallSchema } = require("../middleware/validate");
 
 // ─── POST /calculate-irr ────────────────────────────────
 // Body: { cashFlows: [{date, amount}] }
-router.post("/calculate-irr", (req, res) => {
+router.post("/calculate-irr", validate(calculateIrrSchema), (req, res) => {
   try {
     const { cashFlows } = req.body;
-    if (!cashFlows || !Array.isArray(cashFlows)) {
-      return res.status(400).json({ error: "cashFlows array is required" });
-    }
     const irr = calculateXIRR(cashFlows);
     res.json({ irr });
   } catch (err) {
@@ -23,12 +20,9 @@ router.post("/calculate-irr", (req, res) => {
 
 // ─── POST /calculate-waterfall ──────────────────────────
 // Body: { totalDistributable, structure: { prefReturnPct, gpCatchupPct, carryPct, lpCapital, holdPeriodYears } }
-router.post("/calculate-waterfall", (req, res) => {
+router.post("/calculate-waterfall", validate(calculateWaterfallSchema), (req, res) => {
   try {
     const { totalDistributable, structure } = req.body;
-    if (totalDistributable == null || !structure) {
-      return res.status(400).json({ error: "totalDistributable and structure are required" });
-    }
     const result = calculateWaterfall(totalDistributable, structure);
     res.json(result);
   } catch (err) {
