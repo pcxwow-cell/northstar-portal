@@ -113,6 +113,11 @@ export async function getMe() {
   return apiFetch("/auth/me");
 }
 
+export async function updateProfile(data) {
+  if (_demoMode) return data;
+  return apiFetch("/auth/profile", { method: "PUT", body: JSON.stringify(data) });
+}
+
 export function logout() {
   setToken(null);
   localStorage.removeItem("northstar_demo_role");

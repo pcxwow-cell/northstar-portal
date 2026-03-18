@@ -57,6 +57,22 @@ router.get("/me", authenticate, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// PUT /api/v1/auth/profile — investor updates own profile
+router.put("/profile", authenticate, async (req, res, next) => {
+  try {
+    const { name, email, initials } = req.body;
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        ...(name !== undefined && { name }),
+        ...(email !== undefined && { email }),
+        ...(initials !== undefined && { initials }),
+      },
+    });
+    res.json({ id: user.id, name: user.name, email: user.email, initials: user.initials });
+  } catch (err) { next(err); }
+});
+
 // POST /api/v1/auth/logout — client-side token deletion, server just acknowledges
 router.post("/logout", (req, res) => {
   res.json({ message: "Logged out" });

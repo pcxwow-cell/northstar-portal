@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef, createContext, useContext } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-import { login as apiLogin, logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, downloadDocument, fetchThreads, fetchThread, createThread, replyToThread, fmt, fmtCurrency } from "./api.js";
+import { login as apiLogin, logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, downloadDocument, fetchThreads, fetchThread, createThread, replyToThread, updateProfile, fmt, fmtCurrency } from "./api.js";
 import AdminPanel from "./Admin.jsx";
 
 // ─── THEME ───────────────────────────────────────────────
@@ -185,7 +185,7 @@ function Overview({ onNavigate, investor, projects, myProjects, allDistributions
   return (
     <>
       {/* Hero */}
-      <div style={{ marginBottom: 48 }}>
+      <div style={{ marginBottom: 32 }}>
         <p style={{ fontSize: 11, letterSpacing: ".14em", textTransform: "uppercase", color: t3, marginBottom: 10 }}>
           Your Investments
         </p>
@@ -196,6 +196,30 @@ function Overview({ onNavigate, investor, projects, myProjects, allDistributions
           Northstar Pacific Development Group · {investor.role}
         </p>
       </div>
+
+      {/* Portfolio summary cards */}
+      {(() => {
+        const totalContributed = myProjects.reduce((s, p) => s + (p.investorCommitted || 0), 0);
+        const totalValue = myProjects.reduce((s, p) => s + (p.currentValue || 0), 0);
+        const totalDistributed = allDistributions.reduce((s, d) => s + d.amount, 0);
+        const gainLoss = totalValue + totalDistributed - totalContributed;
+        return (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 1, background: line, borderRadius: 2, overflow: "hidden", marginBottom: 48 }}>
+            {[
+              { label: "Total Contributed", value: `$${fmt(totalContributed)}`, sub: `across ${myProjects.length} projects` },
+              { label: "Current Value", value: `$${fmt(totalValue)}`, sub: gainLoss >= 0 ? `+$${fmt(gainLoss)} gain` : `-$${fmt(Math.abs(gainLoss))} loss`, subColor: gainLoss >= 0 ? green : red },
+              { label: "Total Distributed", value: `$${fmt(totalDistributed)}`, sub: `${allDistributions.length} payments` },
+              { label: "Weighted IRR", value: `${(myProjects.reduce((s, p) => s + (p.irr || 0) * (p.investorCommitted || 0), 0) / (totalContributed || 1)).toFixed(1)}%`, sub: "blended across projects" },
+            ].map((s, i) => (
+              <div key={i} style={{ background: surface, padding: "20px 24px" }}>
+                <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: t3, marginBottom: 6 }}>{s.label}</div>
+                <div style={{ fontFamily: serif, fontSize: 26, fontWeight: 300, color: t1 }}>{s.value}</div>
+                <div style={{ fontSize: 11, color: s.subColor || t3, marginTop: 4 }}>{s.sub}</div>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Project cards */}
       <SectionHeader title="Projects" right={<span style={{ color: red, cursor: "pointer" }} onClick={() => onNavigate("portfolio")}>View details →</span>} />
@@ -331,6 +355,33 @@ function Portfolio({ myProjects }) {
             </div>
           ))}
         </div>
+        {/* Capital Account Statement */}
+        <SectionHeader title="Capital Account" />
+        <div style={{ border: `1px solid ${line}`, borderRadius: 2, overflow: "hidden", marginBottom: 40 }}>
+          {(() => {
+            const contributed = project.investorCalled || project.investorCommitted || 0;
+            const distributed = (project.distributions || []).reduce((s, d) => s + d.amount, 0);
+            const endingBalance = project.currentValue || 0;
+            const unrealizedGain = endingBalance - contributed + distributed;
+            const rows = [
+              { label: "Capital Committed", value: project.investorCommitted },
+              { label: "Capital Called / Contributed", value: contributed },
+              { label: "Unfunded Commitment", value: (project.investorCommitted || 0) - contributed },
+              { label: "Total Distributions Received", value: distributed },
+              { label: "Current Value (NAV)", value: endingBalance },
+              { label: "Unrealized Gain / (Loss)", value: unrealizedGain, highlight: true },
+            ];
+            return rows.map((r, i) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "12px 20px", borderBottom: i < rows.length - 1 ? `1px solid ${line}` : "none", background: r.highlight ? `${line}44` : "transparent" }}>
+                <span style={{ fontSize: 13, color: r.highlight ? t1 : t2, fontWeight: r.highlight ? 500 : 400 }}>{r.label}</span>
+                <span style={{ fontSize: 13, fontWeight: r.highlight ? 600 : 400, color: r.highlight ? (r.value >= 0 ? green : red) : t1 }}>
+                  {r.value < 0 ? `-$${fmt(Math.abs(r.value))}` : `$${fmt(r.value)}`}
+                </span>
+              </div>
+            ));
+          })()}
+        </div>
+
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48, marginBottom: 40 }}>
           <div>
             <SectionHeader title="About" />
@@ -359,6 +410,24 @@ function Portfolio({ myProjects }) {
             ))}
           </div>
         </div>
+
+        {/* Project Documents */}
+        {project.documents && project.documents.length > 0 && (
+          <>
+            <SectionHeader title="Documents" />
+            <div style={{ border: `1px solid ${line}`, borderRadius: 2, overflow: "hidden", marginBottom: 40 }}>
+              {project.documents.map((d, i) => (
+                <div key={d.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: i < project.documents.length - 1 ? `1px solid ${line}` : "none" }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 400, color: t1 }}>{d.name}</div>
+                    <div style={{ fontSize: 11, color: t3, marginTop: 2 }}>{d.category} · {d.date} · {d.size}</div>
+                  </div>
+                  <span onClick={() => downloadDocument(d.id).catch(() => {})} style={{ fontSize: 12, color: red, cursor: "pointer" }}>Download</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </>
     );
   }
@@ -689,7 +758,7 @@ function MessagesPage({ toast, investor }) {
   useEffect(() => { loadThreads(); }, []);
 
   async function loadThreads() {
-    try { const t = await fetchThreads(); setThreads(t); } catch (e) { console.error(e); }
+    try { const t = await fetchThreads(); setThreads(t); } catch (e) { if (!e.message?.includes("unreachable")) console.error(e); }
     finally { setLoading(false); }
   }
 
@@ -858,6 +927,93 @@ function MessagesPage({ toast, investor }) {
           ))}
         </div>
       )}
+    </>
+  );
+}
+
+// ─── PAGE: PROFILE ──────────────────────────────────────
+function ProfilePage({ investor, toast, onUpdate }) {
+  const { bg, surface, line, t1, t2, t3 } = useTheme();
+  const [name, setName] = useState(investor.name);
+  const [email, setEmail] = useState(investor.email);
+  const [initials, setInitials] = useState(investor.initials || "");
+  const [saving, setSaving] = useState(false);
+
+  async function handleSave(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const updated = await updateProfile({ name, email, initials });
+      onUpdate(updated);
+      toast.add("Profile updated", "success");
+    } catch (err) {
+      toast.add(err.message || "Failed to update", "error");
+    } finally { setSaving(false); }
+  }
+
+  const inputStyle = { width: "100%", padding: "12px 14px", background: "transparent", border: `1px solid ${line}`, borderRadius: 4, color: t1, fontSize: 14, fontFamily: sans, outline: "none", boxSizing: "border-box", transition: "border-color .15s" };
+
+  return (
+    <>
+      <div style={{ marginBottom: 40 }}>
+        <h1 style={{ fontFamily: serif, fontSize: 36, fontWeight: 300 }}>Profile</h1>
+        <p style={{ fontSize: 14, color: t2, marginTop: 6 }}>Manage your account information</p>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48 }}>
+        {/* Profile form */}
+        <form onSubmit={handleSave}>
+          <div style={{ border: `1px solid ${line}`, borderRadius: 4, padding: "28px 24px", background: surface }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 28 }}>
+              <div style={{ width: 56, height: 56, borderRadius: "50%", background: `${red}15`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 600, color: red }}>
+                {initials || name.split(" ").map(n => n[0]).join("")}
+              </div>
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 500, color: t1 }}>{name}</div>
+                <div style={{ fontSize: 12, color: t3 }}>{investor.role} · Joined {investor.joined}</div>
+              </div>
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", fontSize: 11, color: t3, fontWeight: 500, marginBottom: 6 }}>Full Name</label>
+              <input value={name} onChange={e => setName(e.target.value)} style={inputStyle} />
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", fontSize: 11, color: t3, fontWeight: 500, marginBottom: 6 }}>Email</label>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} />
+            </div>
+            <div style={{ marginBottom: 24 }}>
+              <label style={{ display: "block", fontSize: 11, color: t3, fontWeight: 500, marginBottom: 6 }}>Initials</label>
+              <input value={initials} onChange={e => setInitials(e.target.value)} maxLength={3} style={{ ...inputStyle, width: 80 }} />
+            </div>
+            <button type="submit" disabled={saving} style={{
+              padding: "10px 24px", background: saving ? `${red}88` : red, color: "#fff",
+              border: "none", borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: saving ? "default" : "pointer",
+            }}>
+              {saving ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
+        </form>
+
+        {/* Account info */}
+        <div>
+          <div style={{ border: `1px solid ${line}`, borderRadius: 4, padding: "28px 24px", background: surface, marginBottom: 16 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: t3, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 16 }}>Investment Summary</div>
+            {(investor.projectIds || []).length > 0 ? (
+              <div style={{ fontSize: 13, color: t2 }}>
+                <div style={{ marginBottom: 8 }}>Active Projects: <strong>{investor.projectIds.length}</strong></div>
+                <div>Account Status: <span style={{ padding: "2px 8px", borderRadius: 3, fontSize: 11, background: `${green}20`, color: green }}>Active</span></div>
+              </div>
+            ) : (
+              <div style={{ fontSize: 13, color: t3, fontStyle: "italic" }}>No active investments</div>
+            )}
+          </div>
+          <div style={{ border: `1px solid ${line}`, borderRadius: 4, padding: "28px 24px", background: surface }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: t3, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 16 }}>Security</div>
+            <div style={{ fontSize: 13, color: t2, marginBottom: 8 }}>Password: ••••••••</div>
+            <div style={{ fontSize: 12, color: t3 }}>Contact admin to change password</div>
+          </div>
+        </div>
+      </div>
     </>
   );
 }
@@ -1149,6 +1305,7 @@ export default function App() {
     documents: <DocumentsPage toast={toast} allDocuments={allDocuments} myProjects={myProjects} investor={investor} />,
     distributions: <DistributionsPage allDistributions={allDistributions} myProjects={myProjects} />,
     messages: <MessagesPage toast={toast} investor={investor} />,
+    profile: <ProfilePage investor={investor} toast={toast} onUpdate={(u) => setAppData(prev => ({ ...prev, investor: { ...prev.investor, ...u } }))} />,
   };
 
   const navItems = [
@@ -1158,6 +1315,7 @@ export default function App() {
     { id: "documents", label: "Documents" },
     { id: "distributions", label: "Distributions" },
     { id: "messages", label: "Messages" },
+    { id: "profile", label: "Profile" },
   ];
 
   return (
