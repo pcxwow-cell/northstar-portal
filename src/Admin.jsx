@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchDashboard, fetchAdminProjects, updateProject, postUpdate, fetchAdminInvestors, sendMessage, uploadDocument, inviteInvestor, updateInvestor, approveInvestor, deactivateInvestor, resetInvestorPassword, assignInvestorProject, updateInvestorKPI, fetchThreads, fetchThread, createThread, replyToThread, fetchInvestorProfile, fetchGroups, createGroup, updateGroup, deleteGroup, fetchGroupDetail, addGroupMembers, removeGroupMember, fetchStaff, createStaff, updateStaff, fetchAdminDocuments, fetchAdminDocumentDetail, fetchAdminProjectDetail, updateWaterfall, fetchSignatureRequests, createSignatureRequest, cancelSignatureRequest, fetchProspects, updateProspectStatus, fetchProspectStats, fetchCashFlows, recordCashFlow, recalculateProject, fetchAuditLog, createProject, fetchEntities, createEntity, updateEntity, deleteEntity, runFinancialModel, updateCashFlow, deleteCashFlow, fetchProjectCashFlows, fetchUserFlags, updateUserFlags, fetchFeatureDefaults, fmt, fmtCurrency } from "./api.js";
+import { fetchDashboard, fetchAdminProjects, updateProject, postUpdate, fetchAdminInvestors, sendMessage, uploadDocument, bulkUploadK1, inviteInvestor, updateInvestor, approveInvestor, deactivateInvestor, resetInvestorPassword, assignInvestorProject, updateInvestorKPI, fetchThreads, fetchThread, createThread, replyToThread, fetchInvestorProfile, fetchGroups, createGroup, updateGroup, deleteGroup, fetchGroupDetail, addGroupMembers, removeGroupMember, fetchStaff, createStaff, updateStaff, fetchAdminDocuments, fetchAdminDocumentDetail, fetchAdminProjectDetail, updateWaterfall, fetchSignatureRequests, createSignatureRequest, cancelSignatureRequest, fetchProspects, updateProspectStatus, fetchProspectStats, fetchCashFlows, recordCashFlow, recalculateProject, fetchAuditLog, createProject, fetchEntities, createEntity, updateEntity, deleteEntity, runFinancialModel, updateCashFlow, deleteCashFlow, fetchProjectCashFlows, fetchUserFlags, updateUserFlags, fetchFeatureDefaults, fmt, fmtCurrency } from "./api.js";
 
 const sans = "'DM Sans', -apple-system, sans-serif";
 const red = "#EA2028";
@@ -1158,6 +1158,12 @@ function DocumentManager({ toast, hideHeader }) {
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [docDetail, setDocDetail] = useState(null);
   const [showUpload, setShowUpload] = useState(false);
+  const [showBulkK1, setShowBulkK1] = useState(false);
+  const [bulkK1Files, setBulkK1Files] = useState(null);
+  const [bulkK1Project, setBulkK1Project] = useState("");
+  const [bulkK1Year, setBulkK1Year] = useState(new Date().getFullYear().toString());
+  const [bulkK1Results, setBulkK1Results] = useState(null);
+  const [bulkUploading, setBulkUploading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showSignModal, setShowSignModal] = useState(false);
   const [sigInvestors, setSigInvestors] = useState([]);
@@ -1368,8 +1374,63 @@ function DocumentManager({ toast, hideHeader }) {
       </div>}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <p style={{ fontSize: 13, color: "#767168" }}>{hideHeader ? `${docs.length} documents` : ""}</p>
-        <button onClick={() => setShowUpload(true)} style={btnStyle}>Upload Document</button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => { setShowBulkK1(!showBulkK1); setShowUpload(false); }} style={btnOutline}>{showBulkK1 ? "Cancel" : "Bulk K-1 Upload"}</button>
+          <button onClick={() => { setShowUpload(true); setShowBulkK1(false); }} style={btnStyle}>Upload Document</button>
+        </div>
       </div>
+
+      {/* Bulk K-1 Upload */}
+      {showBulkK1 && (
+        <div style={{ background: "#fff", borderRadius: 12, padding: "24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", marginBottom: 24 }}>
+          <div style={{ fontSize: 16, fontWeight: 500, marginBottom: 16 }}>Bulk K-1 Upload</div>
+          <p style={{ fontSize: 12, color: "#767168", marginBottom: 16 }}>Upload multiple K-1 documents at once. Files are auto-matched to investors by name in the filename (e.g., "K1_JamesChen_2025.pdf").</p>
+          <div className="admin-form-row" style={{ display: "flex", gap: 12, alignItems: "flex-end", marginBottom: 16 }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: "block", fontSize: 11, color: "#888", marginBottom: 4 }}>Select K-1 Files</label>
+              <input type="file" multiple accept=".pdf" onChange={e => setBulkK1Files(e.target.files)} style={{ fontSize: 13 }} />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: 11, color: "#888", marginBottom: 4 }}>Tax Year</label>
+              <input value={bulkK1Year} onChange={e => setBulkK1Year(e.target.value)} style={{ ...inputStyle, width: 80 }} />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: 11, color: "#888", marginBottom: 4 }}>Project (optional)</label>
+              <select value={bulkK1Project} onChange={e => setBulkK1Project(e.target.value)} style={{ ...inputStyle, width: 160 }}>
+                <option value="">General</option>
+                {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+            <button disabled={!bulkK1Files || bulkUploading} onClick={async () => {
+              setBulkUploading(true);
+              try {
+                const fd = new FormData();
+                for (const f of bulkK1Files) fd.append("files", f);
+                if (bulkK1Project) fd.append("projectId", bulkK1Project);
+                fd.append("taxYear", bulkK1Year);
+                const result = await bulkUploadK1(fd);
+                setBulkK1Results(result);
+                toast(`Uploaded ${result.total} K-1s: ${result.matched} matched, ${result.unmatched} unmatched`);
+                reload();
+              } catch (err) { toast(err.message, "error"); }
+              setBulkUploading(false);
+            }} style={btnStyle}>{bulkUploading ? "Uploading..." : "Upload All"}</button>
+          </div>
+          {bulkK1Results && (
+            <div style={{ borderTop: "1px solid #F0EDE8", paddingTop: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>Results: {bulkK1Results.matched} matched, {bulkK1Results.unmatched} unmatched</div>
+              {bulkK1Results.results.map((r, i) => (
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #F8F7F4", fontSize: 12 }}>
+                  <span>{r.filename}</span>
+                  <span style={{ color: r.status === "matched" ? green : red, fontWeight: 500 }}>
+                    {r.status === "matched" ? `Matched → ${r.matched.name}` : "Unmatched — assign manually"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Filters */}
       <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>

@@ -456,6 +456,24 @@ export async function uploadDocument(formData) {
   return res.json();
 }
 
+export async function bulkUploadK1(formData) {
+  if (_demoMode) return { total: 2, matched: 1, unmatched: 1, results: [
+    { filename: "K1_JamesChen_2025.pdf", documentId: 99, matched: { id: 1, name: "James Chen" }, status: "matched" },
+    { filename: "K1_Unknown_2025.pdf", documentId: 100, matched: null, status: "unmatched" },
+  ]};
+  const token = getToken();
+  const res = await fetch(`${API_BASE}/documents/bulk-k1`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || "Bulk upload failed");
+  }
+  return res.json();
+}
+
 // ─── Signatures ───
 const _demoSignatures = [];
 

@@ -189,4 +189,88 @@ router.post("/upload", requireRole("ADMIN", "GP"), upload.single("file"), valida
   } catch (err) { next(err); }
 });
 
+// POST /api/v1/documents/bulk-k1 — bulk upload K-1 documents with auto-matching
+router.post("/bulk-k1", requireRole("ADMIN", "GP"), upload.array("files", 50), async (req, res, next) => {
+  try {
+    if (!req.files || req.files.length === 0) return res.status(400).json({ error: "No files provided" });
+
+    const { projectId, taxYear } = req.body;
+
+    // Get all investors for matching
+    const investors = await prisma.user.findMany({
+      where: { role: "INVESTOR" },
+      select: { id: true, name: true, email: true },
+    });
+
+    const results = [];
+
+    for (const file of req.files) {
+      const filename = file.originalname.replace(/\.[^.]+$/, ""); // strip extension
+
+      // Auto-match by investor name in filename
+      // Patterns: "K-1_JamesChen_2025", "K1-James Chen-2025", "james.chen_k1", etc.
+      const cleanName = filename.toLowerCase().replace(/[_\-\.]/g, " ").replace(/k\s*1/g, "").replace(/\d{4}/g, "").trim();
+      let matched = null;
+
+      for (const inv of investors) {
+        const invNameClean = inv.name.toLowerCase().replace(/\s+/g, "");
+        const invNameParts = inv.name.toLowerCase().split(/\s+/);
+        const fileNameClean = cleanName.replace(/\s+/g, "");
+
+        // Match: full name (no spaces), or first+last name parts in filename
+        if (fileNameClean.includes(invNameClean) || invNameParts.every(part => cleanName.includes(part))) {
+          matched = inv;
+          break;
+        }
+      }
+
+      // Upload file
+      const prefix = projectId ? `project-${projectId}` : "general";
+      const storageKey = `documents/${prefix}/k1-${Date.now()}-${file.originalname}`;
+      await storage.upload(storageKey, file.buffer, file.mimetype);
+
+      const bytes = file.size;
+      const size = bytes >= 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`;
+      const year = taxYear || new Date().getFullYear().toString();
+
+      // Create document record
+      const doc = await prisma.document.create({
+        data: {
+          name: `K-1 Tax Document — ${matched ? matched.name : "Unmatched"} (${year})`,
+          category: "Tax",
+          date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+          size,
+          status: matched ? "action_required" : "pending",
+          file: `/documents/${storageKey}`,
+          storageKey,
+          ...(projectId ? { projectId: parseInt(projectId) } : {}),
+        },
+      });
+
+      // Assign to matched investor
+      if (matched) {
+        await prisma.documentAssignment.create({
+          data: { documentId: doc.id, userId: matched.id },
+        });
+      }
+
+      results.push({
+        filename: file.originalname,
+        documentId: doc.id,
+        matched: matched ? { id: matched.id, name: matched.name } : null,
+        status: matched ? "matched" : "unmatched",
+      });
+
+      audit.log(req, "document_upload", `document:${doc.id}`, { name: doc.name, category: "Tax", bulk: true, matched: !!matched });
+    }
+
+    res.status(201).json({
+      total: results.length,
+      matched: results.filter(r => r.status === "matched").length,
+      unmatched: results.filter(r => r.status === "unmatched").length,
+      results,
+    });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;
