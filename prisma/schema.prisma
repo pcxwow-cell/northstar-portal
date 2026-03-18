@@ -31,6 +31,7 @@ model User {
   signerRecords        SignatureSigner[]  @relation("signerUser")
   notificationLogs     NotificationLog[]
   notificationPrefs    NotificationPreference?
+  cashFlows            CashFlow[]
 
   @@map("users")
 }
@@ -62,6 +63,7 @@ model Project {
   targetedMessages   Message[] @relation("messageTarget")
   targetedThreads    MessageThread[] @relation("threadTarget")
   prospects          Prospect[]
+  cashFlows          CashFlow[]
 
   @@map("projects")
 }
@@ -383,4 +385,22 @@ model Prospect {
   interestedProject Project? @relation(fields: [interestedProjectId], references: [id])
 
   @@map("prospects")
+}
+
+// ─── CASH FLOWS (financial engine) ────────────────────────
+
+model CashFlow {
+  id          Int      @id @default(autoincrement())
+  projectId   Int      @map("project_id")
+  userId      Int      @map("user_id")
+  date        DateTime
+  amount      Float    // negative = capital call/investment, positive = distribution
+  type        String   // capital_call | distribution | return_of_capital | income
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@map("cash_flows")
 }

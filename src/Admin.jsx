@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchDashboard, fetchAdminProjects, updateProject, postUpdate, fetchAdminInvestors, sendMessage, uploadDocument, inviteInvestor, updateInvestor, approveInvestor, deactivateInvestor, resetInvestorPassword, assignInvestorProject, updateInvestorKPI, fetchThreads, fetchThread, createThread, replyToThread, fetchInvestorProfile, fetchGroups, createGroup, updateGroup, deleteGroup, fetchGroupDetail, addGroupMembers, removeGroupMember, fetchStaff, createStaff, updateStaff, fetchAdminDocuments, fetchAdminDocumentDetail, fetchAdminProjectDetail, updateWaterfall, fetchSignatureRequests, createSignatureRequest, cancelSignatureRequest, fetchProspects, updateProspectStatus, fetchProspectStats, fmt, fmtCurrency } from "./api.js";
+import { fetchDashboard, fetchAdminProjects, updateProject, postUpdate, fetchAdminInvestors, sendMessage, uploadDocument, inviteInvestor, updateInvestor, approveInvestor, deactivateInvestor, resetInvestorPassword, assignInvestorProject, updateInvestorKPI, fetchThreads, fetchThread, createThread, replyToThread, fetchInvestorProfile, fetchGroups, createGroup, updateGroup, deleteGroup, fetchGroupDetail, addGroupMembers, removeGroupMember, fetchStaff, createStaff, updateStaff, fetchAdminDocuments, fetchAdminDocumentDetail, fetchAdminProjectDetail, updateWaterfall, fetchSignatureRequests, createSignatureRequest, cancelSignatureRequest, fetchProspects, updateProspectStatus, fetchProspectStats, fetchCashFlows, recordCashFlow, recalculateProject, fmt, fmtCurrency } from "./api.js";
 
 const sans = "'DM Sans', -apple-system, sans-serif";
 const red = "#EA2028";
@@ -354,9 +354,62 @@ function ProjectDetail({ projectId, onBack, toast }) {
   const [tab, setTab] = useState("overview");
   const [updateText, setUpdateText] = useState("");
   const [editingKPI, setEditingKPI] = useState(null);
+  const [cashFlowsList, setCashFlowsList] = useState([]);
+  const [cfInvestors, setCfInvestors] = useState([]);
+  const [showCfModal, setShowCfModal] = useState(false);
+  const [cfDate, setCfDate] = useState("");
+  const [cfAmount, setCfAmount] = useState("");
+  const [cfType, setCfType] = useState("capital_call");
+  const [cfUserId, setCfUserId] = useState("");
+  const [cfDesc, setCfDesc] = useState("");
+  const [recalculating, setRecalculating] = useState(false);
 
   useEffect(() => { load(); }, [projectId]);
   async function load() { fetchAdminProjectDetail(projectId).then(setProject); }
+
+  useEffect(() => {
+    if (tab === "cashflows" && project) {
+      loadCashFlows();
+      if (project.investors) setCfInvestors(project.investors);
+    }
+  }, [tab, project?.id]);
+
+  async function loadCashFlows() {
+    const allFlows = [];
+    if (project?.investors) {
+      for (const inv of project.investors) {
+        try {
+          const flows = await fetchCashFlows(inv.userId, projectId);
+          allFlows.push(...flows.map(f => ({ ...f, investorName: inv.name })));
+        } catch (e) { /* skip */ }
+      }
+    }
+    allFlows.sort((a, b) => new Date(a.date) - new Date(b.date));
+    setCashFlowsList(allFlows);
+  }
+
+  async function handleRecordCashFlow(e) {
+    e.preventDefault();
+    if (!cfUserId || !cfDate || !cfAmount || !cfType) { toast("All fields required", "error"); return; }
+    try {
+      const amountVal = parseFloat(cfAmount);
+      const finalAmount = (cfType === "capital_call") ? -Math.abs(amountVal) : Math.abs(amountVal);
+      await recordCashFlow({ userId: parseInt(cfUserId), projectId, date: cfDate, amount: finalAmount, type: cfType, description: cfDesc || null });
+      toast("Cash flow recorded");
+      setShowCfModal(false); setCfDate(""); setCfAmount(""); setCfDesc(""); setCfUserId("");
+      loadCashFlows();
+    } catch (err) { toast(err.message, "error"); }
+  }
+
+  async function handleRecalculate() {
+    setRecalculating(true);
+    try {
+      const result = await recalculateProject(projectId);
+      toast(`Recalculated ${result.results.length} investor(s)`);
+      load();
+    } catch (err) { toast(err.message, "error"); }
+    setRecalculating(false);
+  }
 
   async function handleSaveField(field, value) {
     try { await updateProject(projectId, { [field]: value }); toast("Updated"); load(); } catch (e) { toast(e.message, "error"); }
@@ -378,7 +431,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
   if (!project) return <p style={{ color: "#999" }}>Loading...</p>;
 
   const section = { background: "#fff", border: "1px solid #E8E5DE", borderRadius: 6, padding: "20px 24px", marginBottom: 16 };
-  const tabs = ["overview", "investors", "documents", "updates", "waterfall"];
+  const tabs = ["overview", "investors", "documents", "updates", "waterfall", "cashflows"];
 
   return (
     <>
@@ -570,6 +623,84 @@ function ProjectDetail({ projectId, onBack, toast }) {
                 </div>
               ))}
             </>
+          )}
+        </div>
+      )}
+
+      {/* Cash Flows tab */}
+      {tab === "cashflows" && (
+        <div style={section}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#666" }}>Cash Flow History ({cashFlowsList.length} records)</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => setShowCfModal(true)} style={btnStyle}>Record Cash Flow</button>
+              <button onClick={handleRecalculate} disabled={recalculating} style={{ ...btnOutline, opacity: recalculating ? 0.5 : 1 }}>
+                {recalculating ? "Recalculating..." : "Recalculate All"}
+              </button>
+            </div>
+          </div>
+          {cashFlowsList.length > 0 ? (
+            <>
+              <div style={{ display: "grid", gridTemplateColumns: "100px 1fr 1fr 100px 100px", fontSize: 11, color: "#999", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
+                <span>Date</span><span>Investor</span><span>Description</span><span style={{ textAlign: "right" }}>Amount</span><span style={{ textAlign: "right" }}>Type</span>
+              </div>
+              {cashFlowsList.map((cf, i) => (
+                <div key={cf.id || i} style={{ display: "grid", gridTemplateColumns: "100px 1fr 1fr 100px 100px", padding: "10px 0", borderBottom: "1px solid #F5F3F0", fontSize: 13 }}>
+                  <span style={{ color: "#999", fontSize: 12 }}>{new Date(cf.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}</span>
+                  <span style={{ fontWeight: 500 }}>{cf.investorName || `User ${cf.userId}`}</span>
+                  <span style={{ color: "#666" }}>{cf.description || cf.type}</span>
+                  <span style={{ textAlign: "right", fontWeight: 500, color: cf.amount < 0 ? red : green }}>
+                    {cf.amount < 0 ? `-$${fmt(Math.abs(cf.amount))}` : `+$${fmt(cf.amount)}`}
+                  </span>
+                  <span style={{ textAlign: "right", fontSize: 11, color: "#999", textTransform: "capitalize" }}>{(cf.type || "").replace(/_/g, " ")}</span>
+                </div>
+              ))}
+            </>
+          ) : <p style={{ color: "#BBB", fontSize: 13, fontStyle: "italic" }}>No cash flows recorded</p>}
+
+          {/* Record Cash Flow Modal */}
+          {showCfModal && (
+            <div onClick={() => setShowCfModal(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 8, padding: 32, width: 420, boxShadow: "0 8px 32px rgba(0,0,0,.15)" }}>
+                <h3 style={{ fontSize: 18, fontWeight: 500, marginBottom: 20 }}>Record Cash Flow</h3>
+                <form onSubmit={handleRecordCashFlow}>
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ fontSize: 11, color: "#888" }}>Investor</label>
+                    <select value={cfUserId} onChange={e => setCfUserId(e.target.value)} style={{ ...inputStyle, marginTop: 4 }} required>
+                      <option value="">Select investor...</option>
+                      {(cfInvestors || []).map(inv => <option key={inv.userId} value={inv.userId}>{inv.name}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ fontSize: 11, color: "#888" }}>Date</label>
+                    <input type="date" value={cfDate} onChange={e => setCfDate(e.target.value)} style={{ ...inputStyle, marginTop: 4 }} required />
+                  </div>
+                  <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: 11, color: "#888" }}>Amount ($)</label>
+                      <input type="number" step="0.01" value={cfAmount} onChange={e => setCfAmount(e.target.value)} placeholder="e.g. 50000" style={{ ...inputStyle, marginTop: 4 }} required />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: 11, color: "#888" }}>Type</label>
+                      <select value={cfType} onChange={e => setCfType(e.target.value)} style={{ ...inputStyle, marginTop: 4 }}>
+                        <option value="capital_call">Capital Call</option>
+                        <option value="distribution">Distribution</option>
+                        <option value="return_of_capital">Return of Capital</option>
+                        <option value="income">Income</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: 20 }}>
+                    <label style={{ fontSize: 11, color: "#888" }}>Description</label>
+                    <input value={cfDesc} onChange={e => setCfDesc(e.target.value)} placeholder="Optional description" style={{ ...inputStyle, marginTop: 4 }} />
+                  </div>
+                  <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                    <button type="button" onClick={() => setShowCfModal(false)} style={btnOutline}>Cancel</button>
+                    <button type="submit" style={btnStyle}>Record</button>
+                  </div>
+                </form>
+              </div>
+            </div>
           )}
         </div>
       )}
@@ -886,11 +1017,11 @@ function InvestorProfile({ investorId, onBack, toast }) {
               <div style={{ fontSize: 14, fontWeight: 500 }}>{p.projectName}</div>
               <div style={{ fontSize: 11, color: "#999" }}>{p.projectStatus}</div>
             </div>
-            <div style={{ display: "flex", gap: 24, fontSize: 13, color: "#666" }}>
+            <div style={{ display: "flex", gap: 24, fontSize: 13, color: "#666", alignItems: "center" }}>
               <span>${fmt(p.committed)} committed</span>
               <span>${fmt(p.currentValue)} value</span>
-              <span>{p.irr}% IRR</span>
-              <span>{p.moic}x MOIC</span>
+              <span>{p.irr}% IRR <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 2, background: "#EFE", color: green, marginLeft: 2, verticalAlign: "middle" }}>calculated</span></span>
+              <span>{p.moic}x MOIC <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 2, background: "#EFE", color: green, marginLeft: 2, verticalAlign: "middle" }}>calculated</span></span>
             </div>
           </div>
         )) : <span style={{ fontSize: 12, color: "#BBB", fontStyle: "italic" }}>No project assignments</span>}

@@ -483,6 +483,69 @@ export async function fetchProspectStats() {
   return apiFetch("/prospects/stats");
 }
 
+// ─── Finance (Sprint 14) ───
+export async function fetchCapitalAccount(userId, projectId) {
+  if (_demoMode) {
+    return {
+      committed: 500000, called: 400000, unfunded: 100000,
+      totalDistributed: 27600, currentValue: 480000,
+      unrealizedGainLoss: 107600, totalReturn: 107600, moic: 1.27, irr: 12.4,
+    };
+  }
+  return apiFetch(`/finance/capital-account/${userId}/${projectId}`);
+}
+
+export async function fetchCashFlows(userId, projectId) {
+  if (_demoMode) {
+    return [
+      { id: 1, date: "2023-01-15T00:00:00.000Z", amount: -500000, type: "capital_call", description: "Initial investment" },
+      { id: 2, date: "2023-06-01T00:00:00.000Z", amount: -100000, type: "capital_call", description: "Capital call #2" },
+      { id: 3, date: "2024-09-15T00:00:00.000Z", amount: 8500, type: "distribution", description: "Q3 2024 income distribution" },
+      { id: 4, date: "2024-12-15T00:00:00.000Z", amount: 10200, type: "distribution", description: "Q4 2024 income distribution" },
+      { id: 5, date: "2025-03-15T00:00:00.000Z", amount: 8900, type: "distribution", description: "Q1 2025 income distribution" },
+    ];
+  }
+  return apiFetch(`/finance/cashflows/${userId}/${projectId}`);
+}
+
+export async function calculateWaterfallApi(data) {
+  if (_demoMode) {
+    const { totalDistributable = 1000000, structure = {} } = data;
+    const lpCap = structure.lpCapital || 500000;
+    const prefPct = structure.prefReturnPct || 8;
+    const carryPct = structure.carryPct || 20;
+    const holdYears = structure.holdPeriodYears || 2;
+    const prefAmt = lpCap * (Math.pow(1 + prefPct / 100, holdYears) - 1);
+    const roc = Math.min(totalDistributable, lpCap);
+    const pref = Math.min(totalDistributable - roc, prefAmt);
+    const remaining = totalDistributable - roc - pref;
+    const catchup = Math.min(remaining, pref * carryPct / (100 - carryPct));
+    const rest = remaining - catchup;
+    return {
+      tiers: [
+        { name: "Return of Capital", lpAmount: roc, gpAmount: 0, total: roc },
+        { name: `Preferred Return (${prefPct}%)`, lpAmount: Math.round(pref * 100) / 100, gpAmount: 0, total: Math.round(pref * 100) / 100 },
+        { name: "GP Catch-Up", lpAmount: 0, gpAmount: Math.round(catchup * 100) / 100, total: Math.round(catchup * 100) / 100 },
+        { name: "Carried Interest", lpAmount: Math.round(rest * (100 - carryPct) / 100 * 100) / 100, gpAmount: Math.round(rest * carryPct / 100 * 100) / 100, total: Math.round(rest * 100) / 100 },
+      ],
+      lpTotal: Math.round((roc + pref + rest * (100 - carryPct) / 100) * 100) / 100,
+      gpTotal: Math.round((catchup + rest * carryPct / 100) * 100) / 100,
+      lpIRR: 0.12,
+    };
+  }
+  return apiFetch("/finance/calculate-waterfall", { method: "POST", body: JSON.stringify(data) });
+}
+
+export async function recordCashFlow(data) {
+  if (_demoMode) return { id: Date.now(), ...data, createdAt: new Date().toISOString() };
+  return apiFetch("/finance/record-cashflow", { method: "POST", body: JSON.stringify(data) });
+}
+
+export async function recalculateProject(projectId) {
+  if (_demoMode) return { projectId, results: [{ userId: 1, irr: 12.4, moic: 1.27, status: "updated" }] };
+  return apiFetch(`/finance/recalculate/${projectId}`, { method: "POST" });
+}
+
 // ─── Utility (kept from data.js) ───
 export const fmt = (n) => {
   if (typeof n !== "number") return n;

@@ -34,6 +34,7 @@ app.use("/api/v1/threads", authenticate, require("./routes/threads"));
 app.use("/api/v1/signatures", authenticate, require("./routes/signatures"));
 app.use("/api/v1/notifications", authenticate, require("./routes/notifications"));
 app.use("/api/v1/admin", authenticate, require("./routes/admin"));
+app.use("/api/v1/finance", authenticate, require("./routes/finance"));
 
 // Serve uploaded files (local storage only — S3 uses signed URLs)
 app.use("/uploads", express.static(path.resolve(__dirname, "../uploads")));

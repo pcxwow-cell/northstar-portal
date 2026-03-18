@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef, createContext, useContext } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-import { login as apiLogin, logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, downloadDocument, fetchThreads, fetchThread, createThread, replyToThread, updateProfile, fetchSignatureRequests, signDocument, fetchNotificationPreferences, updateNotificationPreferences, fmt, fmtCurrency } from "./api.js";
+import { login as apiLogin, logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, downloadDocument, fetchThreads, fetchThread, createThread, replyToThread, updateProfile, fetchSignatureRequests, signDocument, fetchNotificationPreferences, updateNotificationPreferences, fetchCapitalAccount, fetchCashFlows, calculateWaterfallApi, fmt, fmtCurrency } from "./api.js";
 import AdminPanel from "./Admin.jsx";
 import ProspectPortal from "./ProspectPortal.jsx";
 
@@ -327,15 +327,28 @@ function Overview({ onNavigate, investor, projects, myProjects, allDistributions
 }
 
 // ─── PAGE: PORTFOLIO ─────────────────────────────────────
-function Portfolio({ myProjects }) {
+function Portfolio({ myProjects, investor }) {
   const { bg, surface, line, t1, t2, t3, hover } = useTheme();
   const [selected, setSelected] = useState(null);
+  const [capitalAccount, setCapitalAccount] = useState(null);
+  const [cashFlows, setCashFlows] = useState([]);
   const project = selected !== null ? myProjects[selected] : null;
 
+  useEffect(() => {
+    if (project && investor) {
+      fetchCapitalAccount(investor.id, project.id).then(setCapitalAccount).catch(() => setCapitalAccount(null));
+      fetchCashFlows(investor.id, project.id).then(setCashFlows).catch(() => setCashFlows([]));
+    }
+  }, [selected, project?.id, investor?.id]);
+
   if (project) {
+    const ca = capitalAccount || {};
+    const displayIRR = ca.irr ?? project.irr;
+    const displayMOIC = ca.moic ?? project.moic;
+
     return (
       <>
-        <p style={{ fontSize: 12, color: red, cursor: "pointer", marginBottom: 24 }} onClick={() => setSelected(null)}>← Back to portfolio</p>
+        <p style={{ fontSize: 12, color: red, cursor: "pointer", marginBottom: 24 }} onClick={() => { setSelected(null); setCapitalAccount(null); setCashFlows([]); }}>← Back to portfolio</p>
         <div style={{ marginBottom: 40 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 8 }}>
             <h1 style={{ fontFamily: serif, fontSize: 36, fontWeight: 400 }}>{project.name}</h1>
@@ -347,12 +360,13 @@ function Portfolio({ myProjects }) {
           {[
             { label: "Your Committed", value: `$${fmt(project.investorCommitted)}` },
             { label: "Current Value", value: `$${fmt(project.currentValue)}` },
-            { label: "Net IRR", value: `${project.irr}%` },
-            { label: "MOIC", value: `${project.moic}x` },
+            { label: "Net IRR", value: displayIRR != null ? `${displayIRR}%` : "--", sub: capitalAccount ? "calculated" : null },
+            { label: "MOIC", value: displayMOIC != null ? `${displayMOIC}x` : "--", sub: capitalAccount ? "calculated" : null },
           ].map((m, i) => (
             <div key={i} style={{ background: surface, padding: "24px" }}>
               <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: t3, marginBottom: 10 }}>{m.label}</div>
               <div style={{ fontSize: 22, fontFamily: serif, fontWeight: 400 }}>{m.value}</div>
+              {m.sub && <div style={{ fontSize: 9, color: green, marginTop: 4, textTransform: "uppercase", letterSpacing: ".06em" }}>{m.sub}</div>}
             </div>
           ))}
         </div>
@@ -360,14 +374,14 @@ function Portfolio({ myProjects }) {
         <SectionHeader title="Capital Account" />
         <div style={{ border: `1px solid ${line}`, borderRadius: 2, overflow: "hidden", marginBottom: 40 }}>
           {(() => {
-            const contributed = project.investorCalled || project.investorCommitted || 0;
-            const distributed = (project.distributions || []).reduce((s, d) => s + d.amount, 0);
-            const endingBalance = project.currentValue || 0;
-            const unrealizedGain = endingBalance - contributed + distributed;
+            const contributed = capitalAccount ? ca.called : (project.investorCalled || project.investorCommitted || 0);
+            const distributed = capitalAccount ? ca.totalDistributed : (project.distributions || []).reduce((s, d) => s + d.amount, 0);
+            const endingBalance = capitalAccount ? ca.currentValue : (project.currentValue || 0);
+            const unrealizedGain = capitalAccount ? ca.unrealizedGainLoss : (endingBalance - contributed + distributed);
             const rows = [
-              { label: "Capital Committed", value: project.investorCommitted },
+              { label: "Capital Committed", value: capitalAccount ? ca.committed : project.investorCommitted },
               { label: "Capital Called / Contributed", value: contributed },
-              { label: "Unfunded Commitment", value: (project.investorCommitted || 0) - contributed },
+              { label: "Unfunded Commitment", value: capitalAccount ? ca.unfunded : ((project.investorCommitted || 0) - contributed) },
               { label: "Total Distributions Received", value: distributed },
               { label: "Current Value (NAV)", value: endingBalance },
               { label: "Unrealized Gain / (Loss)", value: unrealizedGain, highlight: true },
@@ -382,6 +396,31 @@ function Portfolio({ myProjects }) {
             ));
           })()}
         </div>
+
+        {/* Cash Flow Timeline */}
+        {cashFlows.length > 0 && (
+          <>
+            <SectionHeader title="Cash Flow History" />
+            <div style={{ border: `1px solid ${line}`, borderRadius: 2, overflow: "hidden", marginBottom: 40 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "120px 1fr 120px 100px", padding: "10px 20px", borderBottom: `1px solid ${line}`, background: `${line}33` }}>
+                <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".08em", color: t3 }}>Date</span>
+                <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".08em", color: t3 }}>Description</span>
+                <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".08em", color: t3, textAlign: "right" }}>Amount</span>
+                <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".08em", color: t3, textAlign: "right" }}>Type</span>
+              </div>
+              {cashFlows.map((cf, i) => (
+                <div key={cf.id || i} style={{ display: "grid", gridTemplateColumns: "120px 1fr 120px 100px", padding: "12px 20px", borderBottom: i < cashFlows.length - 1 ? `1px solid ${line}` : "none", alignItems: "center" }}>
+                  <span style={{ fontSize: 12, color: t3 }}>{new Date(cf.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                  <span style={{ fontSize: 13, color: t2 }}>{cf.description || cf.type}</span>
+                  <span style={{ fontSize: 13, fontWeight: 500, textAlign: "right", color: cf.amount < 0 ? red : green }}>
+                    {cf.amount < 0 ? `-$${fmt(Math.abs(cf.amount))}` : `+$${fmt(cf.amount)}`}
+                  </span>
+                  <span style={{ fontSize: 11, textAlign: "right", color: t3, textTransform: "capitalize" }}>{(cf.type || "").replace(/_/g, " ")}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48, marginBottom: 40 }}>
           <div>
@@ -465,6 +504,9 @@ function Portfolio({ myProjects }) {
 function CapTablePage({ myProjects, investor }) {
   const { bg, surface, line, t1, t2, t3 } = useTheme();
   const [selectedIdx, setSelectedIdx] = useState(0);
+  const [waterfallInput, setWaterfallInput] = useState("");
+  const [waterfallResult, setWaterfallResult] = useState(null);
+  const [waterfallLoading, setWaterfallLoading] = useState(false);
   const project = myProjects[selectedIdx];
 
   return (
@@ -546,6 +588,102 @@ function CapTablePage({ myProjects, investor }) {
           </div>
         </div>
       )}
+
+      {/* Waterfall Scenario Calculator */}
+      <div style={{ marginTop: 48 }}>
+        <SectionHeader title="Run Waterfall Scenario" />
+        <div style={{ border: `1px solid ${line}`, borderRadius: 2, padding: "24px", marginBottom: 40 }}>
+          <div style={{ display: "flex", gap: 12, alignItems: "flex-end", marginBottom: 20 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, color: t3, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>Total Distributable Amount ($)</div>
+              <input
+                type="number"
+                value={waterfallInput}
+                onChange={e => setWaterfallInput(e.target.value)}
+                placeholder={`e.g. ${fmt(project.totalRaise)}`}
+                style={{ width: "100%", padding: "10px 14px", background: `${line}33`, border: `1px solid ${line}`, borderRadius: 2, fontSize: 14, fontFamily: sans, color: t1, boxSizing: "border-box", outline: "none" }}
+              />
+            </div>
+            <button
+              onClick={async () => {
+                const amount = parseFloat(waterfallInput) || project.totalRaise;
+                setWaterfallLoading(true);
+                try {
+                  const lpCap = project.capTable.reduce((s, r) => r.type !== "GP Interest" ? s + r.called : s, 0);
+                  const result = await calculateWaterfallApi({
+                    totalDistributable: amount,
+                    structure: {
+                      prefReturnPct: project.waterfall?.prefReturn || 8,
+                      gpCatchupPct: 100,
+                      carryPct: project.waterfall?.carry || 20,
+                      lpCapital: lpCap,
+                      holdPeriodYears: 2,
+                    },
+                  });
+                  setWaterfallResult(result);
+                } catch (err) {
+                  console.error("Waterfall calc error:", err);
+                }
+                setWaterfallLoading(false);
+              }}
+              disabled={waterfallLoading}
+              style={{ padding: "10px 24px", background: red, color: "#fff", border: "none", borderRadius: 2, fontSize: 13, cursor: "pointer", fontFamily: sans, opacity: waterfallLoading ? 0.5 : 1, whiteSpace: "nowrap" }}
+            >
+              {waterfallLoading ? "Calculating..." : "Calculate"}
+            </button>
+          </div>
+
+          {waterfallResult && (
+            <>
+              {/* Summary bar */}
+              <div style={{ display: "flex", height: 32, borderRadius: 2, overflow: "hidden", marginBottom: 20 }}>
+                {(() => {
+                  const total = waterfallResult.lpTotal + waterfallResult.gpTotal;
+                  const lpPct = total > 0 ? (waterfallResult.lpTotal / total) * 100 : 0;
+                  const gpPct = total > 0 ? (waterfallResult.gpTotal / total) * 100 : 0;
+                  return (
+                    <>
+                      <div style={{ width: `${lpPct}%`, background: green, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "#fff", fontWeight: 500, transition: "width .3s" }}>
+                        LP {lpPct.toFixed(1)}%
+                      </div>
+                      <div style={{ width: `${gpPct}%`, background: red, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "#fff", fontWeight: 500, transition: "width .3s" }}>
+                        GP {gpPct.toFixed(1)}%
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+
+              {/* Tier breakdown */}
+              <div style={{ display: "grid", gridTemplateColumns: "200px 1fr 1fr 120px", padding: "10px 0", borderBottom: `1px solid ${line}` }}>
+                <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".08em", color: t3 }}>Tier</span>
+                <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".08em", color: t3, textAlign: "right" }}>LP Amount</span>
+                <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".08em", color: t3, textAlign: "right" }}>GP Amount</span>
+                <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".08em", color: t3, textAlign: "right" }}>Total</span>
+              </div>
+              {waterfallResult.tiers.map((tier, i) => (
+                <div key={i} style={{ display: "grid", gridTemplateColumns: "200px 1fr 1fr 120px", padding: "14px 0", borderBottom: i < waterfallResult.tiers.length - 1 ? `1px solid ${line}` : "none", alignItems: "center" }}>
+                  <span style={{ fontFamily: serif, fontSize: 14, color: t1 }}>{tier.name}</span>
+                  <span style={{ fontSize: 13, color: green, textAlign: "right" }}>${fmt(Math.round(tier.lpAmount))}</span>
+                  <span style={{ fontSize: 13, color: red, textAlign: "right" }}>${fmt(Math.round(tier.gpAmount))}</span>
+                  <span style={{ fontSize: 13, color: t2, textAlign: "right" }}>${fmt(Math.round(tier.total))}</span>
+                </div>
+              ))}
+              <div style={{ display: "grid", gridTemplateColumns: "200px 1fr 1fr 120px", padding: "14px 0", borderTop: `2px solid ${line}`, marginTop: 4 }}>
+                <span style={{ fontFamily: serif, fontSize: 14, fontWeight: 600, color: t1 }}>Total</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: green, textAlign: "right" }}>${fmt(Math.round(waterfallResult.lpTotal))}</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: red, textAlign: "right" }}>${fmt(Math.round(waterfallResult.gpTotal))}</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: t1, textAlign: "right" }}>${fmt(Math.round(waterfallResult.lpTotal + waterfallResult.gpTotal))}</span>
+              </div>
+              {waterfallResult.lpIRR != null && (
+                <div style={{ marginTop: 12, fontSize: 12, color: t3 }}>
+                  Estimated LP IRR: <span style={{ color: green, fontWeight: 500 }}>{(waterfallResult.lpIRR * 100).toFixed(1)}%</span>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
     </>
   );
 }
@@ -1418,7 +1556,7 @@ export default function App() {
 
   const pages = {
     overview: <Overview onNavigate={setView} investor={investor} projects={projects} myProjects={myProjects} allDistributions={allDistributions} msgs={msgs} />,
-    portfolio: <Portfolio myProjects={myProjects} />,
+    portfolio: <Portfolio myProjects={myProjects} investor={investor} />,
     captable: <CapTablePage myProjects={myProjects} investor={investor} />,
     documents: <DocumentsPage toast={toast} allDocuments={allDocuments} myProjects={myProjects} investor={investor} />,
     distributions: <DistributionsPage allDistributions={allDistributions} myProjects={myProjects} />,

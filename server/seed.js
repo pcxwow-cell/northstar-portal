@@ -1,11 +1,13 @@
 require("dotenv").config();
 const bcrypt = require("bcryptjs");
 const prisma = require("./prisma");
+const { calculateXIRR, calculateMOIC } = require("./services/finance");
 
 async function main() {
   console.log("Seeding database...");
 
   // Clear all tables (reverse dependency order)
+  await prisma.cashFlow.deleteMany();
   await prisma.prospect.deleteMany();
   await prisma.notificationLog.deleteMany();
   await prisma.notificationPreference.deleteMany();
@@ -428,6 +430,48 @@ async function main() {
   ];
   await prisma.prospect.createMany({ data: prospectsData });
   console.log("  Prospects: " + prospectsData.length);
+
+  // ─── Cash Flows ───
+  const cashFlowsData = [
+    // Porthaven — James Chen
+    { userId: 1, projectId: 1, date: new Date("2023-01-15"), amount: -500000, type: "capital_call", description: "Initial investment" },
+    { userId: 1, projectId: 1, date: new Date("2023-06-01"), amount: -100000, type: "capital_call", description: "Capital call #2" },
+    { userId: 1, projectId: 1, date: new Date("2024-09-15"), amount: 8500, type: "distribution", description: "Q3 2024 income distribution" },
+    { userId: 1, projectId: 1, date: new Date("2024-12-15"), amount: 10200, type: "distribution", description: "Q4 2024 income distribution" },
+    { userId: 1, projectId: 1, date: new Date("2025-03-15"), amount: 8900, type: "distribution", description: "Q1 2025 income distribution" },
+    // Livy — James Chen
+    { userId: 1, projectId: 2, date: new Date("2024-03-15"), amount: -250000, type: "capital_call", description: "Initial investment" },
+  ];
+  await prisma.cashFlow.createMany({ data: cashFlowsData });
+  console.log("  CashFlows: " + cashFlowsData.length);
+
+  // ─── Recalculate IRR / MOIC from cash flows ───
+  const investorProjects = await prisma.investorProject.findMany();
+  for (const ip of investorProjects) {
+    const flows = await prisma.cashFlow.findMany({
+      where: { userId: ip.userId, projectId: ip.projectId },
+      orderBy: { date: "asc" },
+    });
+    if (flows.length === 0) continue;
+
+    // Build XIRR flows with terminal NAV
+    const xirrFlows = flows.map((cf) => ({ date: cf.date, amount: cf.amount }));
+    xirrFlows.push({ date: new Date(), amount: ip.currentValue });
+
+    const irr = calculateXIRR(xirrFlows);
+    const totalInvested = flows.filter((cf) => cf.amount < 0).reduce((s, cf) => s + Math.abs(cf.amount), 0);
+    const totalDist = flows.filter((cf) => cf.amount > 0).reduce((s, cf) => s + cf.amount, 0);
+    const moic = calculateMOIC(totalDist, ip.currentValue, totalInvested);
+
+    await prisma.investorProject.update({
+      where: { id: ip.id },
+      data: {
+        irr: irr != null ? Math.round(irr * 1000) / 10 : ip.irr,
+        moic,
+      },
+    });
+    console.log(`  Recalculated: userId=${ip.userId} projectId=${ip.projectId} IRR=${irr != null ? (irr * 100).toFixed(1) + "%" : "N/A"} MOIC=${moic}x`);
+  }
 
   console.log("\nSeed complete!");
 }
