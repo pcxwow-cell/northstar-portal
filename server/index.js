@@ -5,7 +5,7 @@ const path = require("path");
 const { rateLimit, securityHeaders } = require("./middleware/security");
 
 const app = express();
-const PORT = process.env.API_PORT || 3001;
+const PORT = process.env.PORT || process.env.API_PORT || 3001;
 
 // ─── Security headers on all routes ───
 app.use(securityHeaders);
