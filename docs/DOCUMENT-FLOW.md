@@ -1,7 +1,7 @@
 # Document Management Flow — Northstar Investor Portal
 
 > Based on Agora, InvestNext, Juniper Square patterns
-> Last updated: 2026-03-17
+> Last updated: 2026-03-18
 
 ---
 
@@ -191,15 +191,17 @@ For generating investor statements (capital account, distribution notices, K-1 s
 
 ---
 
-## Implementation Priority
+## Implementation Status
 
-| Feature | Sprint | Priority |
-|---------|--------|----------|
-| Admin document dashboard with access list | Sprint 8 | P0 |
-| View/download tracking (viewedAt, downloadedAt) | Sprint 8 | P1 |
-| Documents within investment detail page | Sprint 10 | P1 |
-| Capital account statement PDF generation | Sprint 10 | P1 |
-| Bulk K-1 upload with auto-matching | Post-MVP | P1 |
-| In-portal PDF viewer | Post-MVP | P2 |
-| E-signature integration | Post-MVP | P1 |
-| Document versioning | Post-MVP | P2 |
+| Feature | Sprint | Status |
+|---------|--------|--------|
+| Admin document dashboard with access list | Sprint 8 | Done |
+| View/download tracking (viewedAt, downloadedAt) | Sprint 8 | Done |
+| Documents within investment detail page | Sprint 10 | Done |
+| Capital account statement PDF generation | Sprint 10 | Done |
+| Bulk K-1 upload with auto-matching | Post-MVP | Done |
+| E-signature integration (DocuSign/HelloSign) | Post-MVP | Done |
+| Capital call notice PDF generation | Post-MVP | Done |
+| Quarterly report PDF generation | Post-MVP | Done |
+| In-portal PDF viewer | — | Not started |
+| Document versioning | — | Not started |

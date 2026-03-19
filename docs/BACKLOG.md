@@ -4,29 +4,36 @@
 > Priority: P0 = must-have, P1 = should-have, P2 = nice-to-have, P3 = future
 > Status: ○ not started, ◐ in progress, ● done
 > Research baseline: Juniper Square, Agora, InvestNext, Covercy, CashFlow Portal
+> Audit status: 114 issues found, 107 unfixed — see audit docs for details
+
+---
+
+## Current Priority: Frontend Extraction
+
+**Before any feature work, the frontend architecture must be fixed.**
+See `docs/FRONTEND-PLAN.md` for the ~35-commit extraction plan.
+
+The two monolithic frontend files (Admin.jsx: 4,796 lines, App.jsx: 3,336 lines) make every bug fix risky and every feature addition harder. 14 shared components exist but aren't imported. The extraction is prerequisite to all functional fixes below.
 
 ---
 
 ## Industry Gap Analysis
 
-### What We Have vs. Industry Standard
+### What We Have vs. Industry Standard (Honest Assessment)
 
 | Feature | Northstar (Current) | Industry Standard (JS/Agora/IN) | Gap |
 |---------|--------------------|---------------------------------|-----|
-| **Investor Dashboard** | KPI strip, action center, project cards, charts, activity feed | Card-style portfolio overview with charts, total contributions/distributions, live offerings banner | Mostly closed — missing: live offerings banner |
-| **Investment Detail** | Project detail with cap table, waterfall, docs, construction updates | Click-through to full investment detail: contributions, ownership %, outstanding capital, property photos, map, transaction history | Mostly closed — missing: map integration, photo gallery |
-| **Capital Account** | Per-project capital account with IRR/MOIC from real cash flows | Per-investor capital account statement: contributions, distributions, ending balance, gain/loss | Complete |
-| **Documents** | Filter by project/category, download tracking, signature status | Two-tab layout (General / Signature docs), filter by investment/date/profile, docs appear within investment pages too | Complete |
-| **Messaging** | Bidirectional threaded messaging, email notifications, compose | Threaded communication tied to investor profile, email notifications, engagement tracking | Mostly closed — missing: read receipts |
-| **Self-Service** | Profile editing, entity management, password change, MFA | Update profile, banking details, contact info, entity management | Mostly closed — missing: banking details |
-| **Onboarding** | Welcome wizard for first-time users | Self-guided subscription: profile → investment amount → payment → doc signing → KYC | Partial — wizard exists, missing: subscription flow, KYC |
-| **Live Offerings** | Prospect portal with project detail and interest forms | Data rooms with "Invest Now" button, offering cards on dashboard | Partial — missing: gated data rooms, "Invest Now" |
-| **Notifications** | Email templates + demo mode + SendGrid/Resend adapters | Email alerts for new docs, distributions, capital calls, messages | Scaffolded — needs real API keys |
-| **Mobile** | Responsive tables, mobile nav, stat grid reflow | Dedicated mobile app or fully responsive portal | Good — covers most layouts |
-| **Admin CRM** | Profile pages, search/filter, groups, KPI editing, message history | Full CRM: investor profile pages, activity timeline, segment/tags, pipeline management | Mostly closed — missing: activity timeline |
-| **Admin Docs** | Upload with targeting, access audit, view/download tracking | Bulk upload, auto-match K-1s to investors, access audit trail, view tracking | Mostly closed — missing: bulk upload, K-1 matching |
-| **Admin Messaging** | Inbox, compose with recipient picker, threaded replies | Inbox + sent, threaded replies, segment targeting, email integration, engagement metrics | Mostly closed — missing: engagement metrics |
-| **Admin KPIs** | Project KPI dashboard, waterfall config, cash flow CRUD | Per-project dashboard with editable KPIs, waterfall config UI, capital account management | Complete |
+| **Investor Dashboard** | KPI strip, project cards, charts | Portfolio overview with charts, live offerings | Backend data works, frontend has no empty states, NaN on missing IRR |
+| **Investment Detail** | Project detail with cap table, waterfall | Click-through with photos, map, transactions | Missing: drill-down from dashboard, tab interface, photo gallery |
+| **Capital Account** | Per-project with IRR/MOIC from cash flows | Per-investor statement across all projects | Missing: cross-project summary view |
+| **Documents** | Filter by project/category, signatures | Two-tab layout, download tracking | **Broken**: downloads bypass tracking, assignment destroys history |
+| **Messaging** | Threaded messaging, compose | Threaded with email notifications | **Broken**: no email on new threads, read receipts exposed to investors |
+| **Self-Service** | Profile, entity management, MFA | Profile, banking, contact info | Missing: phone, address, banking |
+| **Onboarding** | Invite + credentials | Self-guided subscription flow | **Broken**: PENDING users get "invalid credentials" error |
+| **Notifications** | Email templates exist | Real-time alerts | Scaffolded only — not wired to events |
+| **Mobile** | Some responsive | Fully responsive | 22 responsive failures documented |
+| **Admin Financial CRUD** | KPI editing, read-only cap table | Full CRUD on cap table, waterfall, distributions | **Missing**: cap table CRUD, bulk distributions, capital calls |
+| **Demo Mode** | 83% API coverage | N/A | 22 admin write functions crash with no fallback |
 
 ---
 
@@ -101,7 +108,7 @@
 | M9.6 | **Investor document center**: two tabs (General / Signature docs), filter by project + category | P1 | ● |
 | M9.7 | **Documents within investment detail page**: project-specific docs appear inline on project detail | P1 | ● |
 | M9.8 | **Action required workflow**: investor acknowledges "Action Required" docs, admin sees who acknowledged | P1 | ● |
-| M9.9 | **Bulk upload**: upload multiple files at once with batch assignment | P2 | ○ |
+| M9.9 | **Bulk upload**: upload multiple files at once with batch assignment | P2 | ● |
 
 ---
 
@@ -155,11 +162,11 @@
 | ID | Description | Priority | Status |
 |----|-------------|----------|--------|
 | B.1 | E-signature integration (DocuSign / HelloSign) | P1 | ● |
-| B.2 | K-1 mass upload with auto-matching to investors | P1 | ○ |
+| B.2 | K-1 mass upload with auto-matching to investors | P1 | ● |
 | B.3 | Document view tracking (who opened, when, how long) | P1 | ● |
 | B.4 | Watermarked document viewing | P2 | ○ |
-| B.5 | Capital call notice PDF generation | P2 | ○ |
-| B.6 | Quarterly report PDF generation | P2 | ○ |
+| B.5 | Capital call notice PDF generation | P2 | ● |
+| B.6 | Quarterly report PDF generation | P2 | ● |
 
 ### Phase C — Financial Engine
 
@@ -176,7 +183,7 @@
 | ID | Description | Priority | Status |
 |----|-------------|----------|--------|
 | D.1 | Email notifications (SendGrid/Resend): new docs, messages, distributions, capital calls | P1 | ● |
-| D.2 | Read receipts and engagement tracking | P2 | ○ |
+| D.2 | Read receipts and engagement tracking | P2 | ● |
 | D.3 | Slack/Teams integration for admin alerts | P3 | ○ |
 | D.4 | Accounting integration (QuickBooks/Xero) | P3 | ○ |
 
@@ -240,3 +247,19 @@
 | — | Elevated Minimal design system applied across portal | 2026-03-17 |
 | — | Vercel deployment config (SPA rewrites, cache headers, demo mode 405 fix) | 2026-03-18 |
 | — | SKILLS.md comprehensive agent working guide | 2026-03-18 |
+| — | Feature flags system | 2026-03-18 |
+| — | Statement generation system with approval workflow | 2026-03-18 |
+| — | Staff permission groups UI | 2026-03-18 |
+| — | Comprehensive mobile/responsive fixes (investor + admin) | 2026-03-18 |
+| — | Dashboard cards clickable, unread highlights, table sorting + search | 2026-03-18 |
+| — | Read receipts (readAt timestamp on ThreadRecipient) | 2026-03-18 |
+| — | Activity timeline on investor profiles + userId filter on audit log | 2026-03-18 |
+| — | Bulk K-1 upload with auto-matching to investors by filename | 2026-03-18 |
+| — | Capital call + quarterly report PDF generation with Northstar letterhead | 2026-03-18 |
+| — | PostgreSQL production (Supabase) + Railway backend deployment | 2026-03-18 |
+| — | Vercel → Railway API proxy | 2026-03-18 |
+| — | DocuSign production fixes (graceful fallback, env var private key) | 2026-03-18 |
+| — | Resend email adapter fix (graceful fallback if no API key) | 2026-03-18 |
+| — | PostgreSQL sequence fixes for seeding | 2026-03-18 |
+| — | Welcome/reset emails for new users + persistent credential dialog | 2026-03-18 |
+| — | Admin nav consolidation: People tab + Documents tab | 2026-03-18 |

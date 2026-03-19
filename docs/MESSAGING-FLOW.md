@@ -1,6 +1,6 @@
 # Northstar Investor Portal — Messaging & Notification Flows
 
-> Last updated: 2026-03-17
+> Last updated: 2026-03-18
 
 ## Overview
 
@@ -244,13 +244,21 @@ notification_log
 
 ---
 
-## 4. Future Enhancements
+## 4. Recent Additions (March 2026)
 
-| Feature | Phase | Description |
-|---------|-------|-------------|
-| Real-time inbox | 6 | WebSocket or Pusher for instant message delivery without polling |
-| Read receipts for admin | 6 | Admin sees when investor opened a message |
-| File attachments | 4 | Attach documents to messages (stored in S3) |
-| Message templates | 2 | Pre-built templates for common communications (capital calls, updates) |
-| Scheduled sends | 2 | Admin schedules a message to send at a future date/time |
-| SMS notifications | 6 | Twilio SMS for urgent notices (capital calls, signature deadlines) |
+| Feature | Status | Description |
+|---------|--------|-------------|
+| Read receipts | Done | `readAt` timestamp on `ThreadRecipient`, displayed in thread detail UI |
+| Inbound email replies | Done | HMAC-verified webhook receives email replies, appends to thread |
+| Welcome emails | Done | Sent on user creation with credentials |
+| Resend adapter | Done | Production-ready with graceful fallback if no API key |
+
+## 5. Future Enhancements
+
+| Feature | Description |
+|---------|-------------|
+| Real-time inbox | WebSocket or Pusher for instant message delivery without polling |
+| File attachments | Attach documents to messages (stored in S3) |
+| Message templates | Pre-built templates for common communications (capital calls, updates) |
+| Scheduled sends | Admin schedules a message to send at a future date/time |
+| SMS notifications | Twilio SMS for urgent notices (capital calls, signature deadlines) |

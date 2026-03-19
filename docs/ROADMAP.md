@@ -1,229 +1,139 @@
 # Northstar Investor Portal — Roadmap
 
 > Last updated: 2026-03-18
+> Honest assessment after comprehensive QA audit
 
-## Current State (as of March 18, 2026)
+## Current State
 
-**Architecture**: React 18 + Vite 5 frontend → Express API + Prisma ORM + SQLite (dev) / PostgreSQL (prod)
-**Tests**: 136 passing across 11 suites (auth, IDOR, RBAC, workflow e2e)
-**Deploy**: Vercel (frontend auto-deploy) at https://northstar-portal-roan.vercel.app/
+**Architecture**: React 18 + Vite 5 (Vercel) → Express 4 + Prisma ORM (Railway) → PostgreSQL (Supabase)
+**Backend quality**: 7.5/10 — proper auth, service layer, 136 tests, adapter patterns
+**Frontend quality**: 3/10 — two monolithic files (8,132 lines), no component reuse, no tests
+**Overall**: 5/10 — strong foundation, poorly packaged frontend, 107 unfixed issues
 
-### What's Built (Sprints 1-17 + Security + Polish)
-- JWT authentication with bcrypt, role-based access (INVESTOR/ADMIN/GP)
-- MFA/TOTP with QR code setup, backup codes, login verification
-- Account lockout after 5 failed login attempts
-- Express API with 40+ endpoints serving data from database
-- Prisma schema with 22 models, PostgreSQL-ready
-- File storage abstraction (local disk + S3 adapter ready)
-- Document upload/download with per-investor access control and audit trail
-- E-signature integration (DocuSign/HelloSign adapters + demo mode)
-- Admin panel: dashboard, project CRUD, investor CRM, doc upload, messaging
-- Threaded messaging (bidirectional): investor-to-staff, admin compose with recipient picker
-- Inbound email reply-to-thread system (HMAC-verified webhooks)
-- Investor segments/groups with CRUD API and member management
-- Project KPI dashboard with inline editing, waterfall config, construction updates
-- Capital account statements, XIRR/MOIC calculations, cash flow CRUD
+### What Actually Works
+- JWT auth with bcrypt, MFA/TOTP, account lockout, role-based access
+- Express API with 40+ endpoints, Prisma ORM with 22 models
+- Document upload/download with access control
+- E-signature adapters (DocuSign/HelloSign) with demo fallback
+- Threaded bidirectional messaging
+- Capital account calculations (XIRR/MOIC) from real cash flows
 - Financial modeler with scenario analysis
 - Entity management (LLC, Trust, IRA, Individual)
-- Prospective investor portal with intake forms and lead capture
-- Email notifications (SendGrid/Resend adapters + demo mode)
-- Self-service profile editing, password change, login history
-- IDOR protection on all investor-scoped endpoints
-- Zod input validation on critical API routes
-- 136 automated tests (auth, IDOR, RBAC, workflow e2e)
-- Docker deployment + Caddy SSL reverse proxy config
-- CI/CD pipeline (GitHub Actions)
-- Sentry error tracking adapter
-- Audit logging for all sensitive operations
-- Branded "Elevated Minimal" UI matching northstardevelopment.ca
-- Vercel deployment with SPA rewrites and demo mode fallback
+- Investor segments/groups
+- Statement generation with approval workflow
+- Email adapters (Resend/SendGrid) with demo fallback
+- 136 backend tests across 11 suites
+- Demo mode with static data fallback (82% coverage)
+- Vercel → Railway deployment pipeline
 
-### What's Remaining
-**Investor side:**
-- Photo gallery and map integration on project detail
-- Banking details in self-service profile
-- Live offerings banner on dashboard
+### What's Broken or Missing (107 issues)
 
-**Admin side:**
-- Bulk document upload / K-1 auto-matching
-- Activity timeline on investor profiles
-- Read receipts and engagement metrics
+**Critical (9):**
+- Investor onboarding trap (PENDING users get "invalid credentials")
+- 22 admin write functions crash in demo mode (no fallback)
+- Document downloads bypass tracking
+- No email notifications on new messages
+- Tax IDs stored/displayed in plain text
 
-**Infrastructure:**
-- Production email transport (SendGrid/Resend — adapters built, needs real API keys)
-- KYC/AML integration (Parallel Markets / VerifyInvestor)
+**Blocker (4):**
+- No empty states — new investors see all zeros
+- Cap table and waterfall tiers are read-only (no CRUD)
+- Bulk distribution/capital call recording doesn't update investor records
+
+**Broken (14):**
+- Document assignment destroys tracking history
+- Read receipts visible to investors (privacy violation)
+- Password validation doesn't match strength bar
+- 20+ admin actions have no audit trail
+
+**Missing (69) + UX (18):**
+- See `docs/WORKFLOW-AUDIT.md` (57 items) and `docs/DEEP-AUDIT.md` (57 items)
+
+**Frontend architecture:**
+- Admin.jsx: 4,796 lines, ~160 useState, 15 managers in one file
+- App.jsx: 3,336 lines, ~100 useState, 10 pages in one file
+- 14 shared components exist in src/components/ but are NOT imported
+- Zero frontend tests
+- No router — navigation via useState
+
+Full issue details: `docs/WORKFLOW-AUDIT.md`, `docs/DEEP-AUDIT.md`, `docs/UI-REVIEW.md`
+
+---
+
+## The Path Forward
+
+### Step 1: Frontend Extraction (~35 commits)
+> Plan: `docs/FRONTEND-PLAN.md`
+
+| Phase | Commits | What happens |
+|-------|---------|-------------|
+| 0: Wire components | 2 | Import existing dead components, shrink monoliths ~35% |
+| 1: State & context | 1 | AdminDataContext, InvestorDataContext, eliminate redundant fetches |
+| 2: Extract App.jsx | 12 | One page per commit → 150-line shell |
+| 3: Extract Admin.jsx | 17 | One manager per commit → 120-line shell |
+| 4: Demo mode fixes | 1 | 22 missing fallbacks |
+| 5: Smoke tests | 1 | Vitest render tests for every page |
+| 6: Update docs | 1 | Fix stale file paths |
+
+### Step 2: Functional Fixes (12 sprints, 67 tasks)
+> Plan: `docs/FEATURE-FIX-PLAN.md`
+
+| Sprint | Theme | Tasks |
+|--------|-------|-------|
+| A | Onboarding blockers | 7 |
+| B | Document tracking & signing | 6 |
+| C | Messaging fixes | 6 |
+| D | Admin financial CRUD | 7 |
+| E | Investor portal UX | 6 |
+| F | Notifications & activity | 5 |
+| G | Prospects & permissions | 4 |
+| H | Security polish | 6 |
+| I | Demo mode resilience | 3 |
+| J | Data integrity & security | 6 |
+| K | Audit logging | 5 |
+| L | Admin lifecycle & reporting | 6 |
+
+### Step 3: Accessibility & Responsive (2 sprints)
+- Sprint M: ARIA attributes, focus management, semantic elements
+- Sprint N: Mobile grids, stacking, breakpoints
+
+### After all steps: estimated 7.5-8/10 overall
+
+---
+
+## Future (post-launch)
+
+- TypeScript migration
+- React Router
+- KYC/AML integration (Parallel Markets)
 - Payment processing (ACH/wire)
-- Sentry error tracking (middleware wired, needs DSN)
+- Gated data rooms for prospective investors
+- White-label branding
+- CPA/advisor read-only access
 
 ---
 
-## Phase 1 — Foundation (Backend + Auth) -- COMPLETE
+## Technology Stack
 
-**Goal**: Replace mock data with a real backend. Secure the portal.
-
-| # | Item | Priority |
-|---|------|----------|
-| 1.1 | Database schema: investors, projects, cap_tables, distributions, documents, messages | P0 |
-| 1.2 | API layer (REST or tRPC) with CRUD for all entities | P0 |
-| 1.3 | Authentication: JWT or session-based, bcrypt passwords, login/logout endpoints | P0 |
-| 1.4 | Role-based access: Investor, Admin, GP roles with permission guards | P0 |
-| 1.5 | Seed database from current mock data (data.js → SQL/Prisma seed) | P0 |
-| 1.6 | Connect React frontend to API (replace static imports with fetch/hooks) | P0 |
-| 1.7 | Password reset flow (email link) | P1 |
-| 1.8 | Session management (token refresh, idle timeout) | P1 |
-| 1.9 | Environment variables for API URL, secrets | P1 |
+| Layer | Choice | Notes |
+|-------|--------|-------|
+| Frontend | React 18 + Vite 5 | Deployed on Vercel |
+| Backend | Express 4 | Deployed on Railway |
+| Database | PostgreSQL (Supabase) | Prisma ORM, 22 models |
+| Auth | JWT + bcrypt + TOTP | Role-based: INVESTOR/ADMIN/GP |
+| Email | Resend / SendGrid | Adapter pattern with demo fallback |
+| E-Sign | DocuSign / HelloSign | Adapter pattern with demo fallback |
+| Storage | Local disk / S3 | Adapter pattern |
+| Tests | Jest + Supertest | 136 backend tests, 0 frontend tests |
 
 ---
 
-## Phase 2 — Admin Panel (GP/Staff Tools) -- COMPLETE
+## Competitive Position
 
-**Goal**: Give Northstar staff the ability to manage data without touching code.
-
-| # | Item | Priority |
-|---|------|----------|
-| 2.1 | Admin dashboard: summary of all projects, investors, pending actions | P0 |
-| 2.2 | Project management: create/edit projects, update status, completion %, descriptions | P0 |
-| 2.3 | Investor management: add/edit/deactivate investors, assign to projects | P0 |
-| 2.4 | Cap table editor: add/remove holders, adjust commitments & ownership per project | P0 |
-| 2.5 | Document upload & distribution: upload PDFs, assign to projects/investors, set status | P0 |
-| 2.6 | Distribution management: create distributions, calculate amounts, mark as paid | P1 |
-| 2.7 | Capital call workflow: create capital call, generate notices, track funding status | P1 |
-| 2.8 | Message composer: send messages to individual investors or broadcast to project LPs | P1 |
-| 2.9 | Construction update posting: add updates with photos per project | P1 |
-| 2.10 | Waterfall configuration: set pref return, carry, catch-up per project | P2 |
-| 2.11 | Investor activity log: track portal logins, document views, message reads | P2 |
-
----
-
-## Phase 3 — Prospective Investor Portal
-
-**Goal**: A public-facing or gated section for potential investors to learn about Northstar and express interest.
-
-### Industry Standard Features (RE Developer Portals)
-Real estate developers typically provide prospective investors with:
-- Company overview, investment thesis, and team bios
-- Track record / case studies with realized returns
-- Active investment opportunities with gated data rooms
-- Interest/reservation forms before deals formally open
-- Accreditation verification (required for 506(c) offerings)
-- KYC/AML identity verification
-- Entity/profile creation (Individual, LLC, Trust, IRA)
-- Subscription document workflow with e-signature
-
-### Implementation Plan
-
-| # | Item | Priority |
-|---|------|----------|
-| 3.1 | **Company landing page**: About Northstar, investment approach, leadership team, track record | P0 |
-| 3.2 | **Active opportunities page**: List projects accepting investment with summary cards (target returns, hold period, location, asset type, minimum investment) | P0 |
-| 3.3 | **Project detail / deal page**: Photos, maps, financial projections, project timeline, total raise vs. funded progress bar | P0 |
-| 3.4 | **Investor interest form**: Name, email, entity type, accredited status, investment range, preferred asset classes | P0 |
-| 3.5 | **Gated data room**: PPM, operating agreement, proformas behind registration wall. Watermarked PDFs. | P1 |
-| 3.6 | **Accreditation verification**: Integration with Parallel Markets or Verify Investor | P1 |
-| 3.7 | **Subscription workflow**: Pre-populated subscription docs with embedded e-signature | P1 |
-| 3.8 | **KYC/AML verification**: Identity verification integration | P2 |
-| 3.9 | **W-9 / W-8BEN collection**: Tax form capture during onboarding | P2 |
-| 3.10 | **ACH/wire funding instructions**: Displayed after subscription execution | P2 |
-
-### Content Needed from Northstar
-- Leadership team bios + headshots
-- Investment thesis / strategy copy
-- Completed project case studies with realized returns
-- High-quality project photos and renderings
-- Proforma / financial projection templates
-- Legal review of online subscription workflow
-
----
-
-## Phase 4 — Document & Signature Infrastructure -- MOSTLY COMPLETE
-
-**Goal**: Real document storage, delivery, and legally binding e-signatures.
-
-| # | Item | Priority |
-|---|------|----------|
-| 4.1 | File storage (S3 or equivalent) for document uploads | P0 |
-| 4.2 | Secure document download with access control (investor can only see their docs) | P0 |
-| 4.3 | E-signature integration (DocuSign, HelloSign, or similar) | P1 |
-| 4.4 | K-1 tax document delivery center with electronic consent | P1 |
-| 4.5 | Capital call notice generation (PDF templating per investor) | P1 |
-| 4.6 | Quarterly report generation (narrative + financials PDF) | P2 |
-| 4.7 | Document version control and audit trail | P2 |
-| 4.8 | Watermarked document viewing (prevent unauthorized distribution) | P2 |
-
----
-
-## Phase 5 — Financial Engine -- COMPLETE
-
-**Goal**: Automate calculations that are currently hardcoded.
-
-| # | Item | Priority |
-|---|------|----------|
-| 5.1 | IRR calculation engine (from cash flows: calls + distributions) | P1 |
-| 5.2 | MOIC calculation (current value / invested capital) | P1 |
-| 5.3 | Waterfall distribution calculator (pref return → catch-up → carry) | P1 |
-| 5.4 | Capital account tracking (contributions, distributions, ending balance) | P1 |
-| 5.5 | Distribution payment processing (ACH/wire integration via Stripe or banking API) | P2 |
-| 5.6 | Tax withholding calculations | P2 |
-
----
-
-## Phase 6 — Polish & Production
-
-**Goal**: Make the portal production-ready.
-
-| # | Item | Priority |
-|---|------|----------|
-| 6.1 | Responsive design: mobile + tablet layouts for all pages | P1 |
-| 6.2 | Accessibility: ARIA labels, keyboard navigation, focus management, contrast | P1 |
-| 6.3 | Loading states and error handling for all API calls | P1 |
-| 6.4 | Empty states ("No distributions yet", "No documents") | P1 |
-| 6.5 | Table sorting and search | P2 |
-| 6.6 | PDF/CSV export for distributions, cap table, reports | P2 |
-| 6.7 | Email notifications (new documents, distributions, messages) | P2 |
-| 6.8 | Multi-entity support (investor views holdings across Individual, LLC, Trust) | P2 |
-| 6.9 | CPA/advisor access (investor grants read-only access to their accountant) | P3 |
-| 6.10 | Two-factor authentication | P2 |
-| 6.11 | Audit logging for compliance | P2 |
-| 6.12 | White-label branding (custom domain, colors, logo configuration) | P3 |
-
----
-
-## Known Bugs (Current Prototype)
-
-| # | Bug | Severity |
-|---|-----|----------|
-| B1 | Document iframe preview 404s (mock file paths don't exist) | Medium |
-| B2 | Signed documents not persisted (lost on page refresh) | Medium |
-| B3 | Message replies not persisted (lost on page refresh) | Medium |
-| B4 | Cap table ownership bar assumes max 35% — overflows if higher | Low |
-| B5 | "Next Estimated" distribution date is hardcoded "Oct 2025" | Low |
-| B6 | Cap table page crashes if investor has zero projects | Low |
-| B7 | Download button opens 404 page instead of downloading | Medium |
-
----
-
-## Technology Decisions (Resolved)
-
-| Decision | Chosen | Notes |
-|----------|--------|-------|
-| Backend framework | Express 4 | REST API, Vite SPA frontend |
-| Database | SQLite (dev) + Prisma ORM | Migrations in place, ready for PostgreSQL in production |
-| Auth provider | Custom JWT + bcrypt | Role-based access (INVESTOR/ADMIN/GP), login history, password validation |
-| File storage | Local disk + S3 adapter | Abstraction layer ready for S3/R2 swap |
-| E-signature | Built-in (demo mode) | DocuSign/HelloSign integration ready for production |
-| Email | Demo logger (dev), SendGrid-ready | Templates for all notification types built |
-| Hosting | Docker (Dockerfile + docker-compose) | Ready for Railway, Fly.io, AWS, etc. |
-| Testing | Jest + Supertest | 107+ automated tests (auth, IDOR, RBAC, workflow e2e) |
-
----
-
-## Competitive Reference
-
-Platforms like **Juniper Square**, **InvestNext**, **Covercy**, and **Agora** provide similar functionality as SaaS products for RE developers. Northstar's custom portal differentiates by:
+Custom portal vs. SaaS (Juniper Square, InvestNext, Carta):
 - Direct brand control and custom design
-- No per-investor SaaS fees
+- No per-investor SaaS fees ($15-50/investor/month saved)
 - Full data ownership
 - Custom waterfall and reporting logic
 - Integrated prospective investor pipeline
-
-The tradeoff is development and maintenance cost vs. SaaS subscription.
+- Tradeoff: development cost vs. subscription cost
