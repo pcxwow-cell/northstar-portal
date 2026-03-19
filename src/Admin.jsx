@@ -12,6 +12,7 @@ import Card from "./components/Card.jsx";
 import FormInput from "./components/FormInput.jsx";
 import Modal from "./components/Modal.jsx";
 import StatCard from "./components/StatCard.jsx";
+import StatusBadge from "./components/StatusBadge.jsx";
 
 
 // ─── SORTABLE HEADER ───
@@ -730,8 +731,6 @@ function InvestorManager({ toast, onViewProfile, hideHeader }) {
     else { setSortBy(col); setSortDir("asc"); }
   }
 
-  const statusBadge = (s) => ({ fontSize: 11, padding: "2px 8px", borderRadius: 3, background: s === "ACTIVE" ? "#EFE" : s === "PENDING" ? "#FFF8E1" : "#FEE", color: s === "ACTIVE" ? colors.green : s === "PENDING" ? "#B8860B" : colors.red });
-
   if (invLoading && investors.length === 0) return <Spinner />;
 
   return (
@@ -793,7 +792,7 @@ function InvestorManager({ toast, onViewProfile, hideHeader }) {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 100px 120px 120px 140px", padding: "14px 20px", borderBottom: `1px solid ${colors.lightBorder}`, alignItems: "center", fontSize: 13 }}>
               <span style={{ fontWeight: 500 }}>{inv.name}</span>
               <span style={{ color: "#666" }}>{inv.email}</span>
-              <span><span style={statusBadge(inv.status)}>{inv.status}</span></span>
+              <span><StatusBadge status={inv.status} size="sm" /></span>
               <span>${fmt(inv.totalCommitted)}</span>
               <span>${fmt(inv.totalValue)}</span>
               <div style={{ display: "flex", gap: 6 }}>
@@ -2022,7 +2021,7 @@ function InvestorProfile({ investorId, onBack, toast }) {
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ padding: "4px 12px", borderRadius: 4, fontSize: 12, fontWeight: 500, background: profile.status === "ACTIVE" ? "#EFE" : profile.status === "PENDING" ? "#FFF8E1" : "#FEE", color: profile.status === "ACTIVE" ? colors.green : profile.status === "PENDING" ? "#B8860B" : colors.red }}>{profile.status}</span>
+          <StatusBadge status={profile.status} />
           {(profile.status === "LOCKED" || profile.locked) && (
             <Button onClick={async () => {
               try { await unlockInvestor(investorId); toast("Account unlocked"); const updated = await fetchInvestorProfile(investorId); setProfile(updated); } catch (e) { toast(e.message, "error"); }
@@ -3051,7 +3050,7 @@ function StaffManager({ toast, hideHeader }) {
                   ) : (
                     <Button variant="outline" onClick={e => { e.stopPropagation(); handleReactivate(s); }} title="Reactivate" style={{ padding: "3px 8px", fontSize: 10, color: colors.green, borderColor: colors.green }}>Reactivate</Button>
                   )}
-                  <span style={{ padding: "2px 8px", borderRadius: 3, fontSize: 10, background: s.status === "ACTIVE" ? "#EFE" : "#FEE", color: s.status === "ACTIVE" ? colors.green : colors.red }}>{s.status}</span>
+                  <StatusBadge status={s.status} size="sm" />
                 </div>
               </div>
             </div>
