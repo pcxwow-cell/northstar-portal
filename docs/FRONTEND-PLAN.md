@@ -1,8 +1,16 @@
 # Northstar Portal — Frontend Refactor Plan
 
 > Date: 2026-03-18
-> Status: Not started
+> Status: In progress — Phase 0 (partial) + Phase 1 (partial) complete
 > Scope: Decompose 2 monolithic files (8,132 lines) into focused modules without breaking demo mode or visual design
+
+## Completed
+
+| Commit | Description | Date |
+|--------|-------------|------|
+| e3c9bf6 | Wire ToastContext into App.jsx — remove local useToast/ToastContainer, update 27 call sites | 2026-03-18 |
+| e02a6fc | Wire shared components into Admin.jsx — Spinner, EmptyState, ConfirmDialog; wire toast via context | 2026-03-18 |
+| 01570ad | Add AdminDataContext, eliminate 6 redundant API calls (DocumentManager, StatementManager, GroupManager, AdminInbox) | 2026-03-18 |
 
 ---
 
