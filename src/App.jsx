@@ -7,6 +7,8 @@ import Button from "./components/Button.jsx";
 import Card from "./components/Card.jsx";
 import FormInput from "./components/FormInput.jsx";
 import Modal from "./components/Modal.jsx";
+import StatCard from "./components/StatCard.jsx";
+import StatusBadge from "./components/StatusBadge.jsx";
 
 // Lazy load heavy components — they get their own chunks
 const AdminPanel = lazy(() => import("./Admin.jsx"));
@@ -68,18 +70,6 @@ function ChartTooltip({ active, payload, label, prefix = "$", suffix = "K" }) {
   );
 }
 
-function StatusBadge({ status }) {
-  const { bg, surface, line, t1, t2, t3 } = useTheme();
-  const colors = {
-    "Completed": green, "Under Construction": "#8B7128", "Pre-Development": red,
-  };
-  const c = colors[status] || t3;
-  return (
-    <span style={{ fontSize: 10, padding: "4px 10px", borderRadius: 20, background: `${c}12`, color: c, letterSpacing: ".03em", fontWeight: 500, backdropFilter: "blur(4px)" }}>
-      {status}
-    </span>
-  );
-}
 
 function SectionHeader({ title, right }) {
   const { bg, surface, line, t1, t2, t3 } = useTheme();
@@ -449,20 +439,10 @@ function Overview({ onNavigate, investor, projects, myProjects, allDistributions
           : "—";
         return (
           <div className="stat-grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 48 }}>
-            {[
-              { label: "Total Contributed", value: `$${fmt(totalContributed)}`, rawValue: totalContributed, prefix: "$", sub: `across ${myProjects.length} projects`, accent: red },
-              { label: "Current Value", value: `$${fmt(totalValue)}`, rawValue: totalValue, prefix: "$", sub: gainLoss >= 0 ? `+$${fmt(gainLoss)} gain` : `-$${fmt(Math.abs(gainLoss))} loss`, subColor: gainLoss >= 0 ? green : red, accent: green },
-              { label: "Total Distributed", value: `$${fmt(totalDistributed)}`, rawValue: totalDistributed, prefix: "$", sub: `${allDistributions.length} payments`, accent: "#D4A574" },
-              { label: "Weighted IRR", value: weightedIRR, sub: "blended across projects", accent: "#5B8DEF", tooltip: "Internal Rate of Return" },
-            ].map((s, i) => (
-              <div key={i} role="region" aria-label={`${s.label}: ${s.value}`} style={{ background: surface, padding: "20px 24px", borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", borderLeft: `3px solid ${s.accent}`, transition: "transform .15s, box-shadow .15s, border-color .2s", cursor: "default", border: "1px solid transparent", borderLeftWidth: 3, borderLeftColor: s.accent }}
-                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,.08)"; e.currentTarget.style.borderColor = `${s.accent}33`; e.currentTarget.style.borderLeftColor = s.accent; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.borderLeftColor = s.accent; }}>
-                <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: t3, marginBottom: 8, fontWeight: 500 }} title={s.tooltip || ""}>{s.label}</div>
-                <div style={{ fontSize: 26, fontWeight: 300, color: t1 }}>{s.rawValue != null ? <AnimatedNumber value={s.rawValue} prefix={s.prefix || ""} /> : s.value}</div>
-                <div style={{ fontSize: 11, color: s.subColor || t3, marginTop: 4 }}>{s.sub}</div>
-              </div>
-            ))}
+            <StatCard label="Total Contributed" value={<AnimatedNumber value={totalContributed} prefix="$" />} sub={`across ${myProjects.length} projects`} accent={red} />
+            <StatCard label="Current Value" value={<AnimatedNumber value={totalValue} prefix="$" />} sub={<span style={{ color: gainLoss >= 0 ? green : red }}>{gainLoss >= 0 ? `+$${fmt(gainLoss)} gain` : `-$${fmt(Math.abs(gainLoss))} loss`}</span>} accent={green} />
+            <StatCard label="Total Distributed" value={<AnimatedNumber value={totalDistributed} prefix="$" />} sub={`${allDistributions.length} payments`} accent="#D4A574" />
+            <StatCard label="Weighted IRR" value={weightedIRR} sub="blended across projects" accent="#5B8DEF" />
           </div>
         );
       })()}

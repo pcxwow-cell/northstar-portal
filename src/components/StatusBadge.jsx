@@ -16,6 +16,9 @@ const STATUS_COLORS = {
   declined: { bg: colors.errorBg, color: colors.red },
   published: { bg: colors.successBg, color: colors.green },
   new: { bg: `${colors.red}15`, color: colors.red },
+  Completed: { bg: colors.successBg, color: colors.green },
+  "Under Construction": { bg: colors.warningBg, color: "#8B7128" },
+  "Pre-Development": { bg: colors.errorBg, color: colors.red },
 };
 
 export default function StatusBadge({ status, size = "md", style = {} }) {
