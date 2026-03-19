@@ -13,6 +13,7 @@ import FormInput from "./components/FormInput.jsx";
 import Modal from "./components/Modal.jsx";
 import StatCard from "./components/StatCard.jsx";
 import StatusBadge from "./components/StatusBadge.jsx";
+import SectionHeader from "./components/SectionHeader.jsx";
 
 
 // ─── SORTABLE HEADER ───
@@ -69,9 +70,7 @@ function PeopleSection({ profileId, setProfileId, peopleTab, setPeopleTab, toast
 
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 300 }}>People</h1>
-      </div>
+      <SectionHeader title="People" size="lg" style={{ marginBottom: 8 }} />
       <div style={{ display: "flex", gap: 4, marginBottom: 24, background: colors.lightBorder, borderRadius: 8, padding: 3, width: "fit-content" }}>
         {subTabs.map(t => (
           <span key={t.id} onClick={() => { setPeopleTab(t.id); setProfileId(null); }} style={{
@@ -103,9 +102,7 @@ function DocumentsSection({ docsTab, setDocsTab, toast }) {
 
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 300 }}>Documents</h1>
-      </div>
+      <SectionHeader title="Documents" size="lg" style={{ marginBottom: 8 }} />
       <div style={{ display: "flex", gap: 4, marginBottom: 24, background: colors.lightBorder, borderRadius: 8, padding: 3, width: "fit-content" }}>
         {subTabs.map(t => (
           <span key={t.id} onClick={() => setDocsTab(t.id)} style={{
@@ -291,7 +288,7 @@ function Dashboard({ onNavigate }) {
 
   return (
     <>
-      <h1 style={{ fontSize: 28, fontWeight: 300, marginBottom: 32 }}>Admin Dashboard</h1>
+      <SectionHeader title="Admin Dashboard" size="lg" style={{ marginBottom: 32 }} />
 
       {/* Stat Cards */}
       <div className="admin-stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 32 }}>
@@ -482,10 +479,7 @@ function ProjectManager({ toast, onViewProject }) {
   return (
     <>
       {confirmAction && <ConfirmDialog {...confirmAction} open={true} onCancel={() => setConfirmAction(null)} />}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 300 }}>Projects</h1>
-        <Button onClick={() => setShowCreate(!showCreate)}>{showCreate ? "Cancel" : "Create Project"}</Button>
-      </div>
+      <SectionHeader title="Projects" size="lg" right={<Button onClick={() => setShowCreate(!showCreate)}>{showCreate ? "Cancel" : "Create Project"}</Button>} style={{ marginBottom: 16 }} />
 
       {/* Search & Filter */}
       <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
@@ -737,9 +731,7 @@ function InvestorManager({ toast, onViewProfile, hideHeader }) {
     <>
       {confirmAction && <ConfirmDialog {...confirmAction} open={true} onCancel={() => setConfirmAction(null)} />}
       {credentialDialog && <CredentialDialog {...credentialDialog} onClose={() => setCredentialDialog(null)} />}
-      {!hideHeader && <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 300 }}>Investors</h1>
-      </div>}
+      {!hideHeader && <SectionHeader title="Investors" size="lg" style={{ marginBottom: 24 }} />}
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
         <Button onClick={() => setShowInvite(!showInvite)}>{showInvite ? "Cancel" : "Invite Investor"}</Button>
       </div>
@@ -1826,12 +1818,7 @@ function DocumentManager({ toast, hideHeader }) {
   // Document list dashboard
   return (
     <>
-      {!hideHeader && <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <div>
-          <h1 style={{ fontSize: 28, fontWeight: 300 }}>Documents</h1>
-          <p style={{ fontSize: 13, color: colors.mutedText, marginTop: 4 }}>{docs.length} documents</p>
-        </div>
-      </div>}
+      {!hideHeader && <SectionHeader title="Documents" subtitle={`${docs.length} documents`} size="lg" style={{ marginBottom: 24 }} />}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <p style={{ fontSize: 13, color: colors.mutedText }}>{hideHeader ? `${docs.length} documents` : ""}</p>
         <div style={{ display: "flex", gap: 8 }}>
@@ -2714,7 +2701,7 @@ function GroupManager({ toast, hideHeader }) {
 
   return (
     <>
-      {!hideHeader && <h1 style={{ fontSize: 28, fontWeight: 300, marginBottom: 24 }}>Investor Groups</h1>}
+      {!hideHeader && <SectionHeader title="Investor Groups" size="lg" style={{ marginBottom: 24 }} />}
 
       {/* Create group */}
       <form onSubmit={handleCreate} className="admin-form-row" style={{ display: "flex", gap: 10, marginBottom: 24, alignItems: "flex-end", flexWrap: "wrap" }}>
@@ -2992,9 +2979,7 @@ function StaffManager({ toast, hideHeader }) {
   return (
     <>
       {confirmAction && <ConfirmDialog {...confirmAction} open={true} onCancel={() => setConfirmAction(null)} />}
-      {!hideHeader && <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 300 }}>Company Staff</h1>
-      </div>}
+      {!hideHeader && <SectionHeader title="Company Staff" size="lg" style={{ marginBottom: 24 }} />}
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
         <Button onClick={() => setShowAdd(!showAdd)}>{showAdd ? "Cancel" : "Add Staff"}</Button>
       </div>
@@ -3294,22 +3279,7 @@ function StatementManager({ toast }) {
 
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div>
-            <h1 style={{ fontSize: 28, fontWeight: 300 }}>Statements</h1>
-            <p style={{ fontSize: 13, color: colors.mutedText, marginTop: 4 }}>Generate, review, and send capital account statements</p>
-          </div>
-          {drafts > 0 && (
-            <span style={{ background: "#FFF8E1", color: "#B8860B", fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 12, marginLeft: 8 }}>
-              {drafts} awaiting approval
-            </span>
-          )}
-        </div>
-        <Button onClick={() => setShowGenerateForm(!showGenerateForm)} disabled={generating}>
-          {generating ? "Generating..." : "Generate All"}
-        </Button>
-      </div>
+      <SectionHeader title="Statements" subtitle="Generate, review, and send capital account statements" size="lg" right={<div style={{ display: "flex", alignItems: "center", gap: 12 }}>{drafts > 0 && <span style={{ background: "#FFF8E1", color: "#B8860B", fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 12 }}>{drafts} awaiting approval</span>}<Button onClick={() => setShowGenerateForm(!showGenerateForm)} disabled={generating}>{generating ? "Generating..." : "Generate All"}</Button></div>} style={{ marginBottom: 24 }} />
 
       {/* Generate form with period inputs */}
       {showGenerateForm && (
@@ -3751,12 +3721,7 @@ function SignatureManager({ toast, hideHeader }) {
 
   return (
     <>
-      {!hideHeader && <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <div>
-          <h1 style={{ fontSize: 28, fontWeight: 300 }}>Signatures</h1>
-          <p style={{ fontSize: 13, color: colors.mutedText, marginTop: 4 }}>{sigs.length} signature requests</p>
-        </div>
-      </div>}
+      {!hideHeader && <SectionHeader title="Signatures" subtitle={`${sigs.length} signature requests`} size="lg" style={{ marginBottom: 24 }} />}
       <div style={{ marginBottom: 20 }}>
         <SearchBox value={sigSearch} onChange={setSigSearch} placeholder="Search signatures..." />
       </div>
@@ -3849,9 +3814,7 @@ function ProspectManager({ toast }) {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 400, color: colors.darkText }}>Prospect Leads</h2>
-      </div>
+      <SectionHeader title="Prospect Leads" style={{ marginBottom: 24 }} />
 
       {/* Stats Badges */}
       {stats && (
@@ -4241,13 +4204,7 @@ function AdminInbox({ user, toast }) {
   const unreadCount = threads.filter(t => t.unread).length;
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <div>
-          <h1 style={{ fontSize: 28, fontWeight: 300 }}>Inbox</h1>
-          <p style={{ fontSize: 13, color: colors.mutedText, marginTop: 4 }}>{unreadCount} unread · {threads.length} conversations</p>
-        </div>
-        <Button onClick={() => setComposing(true)}>New Message</Button>
-      </div>
+      <SectionHeader title="Inbox" subtitle={`${unreadCount} unread · ${threads.length} conversations`} size="lg" right={<Button onClick={() => setComposing(true)}>New Message</Button>} style={{ marginBottom: 24 }} />
 
       {/* Filters */}
       <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
@@ -4326,7 +4283,7 @@ function AuditLogViewer() {
 
   return (
     <>
-      <h1 style={{ fontSize: 28, fontWeight: 300, marginBottom: 24 }}>Audit Log</h1>
+      <SectionHeader title="Audit Log" size="lg" style={{ marginBottom: 24 }} />
       <p style={{ fontSize: 13, color: colors.mutedText, marginBottom: 24 }}>Compliance log of key system actions. Last 100 entries shown.</p>
 
       {/* Search */}
@@ -4510,7 +4467,7 @@ function EmailSettingsManager({ toast }) {
 
   return (
     <>
-      <h1 style={{ fontSize: 28, fontWeight: 300, marginBottom: 24 }}>Email Settings</h1>
+      <SectionHeader title="Email Settings" size="lg" style={{ marginBottom: 24 }} />
 
       {/* Section A: Email Provider Status */}
       <div style={cardStyle}>

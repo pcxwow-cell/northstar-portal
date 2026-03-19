@@ -9,6 +9,9 @@ import FormInput from "./components/FormInput.jsx";
 import Modal from "./components/Modal.jsx";
 import StatCard from "./components/StatCard.jsx";
 import StatusBadge from "./components/StatusBadge.jsx";
+import Spinner from "./components/Spinner.jsx";
+import EmptyState from "./components/EmptyState.jsx";
+import ConfirmDialog from "./components/ConfirmDialog.jsx";
 
 // Lazy load heavy components — they get their own chunks
 const AdminPanel = lazy(() => import("./Admin.jsx"));
@@ -149,20 +152,7 @@ function Table({ columns, rows, onRowClick, sortable, sortKey: externalSortKey, 
 }
 
 // ─── LOADING SPINNER ─────────────────────────────────────
-function LoadingSpinner({ size = 24, color = red }) {
-  return (
-    <div role="status" aria-label="Loading" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-      <style>{`@keyframes northstarSpin { to { transform: rotate(360deg); } }`}</style>
-      <div style={{
-        width: size, height: size,
-        border: `2px solid ${color}22`,
-        borderTopColor: color,
-        borderRadius: "50%",
-        animation: "northstarSpin .7s linear infinite",
-      }} />
-    </div>
-  );
-}
+// Using shared Spinner component from ./components/Spinner.jsx
 
 // ─── ERROR BANNER ────────────────────────────────────────
 function ErrorBanner({ message, onRetry }) {
@@ -183,23 +173,14 @@ function ErrorBanner({ message, onRetry }) {
 }
 
 // ─── EMPTY STATE ─────────────────────────────────────────
-function EmptyState({ icon, title, subtitle }) {
-  const th = useTheme();
-  return (
-    <div style={{ textAlign: "center", padding: "60px 20px", fontFamily: sans }}>
-      {icon && <div style={{ fontSize: 36, marginBottom: 16, opacity: 0.3 }}>{icon}</div>}
-      <div style={{ fontSize: 16, fontWeight: 500, color: th.t2, marginBottom: 6 }}>{title}</div>
-      {subtitle && <div style={{ fontSize: 13, color: th.t3 }}>{subtitle}</div>}
-    </div>
-  );
-}
+// Using shared EmptyState component from ./components/EmptyState.jsx
 
 // ─── LOADING PAGE (full-page loader for data fetch) ─────
 function LoadingPage() {
   const th = useTheme();
   return (
     <div aria-busy="true" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 20px", gap: 16 }}>
-      <LoadingSpinner size={32} />
+      <Spinner size={32} />
       <span style={{ fontSize: 13, color: th.t3 }}>Loading...</span>
     </div>
   );
@@ -674,7 +655,7 @@ function Portfolio({ myProjects, investor, initialProjectId }) {
 
         {detailLoading && (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 0" }}>
-            <LoadingSpinner size={28} />
+            <Spinner size={28} />
           </div>
         )}
         {detailTab === "overview" && !detailLoading && (<>
@@ -1425,7 +1406,7 @@ function MessagesPage({ toast, investor, initialThreadId }) {
       <>
         <p style={{ fontSize: 12, color: red, cursor: "pointer", marginBottom: 24 }} onClick={() => { setSelectedThread(null); setThreadDetail(null); setReply(""); }}>← Back to messages</p>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "60px 0" }}>
-          <LoadingSpinner size={28} />
+          <Spinner size={28} />
         </div>
       </>
     );
@@ -2762,7 +2743,7 @@ function ActivityPage({ toast, onNavigate }) {
         <p style={{ fontSize: 14, color: t2, marginTop: 6 }}>Recent events across your portfolio</p>
       </div>
       {loading ? (
-        <div style={{ textAlign: "center", padding: 60 }}><LoadingSpinner size={28} /></div>
+        <div style={{ textAlign: "center", padding: 60 }}><Spinner size={28} /></div>
       ) : notifications.length === 0 ? (
         <EmptyState icon="🔔" title="No activity yet" subtitle="Events will appear here as they occur." />
       ) : (
@@ -2925,14 +2906,14 @@ export default function App() {
       {loading ? (
         <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: th.bg, fontFamily: sans, color: th.t2, gap: 16 }}>
           <NorthstarIcon size={40} color={red} />
-          <LoadingSpinner size={28} />
+          <Spinner size={28} />
         </div>
       ) : showResetPassword ? (
         <ResetPasswordPage onBack={() => { setShowResetPassword(false); window.location.hash = "#/login"; }} />
       ) : showLogin ? (
         <LoginPage onLogin={handleLogin} onShowProspects={() => { setShowLogin(false); window.location.hash = ""; }} />
       ) : (
-        <Suspense fallback={<div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: th.bg }}><LoadingSpinner size={32} /></div>}>
+        <Suspense fallback={<div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: th.bg }}><Spinner size={32} /></div>}>
           <ProspectPortal onNavigateLogin={() => { setShowLogin(true); window.location.hash = "#/login"; }} />
         </Suspense>
       )}
@@ -2942,7 +2923,7 @@ export default function App() {
   // Admin users get the admin panel
   if (user && (user.role === "ADMIN" || user.role === "GP")) {
     return (
-      <Suspense fallback={<div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F5F3EF" }}><LoadingSpinner size={32} /></div>}>
+      <Suspense fallback={<div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F5F3EF" }}><Spinner size={32} /></div>}>
         <AdminPanel user={user} onLogout={handleLogout} />
       </Suspense>
     );
@@ -2952,7 +2933,7 @@ export default function App() {
     <ThemeContext.Provider value={th}>
       <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: th.bg, fontFamily: sans, color: th.t2, gap: 16 }}>
         <NorthstarIcon size={40} color={red} />
-        <LoadingSpinner size={28} />
+        <Spinner size={28} />
       </div>
     </ThemeContext.Provider>
   );
