@@ -16,6 +16,7 @@ import StatusBadge from "./components/StatusBadge.jsx";
 import SectionHeader from "./components/SectionHeader.jsx";
 import Tabs from "./components/Tabs.jsx";
 import DataTable from "./components/DataTable.jsx";
+import SearchFilterBar from "./components/SearchFilterBar.jsx";
 
 
 // ─── SORTABLE HEADER ───
@@ -464,15 +465,9 @@ function ProjectManager({ toast, onViewProject }) {
       <SectionHeader title="Projects" size="lg" right={<Button onClick={() => setShowCreate(!showCreate)}>{showCreate ? "Cancel" : "Create Project"}</Button>} style={{ marginBottom: 16 }} />
 
       {/* Search & Filter */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or location..." style={{ ...inputStyle, flex: 1 }} />
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ ...inputStyle, width: 180 }}>
-          <option value="">All Statuses</option>
-          <option value="Pre-Development">Pre-Development</option>
-          <option value="Under Construction">Under Construction</option>
-          <option value="Completed">Completed</option>
-        </select>
-      </div>
+      <SearchFilterBar search={search} onSearchChange={setSearch} placeholder="Search by name or location..." filters={[
+        { value: statusFilter, onChange: setStatusFilter, label: "Status filter", options: [{ value: "", label: "All Statuses" }, { value: "Pre-Development", label: "Pre-Development" }, { value: "Under Construction", label: "Under Construction" }, { value: "Completed", label: "Completed" }] },
+      ]} style={{ marginBottom: 24 }} />
 
       {/* Create Project Form */}
       {showCreate && (
@@ -734,19 +729,10 @@ function InvestorManager({ toast, onViewProfile, hideHeader }) {
       )}
 
       {/* Search + Filters */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or email..." style={{ ...inputStyle, flex: 1 }} />
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ ...inputStyle, width: 140 }}>
-          <option value="">All Statuses</option>
-          <option value="ACTIVE">Active</option>
-          <option value="PENDING">Pending</option>
-          <option value="INACTIVE">Inactive</option>
-        </select>
-        <select value={projectFilter} onChange={e => setProjectFilter(e.target.value)} style={{ ...inputStyle, width: 160 }}>
-          <option value="">All Projects</option>
-          {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-        </select>
-      </div>
+      <SearchFilterBar search={search} onSearchChange={setSearch} placeholder="Search by name or email..." filters={[
+        { value: statusFilter, onChange: setStatusFilter, label: "Status filter", options: [{ value: "", label: "All Statuses" }, { value: "ACTIVE", label: "Active" }, { value: "PENDING", label: "Pending" }, { value: "INACTIVE", label: "Inactive" }] },
+        { value: projectFilter, onChange: setProjectFilter, label: "Project filter", options: [{ value: "", label: "All Projects" }, ...projects.map(p => ({ value: p.id, label: p.name }))] },
+      ]} />
 
       {/* Column headers */}
       <Card className="admin-table-scroll" padding="0" style={{ overflow: "hidden" }}>
@@ -1869,17 +1855,10 @@ function DocumentManager({ toast, hideHeader }) {
       )}
 
       {/* Filters */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search documents..." style={{ ...inputStyle, flex: 1 }} />
-        <select value={projectFilter} onChange={e => setProjectFilter(e.target.value)} style={{ ...inputStyle, width: 160 }}>
-          <option value="">All Projects</option>
-          {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-        </select>
-        <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} style={{ ...inputStyle, width: 160 }}>
-          <option value="">All Categories</option>
-          {categories.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
-      </div>
+      <SearchFilterBar search={search} onSearchChange={setSearch} placeholder="Search documents..." filters={[
+        { value: projectFilter, onChange: setProjectFilter, label: "Project filter", options: [{ value: "", label: "All Projects" }, ...projects.map(p => ({ value: p.id, label: p.name }))] },
+        { value: categoryFilter, onChange: setCategoryFilter, label: "Category filter", options: [{ value: "", label: "All Categories" }, ...categories.map(c => ({ value: c, label: c }))] },
+      ]} />
 
       {/* Document table */}
       {loading ? <Spinner /> : (
@@ -3288,7 +3267,7 @@ function StatementManager({ toast }) {
             }}>{f === "all" ? "All" : f.charAt(0) + f.slice(1).toLowerCase()}</button>
           ))}
         </div>
-        <SearchBox value={stmtSearch} onChange={setStmtSearch} placeholder="Search statements..." />
+        <SearchFilterBar search={stmtSearch} onSearchChange={setStmtSearch} placeholder="Search statements..." />
       </div>
 
       {/* Rejection reason modal */}
@@ -3656,7 +3635,7 @@ function SignatureManager({ toast, hideHeader }) {
     <>
       {!hideHeader && <SectionHeader title="Signatures" subtitle={`${sigs.length} signature requests`} size="lg" style={{ marginBottom: 24 }} />}
       <div style={{ marginBottom: 20 }}>
-        <SearchBox value={sigSearch} onChange={setSigSearch} placeholder="Search signatures..." />
+        <SearchFilterBar search={sigSearch} onSearchChange={setSigSearch} placeholder="Search signatures..." />
       </div>
       {loading ? <p style={{ color: colors.mutedText }}>Loading...</p> : filteredSigs.length === 0 ? (
         <div style={{ background: colors.white, borderRadius: 12, padding: 40, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", textAlign: "center", color: colors.mutedText, fontSize: 13 }}>
@@ -3777,7 +3756,7 @@ function ProspectManager({ toast }) {
 
       {/* Search */}
       <div style={{ marginBottom: 20 }}>
-        <SearchBox value={prospectSearch} onChange={setProspectSearch} placeholder="Search prospects..." />
+        <SearchFilterBar search={prospectSearch} onSearchChange={setProspectSearch} placeholder="Search prospects..." />
       </div>
 
       {/* Table */}
@@ -4217,7 +4196,7 @@ function AuditLogViewer() {
 
       {/* Search */}
       <div style={{ marginBottom: 20 }}>
-        <SearchBox value={auditSearch} onChange={setAuditSearch} placeholder="Search audit log..." />
+        <SearchFilterBar search={auditSearch} onSearchChange={setAuditSearch} placeholder="Search audit log..." />
       </div>
 
       {/* Filter by action */}
