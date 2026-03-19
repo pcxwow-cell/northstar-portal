@@ -1219,7 +1219,7 @@ function DocumentsPage({ toast, allDocuments, myProjects, investor }) {
                 {d.date && (Date.now() - new Date(d.date).getTime()) < 7 * 86400000 && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 2, background: `${red}18`, color: red, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em" }}>NEW</span>}
                 {d.status === "action_required" && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 2, background: `${red}22`, color: red, textTransform: "uppercase", letterSpacing: ".06em" }}>Action Required</span>}
                 {d.status === "pending_signature" && !signedDocs[d.id] && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 2, background: `#8B712822`, color: "#8B7128", textTransform: "uppercase", letterSpacing: ".06em" }}>Pending Signature</span>}
-                {signedDocs[d.id] && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 2, background: `${green}22`, color: green, textTransform: "uppercase", letterSpacing: ".06em" }}>Signed</span>}
+                {signedDocs[d.id] && <StatusBadge status="signed" size="sm" />}
               </div>
               <div style={{ fontSize: 11, color: t3, marginTop: 3 }}>{d.project} · {d.category} · {d.date} · {d.size}</div>
             </div>
@@ -2133,7 +2133,7 @@ function ProfilePage({ investor, toast, onUpdate }) {
             {(investor.projectIds || []).length > 0 ? (
               <div style={{ fontSize: 13, color: t2 }}>
                 <div style={{ marginBottom: 8 }}>Active Projects: <strong>{investor.projectIds.length}</strong></div>
-                <div>Account Status: <span style={{ padding: "2px 8px", borderRadius: 3, fontSize: 11, background: `${green}20`, color: green }}>Active</span></div>
+                <div>Account Status: <StatusBadge status="active" size="sm" /></div>
               </div>
             ) : (
               <div style={{ fontSize: 13, color: t3, fontStyle: "italic" }}>No active investments</div>
