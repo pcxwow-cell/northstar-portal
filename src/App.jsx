@@ -14,6 +14,7 @@ import EmptyState from "./components/EmptyState.jsx";
 import ConfirmDialog from "./components/ConfirmDialog.jsx";
 import Tabs from "./components/Tabs.jsx";
 import DataTable from "./components/DataTable.jsx";
+import SearchFilterBar from "./components/SearchFilterBar.jsx";
 
 // Lazy load heavy components — they get their own chunks
 const AdminPanel = lazy(() => import("./Admin.jsx"));
@@ -1391,14 +1392,9 @@ function MessagesPage({ toast, investor, initialThreadId }) {
       </div>
       {/* Search and sort controls */}
       {!loading && threads.length > 0 && (
-        <div className="msg-search-row" style={{ display: "flex", gap: 12, marginBottom: 16, alignItems: "center" }}>
-          <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Search messages..." style={{ flex: 1, padding: "10px 14px", background: "transparent", border: `1px solid ${line}`, borderRadius: 6, color: t1, fontSize: 13, fontFamily: sans, outline: "none", boxSizing: "border-box" }} />
-          <select value={sortMode} onChange={e => setSortMode(e.target.value)} style={{ padding: "10px 14px", background: surface, border: `1px solid ${line}`, borderRadius: 6, color: t1, fontSize: 12, fontFamily: sans, outline: "none", cursor: "pointer" }}>
-            <option value="newest">Newest first</option>
-            <option value="oldest">Oldest first</option>
-            <option value="unread">Unread first</option>
-          </select>
-        </div>
+        <SearchFilterBar search={searchTerm} onSearchChange={setSearchTerm} placeholder="Search messages..." filters={[
+          { value: sortMode, onChange: setSortMode, label: "Sort order", options: [{ value: "newest", label: "Newest first" }, { value: "oldest", label: "Oldest first" }, { value: "unread", label: "Unread first" }] },
+        ]} style={{ marginBottom: 16 }} />
       )}
       {loading ? (
         <MessagesSkeleton />
