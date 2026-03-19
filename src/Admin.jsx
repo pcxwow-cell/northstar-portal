@@ -480,6 +480,37 @@ function ProjectManager({ toast, onViewProject }) {
 }
 
 // ─── INVESTOR MANAGER (search, filter, sort, invite, edit, KPI editing) ───
+// ─── CREDENTIAL DIALOG (persistent, copyable) ───
+function CredentialDialog({ name, email, tempPassword, onClose }) {
+  const [copied, setCopied] = useState(false);
+  const copyText = `Email: ${email}\nTemporary Password: ${tempPassword}`;
+  function handleCopy() {
+    navigator.clipboard.writeText(copyText).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+  }
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 12, padding: "32px", maxWidth: 440, width: "90%", boxShadow: "0 20px 60px rgba(0,0,0,.15)" }}>
+        <div style={{ fontSize: 18, fontWeight: 500, marginBottom: 4 }}>Investor Created</div>
+        <p style={{ fontSize: 13, color: "#767168", marginBottom: 20 }}>Save these credentials — the password cannot be retrieved later.</p>
+        <div style={{ background: "#FAFAF8", border: "1px solid #ECEAE5", borderRadius: 8, padding: "16px 20px", marginBottom: 20, fontFamily: "monospace", fontSize: 13, lineHeight: 2 }}>
+          <div><span style={{ color: "#999" }}>Name:</span> <strong>{name}</strong></div>
+          <div><span style={{ color: "#999" }}>Email:</span> <strong>{email}</strong></div>
+          <div><span style={{ color: "#999" }}>Password:</span> <strong style={{ color: "#EA2028" }}>{tempPassword}</strong></div>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={handleCopy} style={{ flex: 1, padding: "10px", background: copied ? "#3D7A54" : "#EA2028", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, cursor: "pointer", fontWeight: 500 }}>
+            {copied ? "✓ Copied!" : "Copy Credentials"}
+          </button>
+          <button onClick={onClose} style={{ padding: "10px 20px", background: "#F5F3EF", border: "1px solid #ECEAE5", borderRadius: 6, fontSize: 13, cursor: "pointer", color: "#666" }}>
+            Close
+          </button>
+        </div>
+        <p style={{ fontSize: 11, color: "#AAA", marginTop: 12 }}>A welcome email has been sent to {email}.</p>
+      </div>
+    </div>
+  );
+}
+
 function InvestorManager({ toast, onViewProfile, hideHeader }) {
   const [investors, setInvestors] = useState([]);
   const [projects, setProjects] = useState([]);
@@ -500,11 +531,13 @@ function InvestorManager({ toast, onViewProfile, hideHeader }) {
   useEffect(() => { reload(); }, [search, statusFilter, projectFilter, sortBy, sortDir]);
   useEffect(() => { fetchAdminProjects().then(setProjects); }, []);
 
+  const [credentialDialog, setCredentialDialog] = useState(null);
+
   async function handleInvite(e) {
     e.preventDefault();
     try {
       const result = await inviteInvestor({ name: inviteName, email: inviteEmail });
-      toast(`Invited ${result.name}. Temp password: ${result.tempPassword}`);
+      setCredentialDialog({ name: result.name, email: inviteEmail, tempPassword: result.tempPassword });
       setShowInvite(false); setInviteName(""); setInviteEmail(""); reload();
     } catch (err) { toast(err.message, "error"); }
   }
@@ -516,7 +549,11 @@ function InvestorManager({ toast, onViewProfile, hideHeader }) {
     try { await deactivateInvestor(id); toast("Investor deactivated"); reload(); } catch (e) { toast(e.message, "error"); }
   }
   async function handleResetPw(id) {
-    try { const r = await resetInvestorPassword(id); toast(`New password: ${r.tempPassword}`); } catch (e) { toast(e.message, "error"); }
+    try {
+      const inv = investors.find(i => i.id === id);
+      const r = await resetInvestorPassword(id);
+      setCredentialDialog({ name: inv?.name || "Investor", email: inv?.email || "", tempPassword: r.tempPassword });
+    } catch (e) { toast(e.message, "error"); }
   }
   async function handleEditSave(id, data) {
     try { await updateInvestor(id, data); toast("Updated"); reload(); setEditing(null); } catch (e) { toast(e.message, "error"); }
@@ -534,6 +571,7 @@ function InvestorManager({ toast, onViewProfile, hideHeader }) {
 
   return (
     <>
+      {credentialDialog && <CredentialDialog {...credentialDialog} onClose={() => setCredentialDialog(null)} />}
       {!hideHeader && <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <h1 style={{ fontSize: 28, fontWeight: 300 }}>Investors</h1>
       </div>}

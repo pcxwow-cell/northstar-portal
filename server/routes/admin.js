@@ -353,9 +353,32 @@ router.post("/investors/invite", validate(inviteInvestorSchema), async (req, res
 
     audit.log(req, "investor_invite", `user:${user.id}`, { name, email });
 
+    // Send welcome email with temporary password
+    try {
+      const emailService = require("../services/email");
+      await emailService.sendEmail({
+        to: email,
+        subject: "Welcome to Northstar Investor Portal",
+        html: `<div style="font-family:sans-serif;max-width:500px;margin:0 auto;">
+          <h2 style="color:#231F20;">Welcome to Northstar, ${name}</h2>
+          <p>You've been invited to the Northstar Investor Portal. Here are your login credentials:</p>
+          <div style="background:#FAFAF8;border:1px solid #ECEAE5;border-radius:8px;padding:16px 20px;margin:16px 0;font-family:monospace;">
+            <div>Email: <strong>${email}</strong></div>
+            <div>Password: <strong>${tempPassword}</strong></div>
+          </div>
+          <p>Please change your password after your first login.</p>
+          <p><a href="https://northstar-portal-roan.vercel.app" style="display:inline-block;padding:10px 24px;background:#EA2028;color:#fff;text-decoration:none;border-radius:4px;">Login to Portal</a></p>
+          <p style="color:#999;font-size:12px;margin-top:24px;">Northstar Pacific Development Group</p>
+        </div>`,
+        text: `Welcome to Northstar, ${name}. Your login: Email: ${email}, Password: ${tempPassword}. Login at https://northstar-portal-roan.vercel.app`,
+      });
+    } catch (emailErr) {
+      console.warn("Welcome email failed:", emailErr.message);
+    }
+
     res.status(201).json({
       id: user.id, name: user.name, email: user.email, status: user.status,
-      tempPassword, // In production, send this via email instead of returning it
+      tempPassword,
     });
   } catch (err) { next(err); }
 });
@@ -414,13 +437,39 @@ router.post("/investors/:id/deactivate", async (req, res, next) => {
 // POST /admin/investors/:id/reset-password — generate new temporary password
 router.post("/investors/:id/reset-password", async (req, res, next) => {
   try {
+    const user = await prisma.user.findUnique({ where: { id: parseInt(req.params.id) } });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
     const tempPassword = crypto.randomBytes(6).toString("hex");
     const passwordHash = await bcrypt.hash(tempPassword, 10);
     await prisma.user.update({
-      where: { id: parseInt(req.params.id) },
+      where: { id: user.id },
       data: { passwordHash },
     });
-    res.json({ tempPassword }); // In production, send via email
+
+    // Send password reset email
+    try {
+      const emailService = require("../services/email");
+      await emailService.sendEmail({
+        to: user.email,
+        subject: "Northstar Portal — Password Reset",
+        html: `<div style="font-family:sans-serif;max-width:500px;margin:0 auto;">
+          <h2 style="color:#231F20;">Password Reset</h2>
+          <p>Hi ${user.name}, your password has been reset by an administrator.</p>
+          <div style="background:#FAFAF8;border:1px solid #ECEAE5;border-radius:8px;padding:16px 20px;margin:16px 0;font-family:monospace;">
+            <div>New Password: <strong>${tempPassword}</strong></div>
+          </div>
+          <p>Please change your password after logging in.</p>
+          <p><a href="https://northstar-portal-roan.vercel.app" style="display:inline-block;padding:10px 24px;background:#EA2028;color:#fff;text-decoration:none;border-radius:4px;">Login to Portal</a></p>
+        </div>`,
+        text: `Hi ${user.name}, your password has been reset. New password: ${tempPassword}`,
+      });
+    } catch (emailErr) {
+      console.warn("Password reset email failed:", emailErr.message);
+    }
+
+    audit.log(req, "password_reset", `user:${user.id}`, { name: user.name });
+    res.json({ tempPassword });
   } catch (err) { next(err); }
 });
 
