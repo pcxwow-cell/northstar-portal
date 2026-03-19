@@ -6,6 +6,7 @@ import { colors, fonts, inputStyle, btnStyle, btnOutline, shadows, radius, label
 import Button from "./components/Button.jsx";
 import Card from "./components/Card.jsx";
 import FormInput from "./components/FormInput.jsx";
+import Modal from "./components/Modal.jsx";
 
 // Lazy load heavy components — they get their own chunks
 const AdminPanel = lazy(() => import("./Admin.jsx"));
@@ -52,36 +53,6 @@ const useTheme = () => useContext(ThemeContext);
 
 const bg = "#060606", surface = "#0C0C0C", line = "#1A1A1A", t1 = "#E8E4DE", t2 = "#8C887F", t3 = "#4A4843";
 
-
-// ─── MODAL ───────────────────────────────────────────────
-function Modal({ open, onClose, children, ariaLabel }) {
-  const { bg, surface, line, t1, t2, t3 } = useTheme();
-  const modalRef = useRef(null);
-  useEffect(() => {
-    if (!open) return;
-    const handleKeyDown = (e) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", handleKeyDown);
-    // Focus trap: focus the modal on open
-    setTimeout(() => modalRef.current?.focus(), 50);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open, onClose]);
-  if (!open) return null;
-  return (
-    <div onClick={onClose} style={{
-      position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,.7)",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      backdropFilter: "blur(4px)", animation: "fadeIn .15s ease",
-    }}>
-      <div ref={modalRef} role="dialog" aria-modal="true" aria-label={ariaLabel || "Dialog"} tabIndex={-1} onClick={e => e.stopPropagation()} style={{
-        background: surface, border: `1px solid ${line}`, borderRadius: 12,
-        padding: "32px", maxWidth: 520, width: "90%", maxHeight: "80vh", overflow: "auto",
-        boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", outline: "none",
-      }}>
-        {children}
-      </div>
-    </div>
-  );
-}
 
 // ─── SHARED COMPONENTS ───────────────────────────────────
 function ChartTooltip({ active, payload, label, prefix = "$", suffix = "K" }) {
@@ -1285,7 +1256,7 @@ function DocumentsPage({ toast, allDocuments, myProjects, investor }) {
       )}
 
       {/* Sign Modal */}
-      <Modal open={!!signModal} onClose={() => setSignModal(null)} ariaLabel="Sign document">
+      <Modal open={!!signModal} onClose={() => setSignModal(null)} title="Sign document">
         {signModal && (
           <>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
@@ -1323,7 +1294,7 @@ function DocumentsPage({ toast, allDocuments, myProjects, investor }) {
       </Modal>
 
       {/* Review Modal */}
-      <Modal open={!!reviewDoc} onClose={() => setReviewDoc(null)} ariaLabel="Review document">
+      <Modal open={!!reviewDoc} onClose={() => setReviewDoc(null)} title="Review document">
         {reviewDoc && (
           <>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20 }}>
@@ -2615,50 +2586,38 @@ function LoginPage({ onLogin, onShowProspects }) {
       </div>
 
       {/* Forgot Password Modal */}
-      {showForgot && (
-        <div onClick={() => { setShowForgot(false); setForgotSent(false); setForgotEmail(""); }} style={{
-          position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,.5)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          backdropFilter: "blur(4px)",
-        }}>
-          <div onClick={e => e.stopPropagation()} style={{
-            background: colors.white, borderRadius: 12, padding: "32px", maxWidth: 400, width: "90%",
-            boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)",
-          }}>
-            <h3 style={{ fontSize: 18, fontWeight: 400, marginBottom: 8, color: darkText }}>Reset Password</h3>
-            {forgotSent ? (
-              <>
-                <p style={{ fontSize: 13, color: "#666", lineHeight: 1.6, marginBottom: 20 }}>
-                  If an account exists with that email, we have sent a password reset link. Please check your inbox.
-                </p>
-                <p style={{ fontSize: 11, color: colors.mutedText, fontStyle: "italic" }}>
-                  (Demo mode — check the server console for the reset link)
-                </p>
-                <Button onClick={() => { setShowForgot(false); setForgotSent(false); setForgotEmail(""); }} style={{ marginTop: 16, padding: "10px 24px", background: red, color: colors.white, border: "none", borderRadius: 4, fontSize: 13, cursor: "pointer", fontFamily: sans }}>
-                  Back to Login
-                </Button>
-              </>
-            ) : (
-              <form onSubmit={handleForgotSubmit}>
-                <p style={{ fontSize: 13, color: "#888", marginBottom: 16 }}>Enter your email address and we will send you a link to reset your password.</p>
-                <div style={{ marginBottom: 20 }}>
-                  <label style={{ display: "block", fontSize: 11, color: "#888", fontWeight: 500, marginBottom: 6 }}>Email</label>
-                  <input type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} required placeholder="your@email.com"
-                    style={{ width: "100%", padding: "12px 14px", background: "#FAFAFA", border: "1px solid #E0DDD8", borderRadius: 4, color: darkText, fontSize: 14, fontFamily: sans, outline: "none", boxSizing: "border-box" }} />
-                </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <Button variant="outline" type="button" onClick={() => { setShowForgot(false); setForgotEmail(""); }} style={{ flex: 1, padding: "10px", background: colors.white, border: "1px solid #DDD", borderRadius: 4, fontSize: 13, cursor: "pointer", fontFamily: sans, color: darkText }}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={forgotLoading} style={{ flex: 1, padding: "10px", background: forgotLoading ? `${red}AA` : red, color: colors.white, border: "none", borderRadius: 4, fontSize: 13, cursor: forgotLoading ? "default" : "pointer", fontFamily: sans }}>
-                    {forgotLoading ? "Sending..." : "Send Reset Link"}
-                  </Button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      )}
+      <Modal open={showForgot} onClose={() => { setShowForgot(false); setForgotSent(false); setForgotEmail(""); }} title="Reset Password" maxWidth={400}>
+        {forgotSent ? (
+          <>
+            <p style={{ fontSize: 13, color: "#666", lineHeight: 1.6, marginBottom: 20 }}>
+              If an account exists with that email, we have sent a password reset link. Please check your inbox.
+            </p>
+            <p style={{ fontSize: 11, color: colors.mutedText, fontStyle: "italic" }}>
+              (Demo mode — check the server console for the reset link)
+            </p>
+            <Button onClick={() => { setShowForgot(false); setForgotSent(false); setForgotEmail(""); }} style={{ marginTop: 16, padding: "10px 24px", background: red, color: colors.white, border: "none", borderRadius: 4, fontSize: 13, cursor: "pointer", fontFamily: sans }}>
+              Back to Login
+            </Button>
+          </>
+        ) : (
+          <form onSubmit={handleForgotSubmit}>
+            <p style={{ fontSize: 13, color: "#888", marginBottom: 16 }}>Enter your email address and we will send you a link to reset your password.</p>
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: "block", fontSize: 11, color: "#888", fontWeight: 500, marginBottom: 6 }}>Email</label>
+              <input type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} required placeholder="your@email.com"
+                style={{ width: "100%", padding: "12px 14px", background: "#FAFAFA", border: "1px solid #E0DDD8", borderRadius: 4, color: darkText, fontSize: 14, fontFamily: sans, outline: "none", boxSizing: "border-box" }} />
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Button variant="outline" type="button" onClick={() => { setShowForgot(false); setForgotEmail(""); }} style={{ flex: 1, padding: "10px", background: colors.white, border: "1px solid #DDD", borderRadius: 4, fontSize: 13, cursor: "pointer", fontFamily: sans, color: darkText }}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={forgotLoading} style={{ flex: 1, padding: "10px", background: forgotLoading ? `${red}AA` : red, color: colors.white, border: "none", borderRadius: 4, fontSize: 13, cursor: forgotLoading ? "default" : "pointer", fontFamily: sans }}>
+                {forgotLoading ? "Sending..." : "Send Reset Link"}
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
 
       {/* ── Footer ── */}
       <div className="login-footer" style={{ padding: "20px 48px", display: "flex", justifyContent: "space-between", fontSize: 11, color: "#888", borderTop: "1px solid #ECEAE5" }}>
@@ -2779,18 +2738,9 @@ function useSessionTimeout(authed, onTimeout) {
 function SessionWarningModal({ onDismiss, onLogout }) {
   const th = useTheme();
   return (
-    <div style={{
-      position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,.6)",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      backdropFilter: "blur(4px)",
-    }}>
-      <div style={{
-        background: th.surface, border: `1px solid ${th.line}`, borderRadius: 12,
-        padding: "32px", maxWidth: 400, width: "90%", textAlign: "center",
-        boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)",
-      }}>
+    <Modal open={true} onClose={onDismiss} title="Session Expiring" maxWidth={400}>
+      <div style={{ textAlign: "center" }}>
         <div style={{ fontSize: 32, marginBottom: 16 }}>&#x23F0;</div>
-        <h3 style={{ fontFamily: sans, fontSize: 18, fontWeight: 500, color: th.t1, marginBottom: 8 }}>Session Expiring</h3>
         <p style={{ fontSize: 13, color: th.t2, lineHeight: 1.6, marginBottom: 24 }}>
           Your session will expire in 5 minutes due to inactivity. Click below to stay signed in.
         </p>
@@ -2799,7 +2749,7 @@ function SessionWarningModal({ onDismiss, onLogout }) {
           <span onClick={onDismiss} style={{ fontSize: 13, padding: "10px 24px", borderRadius: 4, background: red, color: colors.white, cursor: "pointer", fontWeight: 500 }}>Stay Signed In</span>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 
