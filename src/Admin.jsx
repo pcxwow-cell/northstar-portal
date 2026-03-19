@@ -8,6 +8,7 @@ import { fetchDashboard, fetchAdminProjects, updateProject, postUpdate, fetchAdm
 
 import { colors, fonts, inputStyle, btnStyle, btnOutline, shadows, radius, labelStyle } from "./styles/theme.js";
 import Button from "./components/Button.jsx";
+import Card from "./components/Card.jsx";
 
 
 // ─── SORTABLE HEADER ───
@@ -291,17 +292,18 @@ function Dashboard({ onNavigate }) {
       {/* Stat Cards */}
       <div className="admin-stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 32 }}>
         {statCards.map((s, i) => (
-          <div key={i} onClick={() => onNavigate(s.nav)} style={{ background: colors.white, borderRadius: 10, padding: "20px 24px", boxShadow: cardShadow, borderLeft: `3px solid ${s.accent}`, transition: "transform .15s, box-shadow .15s", cursor: "pointer" }}
+          <Card key={i} accent={s.accent} style={{ transition: "transform .15s, box-shadow .15s", cursor: "pointer" }}
+            onClick={() => onNavigate(s.nav)}
             onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,.08)"; e.currentTarget.style.background = colors.cardBg; }}
             onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = cardShadow; e.currentTarget.style.background = colors.white; }}>
             <div style={{ fontSize: 28, fontWeight: 300, marginBottom: 4 }}>{s.value}</div>
             <div style={{ fontSize: 11, color: colors.mutedText, textTransform: "uppercase", letterSpacing: ".08em" }}>{s.label}</div>
-          </div>
+          </Card>
         ))}
       </div>
 
       {/* Pending Actions */}
-      <div style={{ background: colors.white, borderRadius: 12, boxShadow: cardShadow, padding: "24px 28px", marginBottom: 24 }}>
+      <Card padding="24px 28px" style={{ marginBottom: 24 }}>
         <h2 style={{ fontSize: 16, fontWeight: 500, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
           Pending Actions
           {!pendingLoading && (pendingInvestors.length + pendingSigs.length) > 0 && (
@@ -347,7 +349,7 @@ function Dashboard({ onNavigate }) {
             )}
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Quick Actions */}
       <div className="admin-stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
@@ -371,7 +373,7 @@ function Dashboard({ onNavigate }) {
       </div>
 
       {/* Recent Activity Timeline */}
-      <div style={{ background: colors.white, borderRadius: 12, boxShadow: cardShadow, padding: "24px 28px", marginBottom: 24 }}>
+      <Card padding="24px 28px" style={{ marginBottom: 24 }}>
         <h2 style={{ fontSize: 16, fontWeight: 500, marginBottom: 16 }}>Recent Activity</h2>
         {auditLog.length === 0 ? (
           <div style={{ fontSize: 13, color: colors.mutedText, padding: "8px 0" }}>No recent activity recorded.</div>
@@ -397,10 +399,10 @@ function Dashboard({ onNavigate }) {
             ))}
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Recent Documents */}
-      <div style={{ background: colors.white, borderRadius: 12, boxShadow: cardShadow, padding: "24px 28px" }}>
+      <Card padding="24px 28px">
         <h2 style={{ fontSize: 16, fontWeight: 500, marginBottom: 16 }}>Recent Documents</h2>
         {data.recentDocs.length === 0 ? (
           <div style={{ fontSize: 13, color: colors.mutedText }}>No recent documents.</div>
@@ -412,7 +414,7 @@ function Dashboard({ onNavigate }) {
             </div>
           ))
         )}
-      </div>
+      </Card>
     </>
   );
 }
@@ -587,7 +589,8 @@ function ProjectManager({ toast, onViewProject }) {
           const statusBg = p.status === "Completed" ? "#EFE" : p.status === "Under Construction" ? "#FFF8E1" : "#F5F5F5";
 
           return (
-          <div key={p.id} onClick={() => onViewProject?.(p.id)} style={{ background: colors.white, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", cursor: "pointer", transition: "box-shadow .15s, transform .15s" }}
+          <Card key={p.id} padding="0" style={{ overflow: "hidden", cursor: "pointer", transition: "box-shadow .15s, transform .15s" }}
+            onClick={() => onViewProject?.(p.id)}
             onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,.1)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
             onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)"; e.currentTarget.style.transform = "none"; }}>
             <div style={{ display: "flex" }}>
@@ -634,7 +637,7 @@ function ProjectManager({ toast, onViewProject }) {
                 </div>
               </div>
             )}
-          </div>
+          </Card>
         );
         })}
       </div>
@@ -1046,10 +1049,10 @@ function ProjectDetail({ projectId, onBack, toast }) {
           { label: "Investors", value: project.investors.length },
           { label: "Documents", value: project.documents.length },
         ].map((s, i) => (
-          <div key={i} style={{ background: colors.white, borderRadius: 10, padding: "16px 20px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+          <Card key={i} padding="16px 20px">
             <div style={{ fontSize: 22, fontWeight: 300, marginBottom: 2 }}>{s.value}</div>
             <div style={{ fontSize: 10, color: colors.mutedText, textTransform: "uppercase", letterSpacing: ".08em" }}>{s.label}</div>
-          </div>
+          </Card>
         ))}
       </div>
 
@@ -1070,7 +1073,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
       {/* Overview tab */}
       {tab === "overview" && (
         <>
-          <div style={section}>
+          <Card style={{ marginBottom: 16 }}>
             <div style={{ marginBottom: 16 }}>
               <label style={{ fontSize: 11, color: "#888" }}>Description</label>
               <p style={{ fontSize: 14, color: "#444", lineHeight: 1.6, marginTop: 4 }}>{project.description}</p>
@@ -1113,10 +1116,10 @@ function ProjectDetail({ projectId, onBack, toast }) {
                 <input type="number" defaultValue={project.revenue || 0} onBlur={e => handleSaveField("revenue", parseFloat(e.target.value))} style={{ ...inputStyle, marginTop: 4 }} />
               </div>
             </div>
-          </div>
+          </Card>
 
           {/* Org Chart */}
-          <div style={section}>
+          <Card style={{ marginBottom: 16 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: "#666" }}>Organization Chart</div>
               <div style={{ display: "flex", gap: 6 }}>
@@ -1139,13 +1142,13 @@ function ProjectDetail({ projectId, onBack, toast }) {
                 ))}
               </div>
             ) : <p style={{ color: "#BBB", fontSize: 13, fontStyle: "italic" }}>No org chart entries. Click "Add Row" to start.</p>}
-          </div>
+          </Card>
         </>
       )}
 
       {/* Investors tab */}
       {tab === "investors" && (
-        <div style={section}>
+        <Card style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: "#666", marginBottom: 14 }}>LP Investors ({project.investors.length})</div>
           {project.investors.length > 0 ? project.investors.map((inv) => (
             <div key={inv.userId} style={{ padding: "12px 0", borderBottom: `1px solid ${colors.lightBorder}` }}>
@@ -1341,12 +1344,12 @@ function ProjectDetail({ projectId, onBack, toast }) {
             </div>
           )}
           {project.capTable.length === 0 && !showCapForm && <p style={{ color: "#BBB", fontSize: 13, fontStyle: "italic" }}>No cap table entries</p>}
-        </div>
+        </Card>
       )}
 
       {/* Documents tab */}
       {tab === "documents" && (
-        <div style={section}>
+        <Card style={{ marginBottom: 16 }}>
           {project.documents.length > 0 ? project.documents.map((d, i) => (
             <div key={d.id} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: i < project.documents.length - 1 ? "1px solid #F5F3F0" : "none", fontSize: 13 }}>
               <div>
@@ -1356,7 +1359,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
               <span style={{ fontSize: 12, color: d.viewedBy > 0 ? colors.green : "#CCC" }}>{d.viewedBy} viewed</span>
             </div>
           )) : <p style={{ color: "#BBB", fontSize: 13, fontStyle: "italic" }}>No documents</p>}
-        </div>
+        </Card>
       )}
 
       {/* Updates tab */}
@@ -1364,7 +1367,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
 
       {/* Waterfall tab */}
       {tab === "waterfall" && (
-        <div style={section}>
+        <Card style={{ marginBottom: 16 }}>
           <div style={{ display: "flex", gap: 16, marginBottom: 20 }}>
             <div>
               <label style={{ fontSize: 11, color: "#888" }}>Pref Return %</label>
@@ -1418,7 +1421,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
               </div>
             </div>
           )) : (!showTierForm && <p style={{ color: "#BBB", fontSize: 13, fontStyle: "italic" }}>No distribution tiers</p>)}
-        </div>
+        </Card>
       )}
 
       {/* Cash Flows tab */}
@@ -1426,7 +1429,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
 
       {/* Financial Model tab */}
       {tab === "model" && (
-        <div style={section}>
+        <Card style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 16, fontWeight: 500, marginBottom: 20 }}>Financial Scenario Model</div>
           <div className="admin-form-row" style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "flex-end" }}>
             <div style={{ flex: 1 }}>
@@ -1531,7 +1534,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
               )}
             </>
           )}
-        </div>
+        </Card>
       )}
     </>
   );
@@ -2047,17 +2050,17 @@ function InvestorProfile({ investorId, onBack, toast }) {
       </div>
 
       {/* Groups */}
-      <div style={section}>
+      <Card style={{ marginBottom: 16 }}>
         <div style={sectionTitle}>Groups</div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {profile.groups.length > 0 ? profile.groups.map(g => (
             <span key={g.id} style={{ padding: "4px 12px", borderRadius: 16, fontSize: 12, background: g.color ? `${g.color}20` : colors.lightBorder, color: g.color || "#666", border: `1px solid ${g.color ? `${g.color}40` : "#E0DDD8"}` }}>{g.name}</span>
           )) : <span style={{ fontSize: 12, color: "#BBB", fontStyle: "italic" }}>No groups assigned</span>}
         </div>
-      </div>
+      </Card>
 
       {/* Investment Entities */}
-      <div style={section}>
+      <Card style={{ marginBottom: 16 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
           <div style={sectionTitle}>Investment Entities</div>
           <Button variant="outline" onClick={() => setShowEntityForm(!showEntityForm)} style={{ padding: "4px 10px", fontSize: 11 }}>{showEntityForm ? "Cancel" : "Add Entity"}</Button>
@@ -2119,10 +2122,10 @@ function InvestorProfile({ investorId, onBack, toast }) {
         ))}
         </div>
         {entities.length === 0 && !showEntityForm && <span style={{ fontSize: 12, color: "#BBB", fontStyle: "italic" }}>No entities</span>}
-      </div>
+      </Card>
 
       {/* Projects + KPIs */}
-      <div style={section}>
+      <Card style={{ marginBottom: 16 }}>
         <div style={sectionTitle}>Project Investments</div>
         {profile.projects.length > 0 ? profile.projects.map(p => (
           <div key={p.projectId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: `1px solid ${colors.lightBorder}` }}>
@@ -2196,7 +2199,7 @@ function InvestorProfile({ investorId, onBack, toast }) {
             </div>
           )}
         </div>
-      </div>
+      </Card>
 
       {/* Cash Flows */}
       {profile.projects.length > 0 && (
@@ -2204,7 +2207,7 @@ function InvestorProfile({ investorId, onBack, toast }) {
       )}
 
       {/* Documents Access */}
-      <div style={section}>
+      <Card style={{ marginBottom: 16 }}>
         <div style={sectionTitle}>Document Access ({(profile.documents.assigned.length + profile.documents.projectDocs.length + profile.documents.generalDocs.length)} documents)</div>
         {[...profile.documents.assigned, ...profile.documents.projectDocs, ...profile.documents.generalDocs].slice(0, 10).map((d, i) => (
           <div key={`${d.id}-${i}`} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #F5F3F0", fontSize: 13 }}>
@@ -2212,10 +2215,10 @@ function InvestorProfile({ investorId, onBack, toast }) {
             <span style={{ color: colors.mutedText, fontSize: 12 }}>{d.category} · {d.date}</span>
           </div>
         ))}
-      </div>
+      </Card>
 
       {/* Recent Messages */}
-      <div style={section}>
+      <Card style={{ marginBottom: 16 }}>
         <div style={sectionTitle}>Recent Messages</div>
         {profile.recentThreads.length > 0 ? profile.recentThreads.map(t => (
           <div key={t.id} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #F5F3F0", fontSize: 13 }}>
@@ -2226,7 +2229,7 @@ function InvestorProfile({ investorId, onBack, toast }) {
             <span style={{ color: colors.mutedText, fontSize: 11 }}>{new Date(t.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })} · {t.targetType}</span>
           </div>
         )) : <span style={{ fontSize: 12, color: "#BBB", fontStyle: "italic" }}>No messages</span>}
-      </div>
+      </Card>
 
       {/* Activity Timeline */}
       <ActivityTimeline userId={investorId} />
@@ -2258,7 +2261,7 @@ function ActivityTimeline({ userId }) {
   const sectionTitle = { fontSize: 13, fontWeight: 600, color: "#666", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 14 };
 
   return (
-    <div style={section}>
+    <Card style={{ marginBottom: 16 }}>
       <div style={sectionTitle}>Activity Timeline</div>
       {loading ? <p style={{ fontSize: 12, color: "#BBB" }}>Loading...</p> : activities.length === 0 ? (
         <p style={{ fontSize: 12, color: "#BBB", fontStyle: "italic" }}>No recorded activity</p>
@@ -2283,7 +2286,7 @@ function ActivityTimeline({ userId }) {
           ))}
         </div>
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -2369,7 +2372,7 @@ function ProjectUpdatesTab({ project, updateText, setUpdateText, handlePostUpdat
           )}
         </div>
       ) : (
-        <div style={section}>
+        <Card style={{ marginBottom: 16 }}>
           {updates.length > 0 ? updates.map((u, i) => (
             <div key={u.id} style={{ padding: "12px 0", borderBottom: i < updates.length - 1 ? "1px solid #F5F3F0" : "none" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
@@ -2406,7 +2409,7 @@ function ProjectUpdatesTab({ project, updateText, setUpdateText, handlePostUpdat
               })()}
             </div>
           )) : <p style={{ color: "#BBB", fontSize: 13, fontStyle: "italic" }}>No updates posted</p>}
-        </div>
+        </Card>
       )}
     </>
   );
@@ -2455,7 +2458,7 @@ function ProjectCashFlowsTab({ project, projectId, cashFlowsList, cfInvestors, s
   const netCF = totalDistributed - totalContributed;
 
   return (
-    <div style={section}>
+    <Card style={{ marginBottom: 16 }}>
       {/* Summary */}
       <div style={{ display: "flex", gap: 24, marginBottom: 16, padding: "12px 16px", background: colors.cardBg, borderRadius: 4, border: "1px solid #E8E5DE" }}>
         <div>
@@ -2567,7 +2570,7 @@ function ProjectCashFlowsTab({ project, projectId, cashFlowsList, cfInvestors, s
           </div>
         </div>
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -2628,10 +2631,10 @@ function InvestorCashFlowsSection({ investorId, investorName, projects, toast })
   const section = { background: colors.white, borderRadius: 12, padding: "20px 24px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" };
   const sectionTitle = { fontSize: 13, fontWeight: 600, color: "#666", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 14 };
 
-  if (loading) return <div style={section}><div style={sectionTitle}>Cash Flows</div><p style={{ color: "#BBB", fontSize: 13 }}>Loading...</p></div>;
+  if (loading) return <Card style={{ marginBottom: 16 }}><div style={sectionTitle}>Cash Flows</div><p style={{ color: "#BBB", fontSize: 13 }}>Loading...</p></Card>;
 
   return (
-    <div style={section}>
+    <Card style={{ marginBottom: 16 }}>
       <div style={sectionTitle}>Cash Flows ({cashFlows.length} records)</div>
       {cashFlows.length > 0 && (
         <div style={{ display: "flex", gap: 24, marginBottom: 16, padding: "10px 14px", background: colors.cardBg, borderRadius: 4, border: "1px solid #E8E5DE" }}>
@@ -2675,7 +2678,7 @@ function InvestorCashFlowsSection({ investorId, investorName, projects, toast })
           ))}
         </div>
       ) : <span style={{ fontSize: 12, color: "#BBB", fontStyle: "italic" }}>No cash flows</span>}
-    </div>
+    </Card>
   );
 }
 
