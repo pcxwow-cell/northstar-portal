@@ -1,6 +1,6 @@
 #!/bin/bash
-# Northstar Portal — Autopilot v8 (parallel, no Opus dependency)
-# Dispatches parallel Sonnet agents per round, bash validates
+# Northstar Portal — Autopilot v9
+# Bash dispatches parallel Sonnet agents → Opus reviews each round
 # Usage: ./scripts/autopilot.sh
 
 set -eo pipefail
@@ -33,6 +33,58 @@ run_task() {
   echo "$SONNET_PROMPT $task" | claude -p --dangerously-skip-permissions --model claude-sonnet-4-6 --max-turns 30 > "$logfile" 2>&1 || true
 }
 
+opus_review() {
+  local round_name="$1"
+  local before="$2"
+  local review_log="$LOG_DIR/opus-review-$(date +%s).log"
+
+  # Collect diff for Opus to review
+  local diff_stat=$(git diff --stat "$before"..HEAD -- src/ 2>/dev/null || echo "no changes")
+  local admin=$(wc -l < src/Admin.jsx)
+  local app=$(wc -l < src/App.jsx)
+  local build_out=$(npm run build 2>&1 | tail -5)
+  local commits=$(git log --oneline "$before"..HEAD 2>/dev/null || echo "none")
+  local component_imports=$(grep "from.*./components/" src/Admin.jsx src/App.jsx 2>/dev/null || echo "none")
+
+  # Opus reviews the round
+  cat << REVIEW_EOF | claude -p --dangerously-skip-permissions --model claude-opus-4-6 --max-turns 10 > "$review_log" 2>&1 || true
+You are the QA reviewer. Do NOT greet or ask questions. Review this round and output ONLY:
+Line 1: PASS or FAIL
+Line 2-5: Brief explanation (what was done well, what's wrong)
+Line 6+: If FAIL, exact fix instructions for the next Sonnet agent
+
+Round: $round_name
+Commits: $commits
+Diff stat: $diff_stat
+File sizes: Admin=$admin App=$app
+Build output: $build_out
+Components imported: $component_imports
+REVIEW_EOF
+
+  local verdict=$(head -1 "$review_log" 2>/dev/null | tr -d '[:space:]')
+  local review_body=$(tail -n +2 "$review_log" 2>/dev/null | head -5)
+
+  log "  Opus review: $verdict"
+  log "  $review_body"
+
+  if echo "$verdict" | grep -qi "FAIL"; then
+    # Extract fix instructions (everything after line 5)
+    local fix_instructions=$(tail -n +6 "$review_log" 2>/dev/null)
+    if [ -n "$fix_instructions" ]; then
+      log "  Opus found issues — sending fix to Sonnet..."
+      run_task "$fix_instructions" "$LOG_DIR/opus-fix-$(date +%s).log"
+      # Re-check build
+      if npm run build 2>&1 | grep -q "built in"; then
+        log "  Fix applied — Build: PASS"
+      else
+        log "  Fix failed — Build: STILL BROKEN"
+        return 1
+      fi
+    fi
+  fi
+  return 0
+}
+
 validate_round() {
   local round_name="$1"
   local before="$2"
@@ -48,6 +100,7 @@ validate_round() {
     git log --oneline "$before".."$after" | while IFS= read -r c; do log "    $c"; done
   fi
 
+  # Build check
   if npm run build 2>&1 | grep -q "built in"; then
     log "  Build: PASS — Admin: $admin, App: $app"
   else
@@ -61,11 +114,14 @@ validate_round() {
       return 1
     fi
   fi
-  return 0
+
+  # Opus reviews the quality of changes
+  opus_review "$round_name" "$before"
+  return $?
 }
 
-echo "=== AUTOPILOT v8 — $(date) ===" | tee "$STATUS"
-log "Parallel Sonnet agents, bash orchestration"
+echo "=== AUTOPILOT v9 — $(date) ===" | tee "$STATUS"
+log "Parallel Sonnet builders + Opus QA reviewer"
 log "Current state: Admin=$(wc -l < src/Admin.jsx) App=$(wc -l < src/App.jsx)"
 log ""
 
