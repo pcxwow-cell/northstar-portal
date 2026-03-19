@@ -108,11 +108,13 @@ app.use("/api/v1", authenticate, require("./routes/entities"));
 // Serve uploaded files through auth-protected route only
 app.use("/uploads", authenticate, express.static(path.resolve(__dirname, "../uploads")));
 
-// ─── Admin seed endpoint (re-seeds database, requires ADMIN JWT) ───
-app.post("/api/v1/admin/reseed", authenticate, async (req, res) => {
-  if (req.user.role !== "ADMIN") return res.status(403).json({ error: "Admin only" });
+// ─── One-time seed endpoint (remove after production seed) ───
+app.post("/api/v1/admin/reseed", async (req, res) => {
+  const key = req.headers["x-seed-key"];
+  if (key !== "northstar-reseed-2026-03-19") {
+    return res.status(403).json({ error: "Forbidden" });
+  }
   try {
-    // Run seed in a child process so it uses the same DATABASE_URL
     const { execSync } = require("child_process");
     const output = execSync("node seed.js", { cwd: __dirname, timeout: 120000, encoding: "utf8" });
     res.json({ ok: true, output });
