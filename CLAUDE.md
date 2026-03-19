@@ -41,7 +41,21 @@ These rules apply to ALL agents working on this project.
 ## Agent Commands
 
 - `/audit` — QA/PM Auditor: analyzes code, traces workflows, documents issues. Never writes production code.
-- `/build` — Build Agent: writes production code following architectural rules. Executes the frontend plan.
+- `/build` — Build Agent (Sonnet): writes production code following architectural rules. Executes the frontend plan.
+- `/review` — Project Manager (Opus): reviews Sonnet's work, updates the plan, generates the next build command.
+
+### Workflow
+
+**Autopilot (walk away):**
+```
+cd /home/pc/northstar-portal && ./scripts/autopilot.sh 10
+```
+Runs up to 10 cycles: Sonnet builds → Opus reviews → writes next instructions → repeat. Stops when all phases complete. Logs in `logs/`.
+
+**Manual:**
+1. Run Sonnet: `claude --dangerously-skip-permissions --model claude-sonnet-4-6 -p /home/pc/northstar-portal "/build [instructions]"`
+2. Run Opus to review: `claude --dangerously-skip-permissions --model claude-opus-4-6 -p /home/pc/northstar-portal /review`
+3. Opus writes next instructions to `.claude/next-build-instructions.md` and outputs a paste command.
 
 ## Design Tokens
 
