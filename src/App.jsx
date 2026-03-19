@@ -43,7 +43,7 @@ export const NorthstarWordmark = ({ height = 20, color = darkText }) => (
 
 const themes = {
   dark: { bg: "#0A0A0F", surface: "#0C0C0C", line: "#1A1A1A", t1: "#E8E4DE", t2: "#8C887F", t3: "#4A4843", hover: "#0F0F0F", headerBg: "#0A0A0FF0", avatarGrad: "linear-gradient(135deg, #EA2028, #c41920)" },
-  light: { bg: "#F8F7F4", surface: "#FFFFFF", line: "#ECEAE5", t1: "#1A1816", t2: "#5C5850", t3: colors.mutedText, hover: colors.lightBorder, headerBg: "#FFFFFFFA", avatarGrad: "linear-gradient(135deg, #EA2028, #c41920)" },
+  light: { bg: "#F8F7F4", surface: colors.white, line: "#ECEAE5", t1: "#1A1816", t2: "#5C5850", t3: colors.mutedText, hover: colors.lightBorder, headerBg: "#FFFFFFFA", avatarGrad: "linear-gradient(135deg, #EA2028, #c41920)" },
 };
 
 const ThemeContext = createContext(themes.light);
@@ -350,7 +350,7 @@ function OverviewSkeleton() {
       {/* Project cards */}
       <div className="project-grid-2" style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 20, marginBottom: 48 }}>
         {[0,1].map(i => (
-          <div key={i} style={{ background: th.surface, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+          <Card key={i} padding="0" style={{ overflow: "hidden" }}>
             <SkeletonBlock height={140} style={{ borderRadius: 0 }} />
             <div style={{ padding: 20 }}>
               <SkeletonBlock width={160} height={16} style={{ marginBottom: 16 }} />
@@ -358,7 +358,7 @@ function OverviewSkeleton() {
                 {[0,1,2].map(j => <SkeletonBlock key={j} height={32} />)}
               </div>
             </div>
-          </div>
+          </Card>
         ))}
       </div>
       {/* Chart skeleton */}
@@ -952,10 +952,10 @@ function CapTablePage({ myProjects, investor, toast }) {
           { label: "Stakeholders", value: project.capTable.length, accent: "#D4A574" },
           { label: "Your Ownership", value: `${project.capTable.find(r => r.holder === investor.name)?.ownership || 0}%`, accent: "#5B8DEF" },
         ].map((m, i) => (
-          <div key={i} style={{ background: surface, padding: "24px", borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", borderLeft: `3px solid ${m.accent}` }}>
+          <Card key={i} accent={m.accent} padding="24px">
             <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: t3, marginBottom: 10, fontWeight: 500 }}>{m.label}</div>
             <div style={{ fontSize: 22, fontFamily: serif, fontWeight: 400 }}>{m.value}</div>
-          </div>
+          </Card>
         ))}
       </div>
 
@@ -993,7 +993,7 @@ function CapTablePage({ myProjects, investor, toast }) {
       {project.waterfall.tiers.length > 0 && (
         <div style={{ marginTop: 48 }}>
           <SectionHeader title="Distribution Waterfall" right={`${project.waterfall.prefReturn}% pref · ${project.waterfall.carry}% carry`} />
-          <div className="waterfall-grid" style={{ borderRadius: 12, overflow: "hidden", background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+          <Card padding="0" style={{ overflow: "hidden" }} className="waterfall-grid">
             {project.waterfall.tiers.map((tier, i) => (
               <div key={i} style={{ display: "grid", gridTemplateColumns: "200px 1fr 1fr 120px", padding: "16px 20px", borderBottom: i < project.waterfall.tiers.length - 1 ? `1px solid ${line}` : "none", alignItems: "center" }}>
                 <div style={{ fontFamily: serif, fontSize: 14 }}>{tier.name}</div>
@@ -1012,14 +1012,14 @@ function CapTablePage({ myProjects, investor, toast }) {
                 </div>
               </div>
             ))}
-          </div>
+          </Card>
         </div>
       )}
 
       {/* Waterfall Scenario Calculator */}
       <div style={{ marginTop: 48 }}>
         <SectionHeader title="Run Waterfall Scenario" />
-        <div className="waterfall-grid" style={{ borderRadius: 12, padding: "24px", marginBottom: 40, background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+        <Card padding="24px" style={{ marginBottom: 40 }} className="waterfall-grid">
           <div style={{ display: "flex", gap: 12, alignItems: "flex-end", marginBottom: 20 }}>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 11, color: t3, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>Total Distributable Amount ($)</div>
@@ -1106,7 +1106,7 @@ function CapTablePage({ myProjects, investor, toast }) {
               )}
             </>
           )}
-        </div>
+        </Card>
       </div>
     </>
   );
@@ -1363,10 +1363,10 @@ function DistributionsPage({ allDistributions, myProjects }) {
           { label: "Projects", value: [...new Set(allDistributions.map(d => d.project))].join(", ") || "—", accent: green },
           { label: "Next Estimated", value: "See distributions", accent: "#5B8DEF" },
         ].map((m, i) => (
-          <div key={i} style={{ background: surface, padding: "24px", borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", borderLeft: `3px solid ${m.accent}` }}>
+          <Card key={i} accent={m.accent} padding="24px">
             <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: t3, marginBottom: 10, fontWeight: 500 }}>{m.label}</div>
             <div style={{ fontSize: 22, fontFamily: serif, fontWeight: 400 }}>{m.value}</div>
-          </div>
+          </Card>
         ))}
       </div>
 
@@ -1731,10 +1731,10 @@ function FinancialModelerPage({ myProjects, investor }) {
               { label: "Equity Multiple", value: `${result.equityMultiple}x`, accent: "#D4A574" },
               { label: "Cash on Cash", value: `${result.cashOnCash}%`, accent: "#5B8DEF" },
             ].map((c, i) => (
-              <div key={i} style={{ background: surface, padding: 24, borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", borderLeft: `3px solid ${c.accent}` }}>
+              <Card key={i} accent={c.accent} padding="24px">
                 <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: t3, marginBottom: 10, fontWeight: 500 }}>{c.label}</div>
                 <div style={{ fontSize: 22, fontFamily: serif, fontWeight: 400 }}>{c.value}</div>
-              </div>
+              </Card>
             ))}
           </div>
 
@@ -3090,7 +3090,7 @@ export default function App() {
         button:active, [role="button"]:active { transform: scale(0.97); }
         button, [role="button"] { transition: transform .1s ease; }
         .skip-link { position: absolute; left: -9999px; top: auto; width: 1px; height: 1px; overflow: hidden; z-index: 100; }
-        .skip-link:focus { position: fixed; top: 8px; left: 8px; width: auto; height: auto; padding: 8px 16px; background: #EA2028; color: #fff; border-radius: 6px; font-size: 13px; font-family: 'DM Sans', sans-serif; text-decoration: none; z-index: 10000; }
+        .skip-link:focus { position: fixed; top: 8px; left: 8px; width: auto; height: auto; padding: 8px 16px; background: #EA2028; color: ${colors.white}; border-radius: 6px; font-size: 13px; font-family: 'DM Sans', sans-serif; text-decoration: none; z-index: 10000; }
         .app-topbar { padding: 0 48px; }
         .app-topbar .user-name { display: inline; }
         .app-subnav { padding: 0 48px; }
