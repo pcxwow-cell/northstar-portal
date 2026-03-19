@@ -458,7 +458,7 @@ export async function fetchAdminDocuments(params = {}) {
 }
 
 export async function fetchAdminDocumentDetail(id) {
-  if (_demoMode) { const d = demoAllDocuments.find(x => x.id === id); return d ? { ...d, project: d.project !== "General" ? { id: 1, name: d.project } : null, accessList: [{ id: 1, name: "James Chen", email: "j.chen@pacificventures.ca", hasAccess: true, viewedAt: null, downloadedAt: null, acknowledgedAt: null }] } : null; }
+  if (_demoMode) { const d = demoAllDocuments.find(x => x.id === id); return d ? { ...d, project: d.project !== "General" ? { id: 1, name: d.project } : null, accessList: [{ id: 1, name: "James Chen", email: "j.chen@pacificventures.ca", hasAccess: true, viewedAt: null, downloadedAt: null, acknowledgedAt: null }], signatureRequests: [] } : null; }
   return apiFetch(`/admin/documents/${id}`);
 }
 
@@ -499,8 +499,20 @@ export async function deleteDocument(id) {
   return apiFetch(`/documents/${id}`, { method: "DELETE" });
 }
 
-export async function assignDocument(docId, userIds) {
-  return apiFetch(`/admin/documents/${docId}/assign`, { method: "POST", body: JSON.stringify({ userIds }) });
+export function getDocumentPreviewUrl(docId) {
+  if (_demoMode) return null;
+  const BASE = import.meta.env.VITE_API_URL || "";
+  const token = localStorage.getItem("token");
+  return `${BASE}/api/v1/documents/${docId}/preview?token=${encodeURIComponent(token)}`;
+}
+
+export async function acknowledgeDocument(docId) {
+  if (_demoMode) return { ok: true, acknowledgedAt: new Date().toISOString() };
+  return apiFetch(`/documents/${docId}/acknowledge`, { method: "POST" });
+}
+
+export async function assignDocument(docId, userIds, groupIds = []) {
+  return apiFetch(`/admin/documents/${docId}/assign`, { method: "POST", body: JSON.stringify({ userIds, groupIds }) });
 }
 
 export async function deleteProject(id) {

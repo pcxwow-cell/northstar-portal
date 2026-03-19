@@ -109,6 +109,65 @@ router.get("/:id/download", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// GET /api/v1/documents/:id/preview — inline preview (Content-Disposition: inline)
+router.get("/:id/preview", async (req, res, next) => {
+  try {
+    const doc = await prisma.document.findUnique({
+      where: { id: parseInt(req.params.id) },
+      include: { project: true },
+    });
+    if (!doc) return res.status(404).json({ error: "Document not found" });
+
+    // Access check: investor can only preview docs for their projects or general docs
+    if (req.user.role === "INVESTOR" && doc.projectId) {
+      const hasAccess = await prisma.investorProject.findFirst({
+        where: { userId: req.user.id, projectId: doc.projectId },
+      });
+      const directAccess = await prisma.documentAssignment.findFirst({
+        where: { documentId: doc.id, userId: req.user.id },
+      });
+      if (!hasAccess && !directAccess) return res.status(403).json({ error: "Access denied" });
+    }
+
+    // Track view in DocumentAssignment
+    if (req.user.role === "INVESTOR") {
+      await prisma.documentAssignment.upsert({
+        where: { documentId_userId: { documentId: doc.id, userId: req.user.id } },
+        create: { documentId: doc.id, userId: req.user.id, viewedAt: new Date() },
+        update: { viewedAt: new Date() },
+      });
+    }
+
+    if (doc.storageKey) {
+      const stream = await storage.getStream(doc.storageKey);
+      if (!stream) return res.status(404).json({ error: "File not found in storage" });
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `inline; filename="${path.basename(doc.storageKey)}"`);
+      stream.pipe(res);
+    } else {
+      res.status(404).json({ error: "File not yet uploaded. This document is a placeholder." });
+    }
+  } catch (err) { next(err); }
+});
+
+// POST /api/v1/documents/:id/acknowledge — investor acknowledges a document
+router.post("/:id/acknowledge", async (req, res, next) => {
+  try {
+    const docId = parseInt(req.params.id);
+    const doc = await prisma.document.findUnique({ where: { id: docId } });
+    if (!doc) return res.status(404).json({ error: "Document not found" });
+
+    const assignment = await prisma.documentAssignment.upsert({
+      where: { documentId_userId: { documentId: docId, userId: req.user.id } },
+      create: { documentId: docId, userId: req.user.id, acknowledgedAt: new Date(), viewedAt: new Date() },
+      update: { acknowledgedAt: new Date() },
+    });
+
+    audit.log(req, "document_acknowledge", `document:${docId}`, { userId: req.user.id });
+    res.json({ ok: true, acknowledgedAt: assignment.acknowledgedAt });
+  } catch (err) { next(err); }
+});
+
 // POST /api/v1/documents/upload — admin uploads a document
 router.post("/upload", requireRole("ADMIN", "GP"), upload.single("file"), validate(uploadDocumentSchema), async (req, res, next) => {
   try {

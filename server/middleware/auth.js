@@ -42,12 +42,15 @@ function verifyMfaToken(token) {
 // Verify JWT and attach user to req
 async function authenticate(req, res, next) {
   const header = req.headers.authorization;
-  if (!header || !header.startsWith("Bearer ")) {
+  // Support token via query param for iframe/preview endpoints
+  const queryToken = req.query.token;
+  if (!header && !queryToken) {
     return res.status(401).json({ error: "No token provided" });
   }
 
   try {
-    const token = header.split(" ")[1];
+    const token = queryToken || (header.startsWith("Bearer ") ? header.split(" ")[1] : null);
+    if (!token) return res.status(401).json({ error: "Invalid token format" });
     const payload = jwt.verify(token, JWT_SECRET);
     const user = await prisma.user.findUnique({ where: { id: payload.id } });
     if (!user || user.status !== "ACTIVE") {

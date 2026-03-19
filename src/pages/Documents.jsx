@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { colors, fonts } from "../styles/theme.js";
 import { useTheme } from "../context/ThemeContext.jsx";
-import { fetchSignatureRequests, signDocument, downloadDocument, getEmbeddedSignUrl, downloadSignedDocument, fmt } from "../api.js";
+import { fetchSignatureRequests, signDocument, downloadDocument, getEmbeddedSignUrl, downloadSignedDocument, getDocumentPreviewUrl, acknowledgeDocument, fmt } from "../api.js";
 import Button from "../components/Button.jsx";
 import Card from "../components/Card.jsx";
 import Modal from "../components/Modal.jsx";
@@ -36,6 +36,8 @@ export default function DocumentsPage({ toast, allDocuments, myProjects, investo
   const [signedDocs, setSignedDocs] = useState({});
   const [pendingSigs, setPendingSigs] = useState([]);
   const [signingId, setSigningId] = useState(null);
+  const [previewDoc, setPreviewDoc] = useState(null);
+  const [acknowledgedDocs, setAcknowledgedDocs] = useState({});
 
   useEffect(() => {
     fetchSignatureRequests().then(sigs => {
@@ -74,8 +76,8 @@ export default function DocumentsPage({ toast, allDocuments, myProjects, investo
     e.stopPropagation();
     if (d.status === "pending_signature" && !signedDocs[d.id]) {
       setSignModal(d);
-    } else if (d.status === "action_required") {
-      setReviewDoc(d);
+    } else if (d.status === "action_required" && !acknowledgedDocs[d.id]) {
+      handleAcknowledge(d);
     } else {
       downloadDocument(d.id).then(() => {
         toast(`Downloaded ${d.name}`, "success");
@@ -107,8 +109,19 @@ export default function DocumentsPage({ toast, allDocuments, myProjects, investo
   function getActionLabel(d) {
     if (d.status === "pending_signature" && signedDocs[d.id]) return "Signed \u2713";
     if (d.status === "pending_signature") return "Sign";
-    if (d.status === "action_required") return "Review";
+    if (d.status === "action_required" && !acknowledgedDocs[d.id]) return "Acknowledge";
+    if (d.status === "action_required" && acknowledgedDocs[d.id]) return "Acknowledged \u2713";
     return "Download";
+  }
+
+  async function handleAcknowledge(d) {
+    try {
+      await acknowledgeDocument(d.id);
+      setAcknowledgedDocs(prev => ({ ...prev, [d.id]: true }));
+      toast(`Acknowledged ${d.name}`, "success");
+    } catch (err) {
+      toast(err.message || "Acknowledge failed", "error");
+    }
   }
 
   return (
@@ -178,7 +191,7 @@ export default function DocumentsPage({ toast, allDocuments, myProjects, investo
           <div key={`${d.id}-${d.project}`} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: i < filtered.length - 1 ? `1px solid ${line}` : "none", cursor: "pointer", transition: "background .12s" }}
             onMouseEnter={e => e.currentTarget.style.background = hover}
             onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-            onClick={() => { downloadDocument(d.id).catch(err => toast(err.message || "Download failed", "error")); }}>
+            onClick={() => setPreviewDoc(d)}>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}>
                 {d.name}
@@ -191,8 +204,8 @@ export default function DocumentsPage({ toast, allDocuments, myProjects, investo
             </div>
             <span onClick={(e) => handleAction(d, e)} style={{
               fontSize: 11, padding: "5px 12px", borderRadius: 2, transition: "all .15s",
-              border: `1px solid ${d.status === "pending_signature" && !signedDocs[d.id] ? red + "55" : signedDocs[d.id] ? green + "55" : line}`,
-              color: d.status === "pending_signature" && !signedDocs[d.id] ? red : signedDocs[d.id] ? green : t3,
+              border: `1px solid ${d.status === "pending_signature" && !signedDocs[d.id] ? red + "55" : signedDocs[d.id] || acknowledgedDocs[d.id] ? green + "55" : d.status === "action_required" && !acknowledgedDocs[d.id] ? red + "55" : line}`,
+              color: d.status === "pending_signature" && !signedDocs[d.id] ? red : signedDocs[d.id] || acknowledgedDocs[d.id] ? green : d.status === "action_required" ? red : t3,
             }}>
               {getActionLabel(d)}
             </span>
@@ -200,6 +213,29 @@ export default function DocumentsPage({ toast, allDocuments, myProjects, investo
         ))}
       </Card>
       )}
+
+      {/* Preview Modal */}
+      <Modal open={!!previewDoc} onClose={() => setPreviewDoc(null)} title={previewDoc?.name || "Document Preview"} maxWidth={900}>
+        {previewDoc && (
+          <>
+            {(() => {
+              const url = getDocumentPreviewUrl(previewDoc.id);
+              return url ? (
+                <iframe src={url} style={{ width: "100%", height: 500, border: "none", borderRadius: 4, marginBottom: 16 }} title={previewDoc.name} />
+              ) : (
+                <div style={{ padding: 40, textAlign: "center", color: t3, fontSize: 13, marginBottom: 16 }}>
+                  PDF preview not available in demo mode.
+                </div>
+              );
+            })()}
+            <div style={{ fontSize: 11, color: t3, marginBottom: 16 }}>{previewDoc.project} {"\u00B7"} {previewDoc.category} {"\u00B7"} {previewDoc.date} {"\u00B7"} {previewDoc.size}</div>
+            <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+              <span onClick={() => setPreviewDoc(null)} style={{ fontSize: 12, padding: "8px 16px", borderRadius: 2, border: `1px solid ${line}`, color: t3, cursor: "pointer" }}>Close</span>
+              <span onClick={() => { downloadDocument(previewDoc.id).then(() => toast(`Downloaded ${previewDoc.name}`, "success")).catch(err => toast(err.message || "Download failed", "error")); }} style={{ fontSize: 12, padding: "8px 16px", borderRadius: 2, background: red, color: colors.white, cursor: "pointer" }}>Download</span>
+            </div>
+          </>
+        )}
+      </Modal>
 
       {/* Sign Modal */}
       <Modal open={!!signModal} onClose={() => setSignModal(null)} title="Sign document">
@@ -220,7 +256,7 @@ export default function DocumentsPage({ toast, allDocuments, myProjects, investo
                   <div style={{ fontSize: 11, color: t3, marginTop: 2 }}>Review before signing</div>
                 </div>
               </div>
-              <span onClick={() => downloadDocument(signModal.id).catch(err => toast(err.message || "Failed to open document", "error"))} style={{ fontSize: 12, color: red, cursor: "pointer", padding: "6px 14px", border: `1px solid ${red}33`, borderRadius: 4 }}>View Document</span>
+              <span onClick={() => { setSignModal(null); setPreviewDoc(signModal); }} style={{ fontSize: 12, color: red, cursor: "pointer", padding: "6px 14px", border: `1px solid ${red}33`, borderRadius: 4 }}>View Document</span>
             </div>
             <div style={{ border: `1px solid ${line}`, borderRadius: 2, padding: 20, marginBottom: 24, background: surface }}>
               <p style={{ fontSize: 12, color: t3, marginBottom: 12 }}>Electronic Signature</p>

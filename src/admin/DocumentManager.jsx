@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAdminData } from "../context/AdminDataContext.jsx";
-import { fetchAdminDocuments, fetchAdminDocumentDetail, fetchAdminInvestors, uploadDocument, bulkUploadK1, deleteDocument, assignDocument, createSignatureRequest, downloadSignedDocument, sendSignatureReminder } from "../api.js";
+import { fetchAdminDocuments, fetchAdminDocumentDetail, fetchAdminInvestors, uploadDocument, bulkUploadK1, deleteDocument, assignDocument, createSignatureRequest, downloadSignedDocument, sendSignatureReminder, fetchGroups, getDocumentPreviewUrl } from "../api.js";
 import { colors, inputStyle } from "../styles/theme.js";
 import Spinner from "../components/Spinner.jsx";
 import SectionHeader from "../components/SectionHeader.jsx";
@@ -42,7 +42,12 @@ export default function DocumentManager({ toast, hideHeader }) {
   const [showAssignInvestors, setShowAssignInvestors] = useState(false);
   const [assignInvestors, setAssignInvestorsList] = useState([]);
   const [assignSelectedIds, setAssignSelectedIds] = useState([]);
+  const [assignGroups, setAssignGroups] = useState([]);
+  const [assignSelectedGroupIds, setAssignSelectedGroupIds] = useState([]);
   const [assignSaving, setAssignSaving] = useState(false);
+
+  // Preview state
+  const [previewUrl, setPreviewUrl] = useState(null);
 
   // Upload state
   const [uploadName, setUploadName] = useState("");
@@ -135,6 +140,7 @@ export default function DocumentManager({ toast, hideHeader }) {
             </div>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
+            <Button variant="outline" onClick={() => { const url = getDocumentPreviewUrl(docDetail.id); if (url) setPreviewUrl(url); else toast("Preview not available in demo mode", "error"); }} style={{ fontSize: 12 }}>Preview PDF</Button>
             <Button onClick={openSignModal} style={{ fontSize: 12 }}>Request Signature</Button>
             <Button variant="outline" onClick={() => setConfirmAction({ title: "Delete Document", message: `Delete "${docDetail.name}"? This cannot be undone.`, danger: true, onConfirm: async () => { setConfirmAction(null); try { await deleteDocument(docDetail.id); toast("Document deleted"); setSelectedDoc(null); setDocDetail(null); loadDocs(); } catch (e) { toast(e.message, "error"); } } })} style={{ fontSize: 12, color: colors.red, borderColor: colors.red }}>Delete</Button>
           </div>
@@ -167,6 +173,11 @@ export default function DocumentManager({ toast, hideHeader }) {
               {sigSending ? "Sending..." : "Send Request"}
             </Button>
           </div>
+        </Modal>
+
+        {/* PDF Preview Modal */}
+        <Modal open={!!previewUrl} onClose={() => setPreviewUrl(null)} title={docDetail?.name || "Document Preview"} maxWidth={900}>
+          {previewUrl && <iframe src={previewUrl} style={{ width: "100%", height: 600, border: "none", borderRadius: 4 }} title="Document Preview" />}
         </Modal>
 
         {/* Access audit table */}
@@ -226,14 +237,35 @@ export default function DocumentManager({ toast, hideHeader }) {
         <div style={{ marginTop: 20 }}>
           {!showAssignInvestors ? (
             <Button variant="outline" onClick={async () => {
-              const investors = await fetchAdminInvestors();
+              const [investors, groups] = await Promise.all([fetchAdminInvestors(), fetchGroups()]);
               setAssignInvestorsList(Array.isArray(investors) ? investors : investors.investors || []);
+              setAssignGroups(Array.isArray(groups) ? groups : []);
               setAssignSelectedIds(docDetail.accessList.filter(a => a.directAssignment).map(a => a.userId || a.id));
+              setAssignSelectedGroupIds([]);
               setShowAssignInvestors(true);
             }}>Assign to Investors</Button>
           ) : (
             <Card>
               <h3 style={{ fontSize: 16, fontWeight: 400, marginBottom: 16 }}>Assign Investors</h3>
+              {/* Group assignment */}
+              {assignGroups.length > 0 && (
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Assign by Group</label>
+                  <div style={{ border: "1px solid #DDD", borderRadius: 4, maxHeight: 140, overflow: "auto", marginBottom: 8 }}>
+                    {assignGroups.map(g => (
+                      <label key={g.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 14px", borderBottom: `1px solid ${colors.lightBorder}`, cursor: "pointer", fontSize: 13 }}>
+                        <input type="checkbox" checked={assignSelectedGroupIds.includes(g.id)}
+                          onChange={e => setAssignSelectedGroupIds(prev => e.target.checked ? [...prev, g.id] : prev.filter(id => id !== g.id))} />
+                        <span style={{ fontWeight: 500 }}>{g.name}</span>
+                        {g.color && <span style={{ width: 8, height: 8, borderRadius: "50%", background: g.color, display: "inline-block" }} />}
+                        <span style={{ color: colors.mutedText, fontSize: 11 }}>{g.memberCount} member{g.memberCount !== 1 ? "s" : ""}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {/* Individual investor assignment */}
+              <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Individual Investors</label>
               <div style={{ border: "1px solid #DDD", borderRadius: 4, maxHeight: 260, overflow: "auto", marginBottom: 16 }}>
                 {assignInvestors.map(inv => (
                   <label key={inv.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderBottom: `1px solid ${colors.lightBorder}`, cursor: "pointer", fontSize: 13 }}>
@@ -250,7 +282,7 @@ export default function DocumentManager({ toast, hideHeader }) {
                 <Button disabled={assignSaving} onClick={async () => {
                   setAssignSaving(true);
                   try {
-                    await assignDocument(docDetail.id, assignSelectedIds);
+                    await assignDocument(docDetail.id, assignSelectedIds, assignSelectedGroupIds);
                     toast("Investor assignments updated");
                     const detail = await fetchAdminDocumentDetail(docDetail.id);
                     setDocDetail(detail);

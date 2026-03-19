@@ -307,19 +307,30 @@ router.get("/investors", async (req, res, next) => {
 // ─── DOCUMENT ASSIGNMENT ───
 router.post("/documents/:id/assign", async (req, res, next) => {
   try {
-    const { userIds } = req.body;
-    if (!userIds || !userIds.length) return res.status(400).json({ error: "At least one user ID required" });
+    const { userIds = [], groupIds = [] } = req.body;
     const docId = parseInt(req.params.id);
 
+    // Resolve group members into user IDs
+    let resolvedUserIds = userIds.map(uid => parseInt(uid));
+    if (groupIds.length > 0) {
+      const groupMembers = await prisma.groupMember.findMany({
+        where: { groupId: { in: groupIds.map(gid => parseInt(gid)) } },
+        select: { userId: true },
+      });
+      const memberIds = groupMembers.map(gm => gm.userId);
+      resolvedUserIds = [...new Set([...resolvedUserIds, ...memberIds])];
+    }
+
+    if (!resolvedUserIds.length) return res.status(400).json({ error: "No users resolved from userIds or groupIds" });
+
     // Upsert logic: preserve existing assignments (viewedAt/downloadedAt tracking)
-    const newUserIds = userIds.map(uid => parseInt(uid));
     const existing = await prisma.documentAssignment.findMany({ where: { documentId: docId } });
     const existingUserIds = existing.map(a => a.userId);
 
     // Create only NEW assignments (userIds not already assigned)
-    const toCreate = newUserIds.filter(uid => !existingUserIds.includes(uid));
+    const toCreate = resolvedUserIds.filter(uid => !existingUserIds.includes(uid));
     // Delete only REMOVED assignments (userIds no longer in the list)
-    const toDelete = existingUserIds.filter(uid => !newUserIds.includes(uid));
+    const toDelete = existingUserIds.filter(uid => !resolvedUserIds.includes(uid));
 
     if (toCreate.length > 0) {
       await prisma.documentAssignment.createMany({
@@ -331,8 +342,8 @@ router.post("/documents/:id/assign", async (req, res, next) => {
         where: { documentId: docId, userId: { in: toDelete } },
       });
     }
-    audit.log(req, "document_assign", `document:${docId}`, { assignedTo: userIds.length });
-    res.json({ documentId: docId, assignedTo: userIds.length });
+    audit.log(req, "document_assign", `document:${docId}`, { assignedTo: resolvedUserIds.length, groupIds });
+    res.json({ documentId: docId, assignedTo: resolvedUserIds.length });
   } catch (err) { next(err); }
 });
 
@@ -538,6 +549,10 @@ router.get("/documents/:id", async (req, res, next) => {
       include: {
         project: { select: { id: true, name: true } },
         assignments: { include: { user: { select: { id: true, name: true, email: true } } } },
+        signatureRequests: {
+          include: { signers: { select: { id: true, name: true, email: true, status: true, signedAt: true, userId: true } } },
+          orderBy: { createdAt: "desc" },
+        },
       },
     });
     if (!doc) return res.status(404).json({ error: "Document not found" });
@@ -575,6 +590,11 @@ router.get("/documents/:id", async (req, res, next) => {
       status: doc.status, file: doc.file, storageKey: doc.storageKey,
       project: doc.project ? { id: doc.project.id, name: doc.project.name } : null,
       accessList: [...projectInvestors, ...directAssignments],
+      signatureRequests: doc.signatureRequests.map(sr => ({
+        id: sr.id, requestId: sr.requestId, status: sr.status, subject: sr.subject,
+        createdAt: sr.createdAt, completedAt: sr.completedAt,
+        signers: sr.signers.map(s => ({ id: s.id, name: s.name, email: s.email, status: s.status, signedAt: s.signedAt, userId: s.userId })),
+      })),
     });
   } catch (err) { next(err); }
 });
