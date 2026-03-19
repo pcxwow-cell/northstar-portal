@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { colors, fonts } from "../styles/theme.js";
 import { useTheme } from "../context/ThemeContext.jsx";
-import { fetchSignatureRequests, signDocument, downloadDocument, fmt } from "../api.js";
+import { fetchSignatureRequests, signDocument, downloadDocument, getEmbeddedSignUrl, downloadSignedDocument, fmt } from "../api.js";
 import Button from "../components/Button.jsx";
 import Card from "../components/Card.jsx";
 import Modal from "../components/Modal.jsx";
@@ -49,6 +49,13 @@ export default function DocumentsPage({ toast, allDocuments, myProjects, investo
     if (!mySigner) return;
     setSigningId(mySigner.id);
     try {
+      // Try embedded signing URL first (DocuSign/HelloSign redirect)
+      const embed = await getEmbeddedSignUrl(mySigner.id);
+      if (embed.signUrl) {
+        window.location.href = embed.signUrl;
+        return;
+      }
+      // Fallback: in-app signing (demo mode or email-based providers)
       await signDocument(mySigner.id);
       toast(`Signature submitted for ${sig.document?.name || sig.subject}`, "success");
       setPendingSigs(prev => prev.filter(s => s.id !== sig.id));

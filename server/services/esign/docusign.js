@@ -139,8 +139,41 @@ async function createSignatureRequest({ documentId, signers, subject, message, d
   };
 }
 
-// TODO: Implement embedded signing for in-portal signature experience
-// Requires: envelopesApi.createRecipientView(ACCOUNT_ID, envelopeId, { returnUrl, authenticationMethod, email, userName, clientUserId })
+async function getEmbeddedSignUrl({ requestId, signerEmail, signerName, returnUrl, clientUserId }) {
+  const token = await getToken();
+  const apiClient = getApiClient(token);
+  const envelopesApi = new docusign.EnvelopesApi(apiClient);
+
+  const viewRequest = {
+    returnUrl: returnUrl || "https://portal.northstardevelopment.ca/documents",
+    authenticationMethod: "none",
+    email: signerEmail,
+    userName: signerName,
+    clientUserId: clientUserId || signerEmail,
+  };
+
+  const result = await envelopesApi.createRecipientView(ACCOUNT_ID, requestId, { recipientViewRequest: viewRequest });
+  return { signUrl: result.url };
+}
+
+async function getSignedDocument(requestId) {
+  const token = await getToken();
+  const apiClient = getApiClient(token);
+  const envelopesApi = new docusign.EnvelopesApi(apiClient);
+
+  // Get combined document (all documents in the envelope merged)
+  const docBuffer = await envelopesApi.getDocument(ACCOUNT_ID, requestId, "combined");
+
+  // Get envelope info for filename
+  const envelope = await envelopesApi.getEnvelope(ACCOUNT_ID, requestId);
+  const subject = envelope.emailSubject || "Signed Document";
+
+  return {
+    buffer: Buffer.from(docBuffer),
+    filename: `${subject.replace(/[^a-zA-Z0-9 ]/g, "")}_signed.pdf`,
+    contentType: "application/pdf",
+  };
+}
 
 async function getRequestStatus(requestId) {
   const token = await getToken();
@@ -204,4 +237,4 @@ async function handleWebhook(payload) {
   };
 }
 
-module.exports = { createSignatureRequest, getRequestStatus, cancelRequest, handleWebhook };
+module.exports = { createSignatureRequest, getRequestStatus, cancelRequest, handleWebhook, getEmbeddedSignUrl, getSignedDocument };

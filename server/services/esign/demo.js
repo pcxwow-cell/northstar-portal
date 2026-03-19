@@ -79,6 +79,38 @@ function markSigned(signerId) {
   throw new Error(`Signer ${signerId} not found`);
 }
 
+async function getEmbeddedSignUrl({ requestId, signerId, returnUrl }) {
+  // Demo mode: return a fake URL that the frontend will detect as demo
+  // In production, the provider returns a real embedded signing URL
+  return {
+    signUrl: `${returnUrl}?event=signing_complete&demo=true`,
+  };
+}
+
+async function getSignedDocument(requestId) {
+  // Demo mode: return a minimal PDF buffer indicating the document was signed
+  const record = requests.get(requestId);
+  const subject = record ? record.subject : "Document";
+  const signedDate = record?.completedAt ? record.completedAt.toISOString() : new Date().toISOString();
+
+  // Minimal valid PDF with "SIGNED" stamp text
+  const content = `Signed Document: ${subject}\nCompleted: ${signedDate}\n\nThis is a demo-mode signed document placeholder.`;
+  const pdfBytes = Buffer.from(
+    "%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n" +
+    `3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R/Contents 4 0 R/Resources<</Font<</F1 5 0 R>>>>>>endobj\n` +
+    `5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj\n` +
+    `4 0 obj<</Length ${44 + content.length}>>stream\nBT /F1 12 Tf 72 700 Td (${content.replace(/[()\\]/g, "\\$&").replace(/\n/g, ") Tj T* (")}) Tj ET\nendstream\nendobj\n` +
+    "xref\n0 6\n" +
+    "trailer<</Size 6/Root 1 0 R>>\nstartxref\n0\n%%EOF"
+  );
+
+  return {
+    buffer: pdfBytes,
+    filename: `${subject.replace(/[^a-zA-Z0-9 ]/g, "")}_signed.pdf`,
+    contentType: "application/pdf",
+  };
+}
+
 async function handleWebhook(payload) {
   // Demo mode: webhook is simulated via the /sign endpoint
   // In production, this would parse the provider's webhook payload
@@ -90,4 +122,4 @@ async function handleWebhook(payload) {
   throw new Error(`Unknown webhook event: ${event}`);
 }
 
-module.exports = { createSignatureRequest, getRequestStatus, cancelRequest, handleWebhook, markSigned };
+module.exports = { createSignatureRequest, getRequestStatus, cancelRequest, handleWebhook, markSigned, getEmbeddedSignUrl, getSignedDocument };

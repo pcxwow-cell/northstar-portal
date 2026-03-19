@@ -553,6 +553,38 @@ export async function signDocument(signerId) {
   return apiFetch(`/signatures/${signerId}/sign`, { method: "POST" });
 }
 
+export async function getEmbeddedSignUrl(signerId) {
+  if (_demoMode) {
+    // Demo mode: return null so frontend falls back to in-app signing
+    return { signUrl: null };
+  }
+  return apiFetch(`/signatures/${signerId}/embed`);
+}
+
+export async function downloadSignedDocument(requestId) {
+  if (_demoMode) {
+    console.log("[Demo] downloadSignedDocument", requestId);
+    // Create a minimal blob to simulate download
+    const blob = new Blob(["[Demo] Signed document placeholder"], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "signed_document.pdf"; a.click();
+    URL.revokeObjectURL(url);
+    return;
+  }
+  const BASE = import.meta.env.VITE_API_URL || "";
+  const token = localStorage.getItem("token");
+  const resp = await fetch(`${BASE}/api/v1/signatures/${requestId}/document`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!resp.ok) throw new Error("Failed to download signed document");
+  const blob = await resp.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `signed_document_${requestId}.pdf`; a.click();
+  URL.revokeObjectURL(url);
+}
+
 export async function cancelSignatureRequest(id) {
   if (_demoMode) {
     const req = _demoSignatures.find(s => s.id === id);

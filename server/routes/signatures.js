@@ -237,6 +237,67 @@ router.post("/:signerId/sign", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// GET /api/v1/signatures/:signerId/embed — get embedded signing URL for in-portal signing
+router.get("/:signerId/embed", async (req, res, next) => {
+  try {
+    const signerId = parseInt(req.params.signerId);
+    const signer = await prisma.signatureSigner.findUnique({
+      where: { id: signerId },
+      include: {
+        request: { include: { document: { select: { id: true, name: true } } } },
+      },
+    });
+    if (!signer) return res.status(404).json({ error: "Signer not found" });
+
+    // Only the signer themselves or an admin can get the signing URL
+    if (req.user.role === "INVESTOR" && signer.userId !== req.user.id) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    if (signer.status !== "pending") {
+      return res.status(400).json({ error: "Signature already completed or cancelled" });
+    }
+
+    const returnUrl = `${req.protocol}://${req.get("host")}/api/v1/signatures/embed-callback`;
+
+    const result = await esign.getEmbeddedSignUrl({
+      requestId: signer.request.requestId,
+      signerId: signer.id.toString(),
+      signerEmail: signer.email,
+      signerName: signer.name,
+      returnUrl,
+      clientUserId: signer.email,
+    });
+
+    res.json({ signUrl: result.signUrl });
+  } catch (err) { next(err); }
+});
+
+// GET /api/v1/signatures/:id/document — download the signed document
+router.get("/:id/document", async (req, res, next) => {
+  try {
+    const request = await prisma.signatureRequest.findUnique({
+      where: { id: parseInt(req.params.id) },
+      include: { signers: true, document: { select: { id: true, name: true } } },
+    });
+    if (!request) return res.status(404).json({ error: "Signature request not found" });
+
+    // Access check: admin or a signer on this request
+    if (req.user.role === "INVESTOR" && !request.signers.some(s => s.userId === req.user.id)) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    if (request.status !== "signed") {
+      return res.status(400).json({ error: "Document has not been fully signed yet" });
+    }
+
+    const result = await esign.getSignedDocument(request.requestId);
+    res.setHeader("Content-Type", result.contentType);
+    res.setHeader("Content-Disposition", `attachment; filename="${result.filename}"`);
+    res.send(result.buffer);
+  } catch (err) { next(err); }
+});
+
 // POST /api/v1/signatures/:id/cancel — cancel a request (ADMIN/GP)
 router.post("/:id/cancel", requireRole("ADMIN", "GP"), async (req, res, next) => {
   try {

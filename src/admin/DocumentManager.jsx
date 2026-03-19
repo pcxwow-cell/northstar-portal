@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAdminData } from "../context/AdminDataContext.jsx";
-import { fetchAdminDocuments, fetchAdminDocumentDetail, fetchAdminInvestors, uploadDocument, bulkUploadK1, deleteDocument, assignDocument, createSignatureRequest } from "../api.js";
+import { fetchAdminDocuments, fetchAdminDocumentDetail, fetchAdminInvestors, uploadDocument, bulkUploadK1, deleteDocument, assignDocument, createSignatureRequest, downloadSignedDocument } from "../api.js";
 import { colors, inputStyle } from "../styles/theme.js";
 import Spinner from "../components/Spinner.jsx";
 import SectionHeader from "../components/SectionHeader.jsx";
@@ -217,8 +217,11 @@ export default function DocumentManager({ toast, hideHeader }) {
             <div style={{ padding: "14px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 13, fontWeight: 600, color: "#666" }}>Signature Status</div>
             {docDetail.signatureRequests.map(req => (
               <div key={req.id}>
-                <div style={{ padding: "10px 20px", fontSize: 12, color: colors.mutedText, background: colors.cardBg, borderBottom: `1px solid ${colors.lightBorder}` }}>
-                  Request: {req.subject || "Signature Request"} — {req.status || "active"}
+                <div style={{ padding: "10px 20px", fontSize: 12, color: colors.mutedText, background: colors.cardBg, borderBottom: `1px solid ${colors.lightBorder}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span>Request: {req.subject || "Signature Request"} — {req.status || "active"}</span>
+                  {req.status === "signed" && (
+                    <Button variant="outline" onClick={() => downloadSignedDocument(req.id).catch(e => toast(e.message || "Download failed", "error"))} style={{ padding: "3px 10px", fontSize: 10 }}>Download Signed Copy</Button>
+                  )}
                 </div>
                 {(req.signers || []).map(signer => (
                   <div key={signer.id || signer.userId} style={{ display: "grid", gridTemplateColumns: "1fr 100px 160px 120px", padding: "10px 20px", borderBottom: `1px solid ${colors.lightBorder}`, fontSize: 13, alignItems: "center" }}>
