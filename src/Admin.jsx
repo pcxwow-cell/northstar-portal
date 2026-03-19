@@ -1240,7 +1240,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
           {/* D.5: Bulk Distribution Recording */}
           <div style={{ marginTop: 16 }}>
             {!showDistribution ? (
-              <button onClick={() => setShowDistribution(true)} style={{ ...btnOutline, fontSize: 12 }}>Record Distribution</button>
+              <Button variant="outline" onClick={() => setShowDistribution(true)} style={{ fontSize: 12 }}>Record Distribution</Button>
             ) : (
               <div style={{ background: colors.cardBg, borderRadius: 8, padding: "16px", border: "1px solid #E8E5DE" }}>
                 <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 12 }}>Record Bulk Distribution</div>
@@ -1278,15 +1278,15 @@ function ProjectDetail({ projectId, onBack, toast }) {
                   </div>
                 )}
                 <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-                  <button onClick={() => { setShowDistribution(false); setDistPreview(null); setDistAmount(""); setDistQuarter(""); setDistDate(""); }} style={{ ...btnOutline, fontSize: 12 }}>Cancel</button>
-                  <button disabled={!distAmount} onClick={async () => {
+                  <Button variant="outline" onClick={() => { setShowDistribution(false); setDistPreview(null); setDistAmount(""); setDistQuarter(""); setDistDate(""); }} style={{ fontSize: 12 }}>Cancel</Button>
+                  <Button disabled={!distAmount} onClick={async () => {
                     if (!confirm(`Record distribution of $${fmt(parseFloat(distAmount))} across ${project.investors.length} investors?`)) return;
                     try {
                       await recordBulkDistribution(projectId, { amount: parseFloat(distAmount), quarter: distQuarter, date: distDate || new Date().toISOString().split("T")[0] });
                       toast("Distribution recorded");
                       setShowDistribution(false); setDistPreview(null); setDistAmount(""); setDistQuarter(""); setDistDate(""); load();
                     } catch (e) { toast(e.message, "error"); }
-                  }} style={{ ...btnStyle, fontSize: 12, opacity: distAmount ? 1 : 0.5 }}>Confirm Distribution</button>
+                  }} style={{ fontSize: 12, opacity: distAmount ? 1 : 0.5 }}>Confirm Distribution</Button>
                 </div>
               </div>
             )}
@@ -1295,7 +1295,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
           {/* Cap table with CRUD (D.1) */}
           <div style={{ fontSize: 13, fontWeight: 600, color: "#666", marginTop: 24, marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span>Cap Table</span>
-            <button onClick={() => { setShowCapForm(!showCapForm); setEditingCapId(null); setCapForm({ holderName: "", holderType: "LP", committed: "", called: "", ownershipPct: "", unfunded: "" }); }} style={{ ...btnOutline, padding: "4px 10px", fontSize: 11 }}>{showCapForm ? "Cancel" : "Add Entry"}</button>
+            <Button variant="outline" onClick={() => { setShowCapForm(!showCapForm); setEditingCapId(null); setCapForm({ holderName: "", holderType: "LP", committed: "", called: "", ownershipPct: "", unfunded: "" }); }} style={{ padding: "4px 10px", fontSize: 11 }}>{showCapForm ? "Cancel" : "Add Entry"}</Button>
           </div>
           {showCapForm && (
             <div style={{ background: colors.cardBg, borderRadius: 6, padding: "12px", marginBottom: 12, border: "1px solid #E8E5DE" }}>
@@ -1308,14 +1308,14 @@ function ProjectDetail({ projectId, onBack, toast }) {
                 <div><label style={{ fontSize: 10, color: "#AAA" }}>Unfunded</label><input type="number" value={capForm.unfunded} onChange={e => setCapForm(f => ({ ...f, unfunded: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} placeholder="0" /></div>
               </div>
               <div style={{ marginTop: 8, display: "flex", justifyContent: "flex-end" }}>
-                <button onClick={async () => {
+                <Button onClick={async () => {
                   const data = { holderName: capForm.holderName, holderType: capForm.holderType, committed: parseFloat(capForm.committed) || 0, called: parseFloat(capForm.called) || 0, ownershipPct: parseFloat(capForm.ownershipPct) || 0, unfunded: parseFloat(capForm.unfunded) || 0 };
                   try {
                     if (editingCapId) { await updateCapTableEntry(projectId, editingCapId, data); toast("Cap table entry updated"); }
                     else { await createCapTableEntry(projectId, data); toast("Cap table entry added"); }
                     setShowCapForm(false); setEditingCapId(null); load();
                   } catch (e) { toast(e.message, "error"); }
-                }} style={{ ...btnStyle, padding: "6px 12px", fontSize: 11 }}>{editingCapId ? "Save" : "Add"}</button>
+                }} style={{ padding: "6px 12px", fontSize: 11 }}>{editingCapId ? "Save" : "Add"}</Button>
               </div>
             </div>
           )}
@@ -1333,8 +1333,8 @@ function ProjectDetail({ projectId, onBack, toast }) {
                   <span>${fmt(e.unfunded)}</span>
                   <span>{e.ownership}%</span>
                   <div style={{ display: "flex", gap: 4 }}>
-                    <button onClick={() => { setEditingCapId(e.id); setCapForm({ holderName: e.holder, holderType: e.type, committed: e.committed || "", called: e.called || "", ownershipPct: e.ownership || "", unfunded: e.unfunded || "" }); setShowCapForm(true); }} style={{ ...btnOutline, padding: "2px 6px", fontSize: 10 }}>Edit</button>
-                    <button onClick={async () => { if (!confirm("Delete this cap table entry?")) return; try { await deleteCapTableEntry(projectId, e.id); toast("Entry deleted"); load(); } catch (err) { toast(err.message, "error"); } }} style={{ ...btnOutline, padding: "2px 6px", fontSize: 10, color: colors.red, borderColor: colors.red }}>&times;</button>
+                    <Button variant="outline" onClick={() => { setEditingCapId(e.id); setCapForm({ holderName: e.holder, holderType: e.type, committed: e.committed || "", called: e.called || "", ownershipPct: e.ownership || "", unfunded: e.unfunded || "" }); setShowCapForm(true); }} style={{ padding: "2px 6px", fontSize: 10 }}>Edit</Button>
+                    <Button variant="outline" onClick={async () => { if (!confirm("Delete this cap table entry?")) return; try { await deleteCapTableEntry(projectId, e.id); toast("Entry deleted"); load(); } catch (err) { toast(err.message, "error"); } }} style={{ padding: "2px 6px", fontSize: 10, color: colors.red, borderColor: colors.red }}>&times;</Button>
                   </div>
                 </div>
               ))}
@@ -1382,7 +1382,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
           {/* Distribution Tiers with CRUD (D.2) */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: "#666" }}>Distribution Tiers</div>
-            <button onClick={() => { setShowTierForm(!showTierForm); setEditingTierId(null); setTierForm({ tierName: "", lpShare: "", gpShare: "", threshold: "" }); }} style={{ ...btnOutline, padding: "4px 10px", fontSize: 11 }}>{showTierForm ? "Cancel" : "Add Tier"}</button>
+            <Button variant="outline" onClick={() => { setShowTierForm(!showTierForm); setEditingTierId(null); setTierForm({ tierName: "", lpShare: "", gpShare: "", threshold: "" }); }} style={{ padding: "4px 10px", fontSize: 11 }}>{showTierForm ? "Cancel" : "Add Tier"}</Button>
           </div>
           {showTierForm && (
             <div style={{ background: colors.cardBg, borderRadius: 6, padding: "12px", marginBottom: 12, border: "1px solid #E8E5DE" }}>
@@ -1393,14 +1393,14 @@ function ProjectDetail({ projectId, onBack, toast }) {
                 <div><label style={{ fontSize: 10, color: "#AAA" }}>Threshold</label><input value={tierForm.threshold} onChange={e => setTierForm(f => ({ ...f, threshold: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} placeholder="e.g. 8% IRR" /></div>
               </div>
               <div style={{ marginTop: 8, display: "flex", justifyContent: "flex-end" }}>
-                <button onClick={async () => {
+                <Button onClick={async () => {
                   const data = { tierName: tierForm.tierName, lpShare: tierForm.lpShare, gpShare: tierForm.gpShare, threshold: tierForm.threshold };
                   try {
                     if (editingTierId) { await updateWaterfallTier(projectId, editingTierId, data); toast("Tier updated"); }
                     else { await createWaterfallTier(projectId, data); toast("Tier added"); }
                     setShowTierForm(false); setEditingTierId(null); load();
                   } catch (e) { toast(e.message, "error"); }
-                }} style={{ ...btnStyle, padding: "6px 12px", fontSize: 11 }}>{editingTierId ? "Save" : "Add"}</button>
+                }} style={{ padding: "6px 12px", fontSize: 11 }}>{editingTierId ? "Save" : "Add"}</Button>
               </div>
             </div>
           )}
@@ -1413,8 +1413,8 @@ function ProjectDetail({ projectId, onBack, toast }) {
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <span style={{ color: colors.mutedText, fontSize: 12 }}>{t.threshold}</span>
                 <span style={{ padding: "2px 8px", borderRadius: 3, fontSize: 10, background: t.status === "complete" ? "#EFE" : t.status === "accruing" ? "#FFF8E1" : colors.lightBorder, color: t.status === "complete" ? colors.green : t.status === "accruing" ? "#B8860B" : "#999" }}>{t.status}</span>
-                <button onClick={() => { setEditingTierId(t.id); setTierForm({ tierName: t.name, lpShare: t.lpShare, gpShare: t.gpShare, threshold: t.threshold }); setShowTierForm(true); }} style={{ ...btnOutline, padding: "2px 6px", fontSize: 10 }}>Edit</button>
-                <button onClick={async () => { if (!confirm(`Delete tier "${t.name}"?`)) return; try { await deleteWaterfallTier(projectId, t.id); toast("Tier deleted"); load(); } catch (e) { toast(e.message, "error"); } }} style={{ ...btnOutline, padding: "2px 6px", fontSize: 10, color: colors.red, borderColor: colors.red }}>&times;</button>
+                <Button variant="outline" onClick={() => { setEditingTierId(t.id); setTierForm({ tierName: t.name, lpShare: t.lpShare, gpShare: t.gpShare, threshold: t.threshold }); setShowTierForm(true); }} style={{ padding: "2px 6px", fontSize: 10 }}>Edit</Button>
+                <Button variant="outline" onClick={async () => { if (!confirm(`Delete tier "${t.name}"?`)) return; try { await deleteWaterfallTier(projectId, t.id); toast("Tier deleted"); load(); } catch (e) { toast(e.message, "error"); } }} style={{ padding: "2px 6px", fontSize: 10, color: colors.red, borderColor: colors.red }}>&times;</Button>
               </div>
             </div>
           )) : (!showTierForm && <p style={{ color: "#BBB", fontSize: 13, fontStyle: "italic" }}>No distribution tiers</p>)}
@@ -1441,9 +1441,9 @@ function ProjectDetail({ projectId, onBack, toast }) {
               <label style={{ fontSize: 11, color: "#888" }}>Annual Cash Flow ($)</label>
               <input type="number" value={fmAnnualCF} onChange={e => setFmAnnualCF(e.target.value)} placeholder="0" style={{ ...inputStyle, marginTop: 4 }} />
             </div>
-            <button onClick={handleRunModel} disabled={fmLoading} style={{ ...btnStyle, opacity: fmLoading ? 0.5 : 1 }}>
+            <Button onClick={handleRunModel} disabled={fmLoading} style={{ opacity: fmLoading ? 0.5 : 1 }}>
               {fmLoading ? "Running..." : "Run Scenario"}
-            </button>
+            </Button>
           </div>
           <div style={{ fontSize: 12, color: colors.mutedText, marginBottom: 20 }}>
             Pre-filled: Total Investment ${fmt(project.totalRaise)} | Pref: {project.prefReturn}% | Carry: {project.carry}%
@@ -1660,8 +1660,8 @@ function DocumentManager({ toast, hideHeader }) {
             </div>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={openSignModal} style={{ ...btnStyle, fontSize: 12 }}>Request Signature</button>
-            <button onClick={() => setConfirmAction({ title: "Delete Document", message: `Delete "${docDetail.name}"? This cannot be undone.`, danger: true, onConfirm: async () => { setConfirmAction(null); try { await deleteDocument(docDetail.id); toast("Document deleted"); setSelectedDoc(null); setDocDetail(null); loadDocs(); } catch (e) { toast(e.message, "error"); } } })} style={{ ...btnOutline, fontSize: 12, color: colors.red, borderColor: colors.red }}>Delete</button>
+            <Button onClick={openSignModal} style={{ fontSize: 12 }}>Request Signature</Button>
+            <Button variant="outline" onClick={() => setConfirmAction({ title: "Delete Document", message: `Delete "${docDetail.name}"? This cannot be undone.`, danger: true, onConfirm: async () => { setConfirmAction(null); try { await deleteDocument(docDetail.id); toast("Document deleted"); setSelectedDoc(null); setDocDetail(null); loadDocs(); } catch (e) { toast(e.message, "error"); } } })} style={{ fontSize: 12, color: colors.red, borderColor: colors.red }}>Delete</Button>
           </div>
         </div>
 
@@ -1691,10 +1691,10 @@ function DocumentManager({ toast, hideHeader }) {
                 </div>
               </div>
               <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-                <button onClick={() => setShowSignModal(false)} style={btnOutline}>Cancel</button>
-                <button onClick={handleSendSignature} disabled={sigSending} style={{ ...btnStyle, opacity: sigSending ? 0.5 : 1 }}>
+                <Button variant="outline" onClick={() => setShowSignModal(false)}>Cancel</Button>
+                <Button onClick={handleSendSignature} disabled={sigSending} style={{ opacity: sigSending ? 0.5 : 1 }}>
                   {sigSending ? "Sending..." : "Send Request"}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -1736,14 +1736,14 @@ function DocumentManager({ toast, hideHeader }) {
                     <span><span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 3, background: signer.status === "signed" ? "#EFE" : signer.status === "declined" ? "#FEE" : "#FFF8E1", color: signer.status === "signed" ? colors.green : signer.status === "declined" ? colors.red : "#B8860B" }}>{signer.status || "pending"}</span></span>
                     <span style={{ fontSize: 12, color: colors.mutedText }}>{signer.signedAt ? new Date(signer.signedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }) : "\u2014"}</span>
                     {(signer.status === "pending" || !signer.status) && (
-                      <button onClick={async () => {
+                      <Button variant="outline" onClick={async () => {
                         try {
                           const BASE = import.meta.env.VITE_API_URL || "";
                           const token = localStorage.getItem("token");
                           await fetch(`${BASE}/notifications/test`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ type: "signature_required", userId: signer.userId }) });
                           toast("Reminder sent");
                         } catch (e) { toast("Failed to send reminder", "error"); }
-                      }} style={{ ...btnOutline, padding: "3px 8px", fontSize: 10 }}>Send Reminder</button>
+                      }} style={{ padding: "3px 8px", fontSize: 10 }}>Send Reminder</Button>
                     )}
                   </div>
                 ))}
@@ -1755,12 +1755,12 @@ function DocumentManager({ toast, hideHeader }) {
         {/* Assign Investors */}
         <div style={{ marginTop: 20 }}>
           {!showAssignInvestors ? (
-            <button onClick={async () => {
+            <Button variant="outline" onClick={async () => {
               const investors = await fetchAdminInvestors();
               setAssignInvestorsList(Array.isArray(investors) ? investors : investors.investors || []);
               setAssignSelectedIds(docDetail.accessList.filter(a => a.directAssignment).map(a => a.userId || a.id));
               setShowAssignInvestors(true);
-            }} style={btnOutline}>Assign to Investors</button>
+            }}>Assign to Investors</Button>
           ) : (
             <div style={{ background: colors.white, borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
               <h3 style={{ fontSize: 16, fontWeight: 400, marginBottom: 16 }}>Assign Investors</h3>
@@ -1776,8 +1776,8 @@ function DocumentManager({ toast, hideHeader }) {
                 {assignInvestors.length === 0 && <div style={{ padding: 14, color: colors.mutedText, fontSize: 12 }}>No investors found</div>}
               </div>
               <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-                <button onClick={() => setShowAssignInvestors(false)} style={btnOutline}>Cancel</button>
-                <button disabled={assignSaving} onClick={async () => {
+                <Button variant="outline" onClick={() => setShowAssignInvestors(false)}>Cancel</Button>
+                <Button disabled={assignSaving} onClick={async () => {
                   setAssignSaving(true);
                   try {
                     await assignDocument(docDetail.id, assignSelectedIds);
@@ -1787,9 +1787,9 @@ function DocumentManager({ toast, hideHeader }) {
                     setShowAssignInvestors(false);
                   } catch (e) { toast(e.message, "error"); }
                   finally { setAssignSaving(false); }
-                }} style={{ ...btnStyle, opacity: assignSaving ? 0.5 : 1 }}>
+                }} style={{ opacity: assignSaving ? 0.5 : 1 }}>
                   {assignSaving ? "Saving..." : "Save Assignments"}
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -1829,10 +1829,10 @@ function DocumentManager({ toast, hideHeader }) {
             <input type="file" accept=".pdf,.doc,.docx,.xlsx,.csv" onChange={e => setUploadFile(e.target.files[0])} style={{ fontSize: 13 }} required />
           </div>
           <div style={{ display: "flex", gap: 10 }}>
-            <button type="button" onClick={() => setShowUpload(false)} style={btnOutline}>Cancel</button>
-            <button type="submit" disabled={uploading} style={{ ...btnStyle, padding: "10px 24px", opacity: uploading ? 0.5 : 1 }}>
+            <Button variant="outline" type="button" onClick={() => setShowUpload(false)}>Cancel</Button>
+            <Button type="submit" disabled={uploading} style={{ padding: "10px 24px", opacity: uploading ? 0.5 : 1 }}>
               {uploading ? "Uploading..." : "Upload"}
-            </button>
+            </Button>
           </div>
         </form>
       </>
@@ -1851,8 +1851,8 @@ function DocumentManager({ toast, hideHeader }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <p style={{ fontSize: 13, color: colors.mutedText }}>{hideHeader ? `${docs.length} documents` : ""}</p>
         <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => { setShowBulkK1(!showBulkK1); setShowUpload(false); }} style={btnOutline}>{showBulkK1 ? "Cancel" : "Bulk K-1 Upload"}</button>
-          <button onClick={() => { setShowUpload(true); setShowBulkK1(false); }} style={btnStyle}>Upload Document</button>
+          <Button variant="outline" onClick={() => { setShowBulkK1(!showBulkK1); setShowUpload(false); }}>{showBulkK1 ? "Cancel" : "Bulk K-1 Upload"}</Button>
+          <Button onClick={() => { setShowUpload(true); setShowBulkK1(false); }}>Upload Document</Button>
         </div>
       </div>
 
@@ -1877,7 +1877,7 @@ function DocumentManager({ toast, hideHeader }) {
                 {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </div>
-            <button disabled={!bulkK1Files || bulkUploading} onClick={async () => {
+            <Button disabled={!bulkK1Files || bulkUploading} onClick={async () => {
               setBulkUploading(true);
               try {
                 const fd = new FormData();
@@ -1892,7 +1892,7 @@ function DocumentManager({ toast, hideHeader }) {
                 loadDocs();
               } catch (err) { toast(err.message, "error"); }
               setBulkUploading(false);
-            }} style={btnStyle}>{bulkUploading ? "Uploading..." : "Upload All"}</button>
+            }}>{bulkUploading ? "Uploading..." : "Upload All"}</Button>
           </div>
           {bulkK1Results && (
             <div style={{ borderTop: `1px solid ${colors.lightBorder}`, paddingTop: 16 }}>
@@ -1908,7 +1908,7 @@ function DocumentManager({ toast, hideHeader }) {
                         <option value="">Select investor...</option>
                         {bulkK1Investors.map(inv => <option key={inv.id} value={inv.id}>{inv.name}</option>)}
                       </select>
-                      <button disabled={!bulkK1Assigns[r.documentId || i]} onClick={async () => {
+                      <Button disabled={!bulkK1Assigns[r.documentId || i]} onClick={async () => {
                         const userId = parseInt(bulkK1Assigns[r.documentId || i]);
                         if (!r.documentId) { toast("No document ID available", "error"); return; }
                         try {
@@ -1916,7 +1916,7 @@ function DocumentManager({ toast, hideHeader }) {
                           toast("Document assigned");
                           setBulkK1Results(prev => ({ ...prev, results: prev.results.map((x, j) => j === i ? { ...x, status: "matched", matched: { name: bulkK1Investors.find(inv => inv.id === userId)?.name || "Assigned" } } : x), matched: prev.matched + 1, unmatched: prev.unmatched - 1 }));
                         } catch (e) { toast(e.message, "error"); }
-                      }} style={{ ...btnStyle, padding: "3px 8px", fontSize: 10, opacity: bulkK1Assigns[r.documentId || i] ? 1 : 0.5 }}>Assign</button>
+                      }} style={{ padding: "3px 8px", fontSize: 10, opacity: bulkK1Assigns[r.documentId || i] ? 1 : 0.5 }}>Assign</Button>
                     </div>
                   )}
                 </div>
@@ -2039,9 +2039,9 @@ function InvestorProfile({ investorId, onBack, toast }) {
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ padding: "4px 12px", borderRadius: 4, fontSize: 12, fontWeight: 500, background: profile.status === "ACTIVE" ? "#EFE" : profile.status === "PENDING" ? "#FFF8E1" : "#FEE", color: profile.status === "ACTIVE" ? colors.green : profile.status === "PENDING" ? "#B8860B" : colors.red }}>{profile.status}</span>
           {(profile.status === "LOCKED" || profile.locked) && (
-            <button onClick={async () => {
+            <Button onClick={async () => {
               try { await unlockInvestor(investorId); toast("Account unlocked"); const updated = await fetchInvestorProfile(investorId); setProfile(updated); } catch (e) { toast(e.message, "error"); }
-            }} style={{ ...btnStyle, padding: "4px 12px", fontSize: 11, background: "#D97706" }}>Unlock Account</button>
+            }} style={{ padding: "4px 12px", fontSize: 11, background: "#D97706" }}>Unlock Account</Button>
           )}
         </div>
       </div>
@@ -2060,7 +2060,7 @@ function InvestorProfile({ investorId, onBack, toast }) {
       <div style={section}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
           <div style={sectionTitle}>Investment Entities</div>
-          <button onClick={() => setShowEntityForm(!showEntityForm)} style={{ ...btnOutline, padding: "4px 10px", fontSize: 11 }}>{showEntityForm ? "Cancel" : "Add Entity"}</button>
+          <Button variant="outline" onClick={() => setShowEntityForm(!showEntityForm)} style={{ padding: "4px 10px", fontSize: 11 }}>{showEntityForm ? "Cancel" : "Add Entity"}</Button>
         </div>
         {showEntityForm && (
           <form onSubmit={handleCreateEntity} style={{ padding: "12px", background: colors.cardBg, borderRadius: 4, marginBottom: 12 }}>
@@ -2093,7 +2093,7 @@ function InvestorProfile({ investorId, onBack, toast }) {
                 <input type="checkbox" checked={entityForm.isDefault} onChange={e => setEntityForm(f => ({ ...f, isDefault: e.target.checked }))} />
                 <label style={{ fontSize: 11, color: "#666" }}>Default entity</label>
               </div>
-              <button type="submit" style={{ ...btnStyle, padding: "6px 12px", fontSize: 11 }}>{editingEntity ? "Save" : "Create"}</button>
+              <Button type="submit" style={{ padding: "6px 12px", fontSize: 11 }}>{editingEntity ? "Save" : "Create"}</Button>
             </div>
           </form>
         )}
@@ -2142,11 +2142,11 @@ function InvestorProfile({ investorId, onBack, toast }) {
         {/* Assign to Project */}
         <div style={{ marginTop: 16 }}>
           {!showAssignProject ? (
-            <button onClick={async () => {
+            <Button variant="outline" onClick={async () => {
               const projects = await fetchAdminProjects();
               setAssignProjList(Array.isArray(projects) ? projects : []);
               setShowAssignProject(true);
-            }} style={{ ...btnOutline, fontSize: 12 }}>Assign to Project</button>
+            }} style={{ fontSize: 12 }}>Assign to Project</Button>
           ) : (
             <div style={{ background: colors.cardBg, borderRadius: 8, padding: "16px", border: "1px solid #E8E5DE", marginTop: 8 }}>
               <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 12 }}>Assign to Project</div>
@@ -2172,8 +2172,8 @@ function InvestorProfile({ investorId, onBack, toast }) {
                 </div>
               </div>
               <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-                <button onClick={() => setShowAssignProject(false)} style={{ ...btnOutline, fontSize: 12 }}>Cancel</button>
-                <button disabled={assignProjSaving || !assignProjId} onClick={async () => {
+                <Button variant="outline" onClick={() => setShowAssignProject(false)} style={{ fontSize: 12 }}>Cancel</Button>
+                <Button disabled={assignProjSaving || !assignProjId} onClick={async () => {
                   setAssignProjSaving(true);
                   try {
                     await assignInvestorProject(investorId, {
@@ -2189,9 +2189,9 @@ function InvestorProfile({ investorId, onBack, toast }) {
                     setAssignProjId(""); setAssignProjCommitted(""); setAssignProjCalled(""); setAssignProjCurrentValue("");
                   } catch (e) { toast(e.message, "error"); }
                   finally { setAssignProjSaving(false); }
-                }} style={{ ...btnStyle, fontSize: 12, opacity: assignProjSaving ? 0.5 : 1 }}>
+                }} style={{ fontSize: 12, opacity: assignProjSaving ? 0.5 : 1 }}>
                   {assignProjSaving ? "Saving..." : "Assign"}
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -2311,11 +2311,11 @@ function ProjectUpdatesTab({ project, updateText, setUpdateText, handlePostUpdat
     <>
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
         <input value={updateText} onChange={e => setUpdateText(e.target.value)} placeholder="Post a construction update..." style={{ ...inputStyle, flex: 1 }} />
-        <button onClick={handlePostUpdate} style={btnStyle}>Post</button>
+        <Button onClick={handlePostUpdate}>Post</Button>
         {updates.length >= 2 && (
-          <button onClick={() => setCompareMode(!compareMode)} style={{ ...btnOutline, background: compareMode ? "#FEE" : colors.white, color: compareMode ? colors.red : colors.darkText }}>
+          <Button variant="outline" onClick={() => setCompareMode(!compareMode)} style={{ background: compareMode ? "#FEE" : colors.white, color: compareMode ? colors.red : colors.darkText }}>
             {compareMode ? "Exit Compare" : "Compare"}
-          </button>
+          </Button>
         )}
       </div>
 
@@ -2475,10 +2475,10 @@ function ProjectCashFlowsTab({ project, projectId, cashFlowsList, cfInvestors, s
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: "#666" }}>Cash Flow History ({cashFlowsList.length} records)</div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => setShowCfModal(true)} style={btnStyle}>Record Cash Flow</button>
-          <button onClick={handleRecalculate} disabled={recalculating} style={{ ...btnOutline, opacity: recalculating ? 0.5 : 1 }}>
+          <Button onClick={() => setShowCfModal(true)}>Record Cash Flow</Button>
+          <Button variant="outline" onClick={handleRecalculate} disabled={recalculating} style={{ opacity: recalculating ? 0.5 : 1 }}>
             {recalculating ? "Recalculating..." : "Recalculate IRR/MOIC"}
-          </button>
+          </Button>
         </div>
       </div>
       {cashFlowsList.length > 0 ? (
@@ -2560,8 +2560,8 @@ function ProjectCashFlowsTab({ project, projectId, cashFlowsList, cfInvestors, s
                 <input value={cfDesc} onChange={e => setCfDesc(e.target.value)} placeholder="Optional description" style={{ ...inputStyle, marginTop: 4 }} />
               </div>
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                <button type="button" onClick={() => setShowCfModal(false)} style={btnOutline}>Cancel</button>
-                <button type="submit" style={btnStyle}>Record</button>
+                <Button variant="outline" type="button" onClick={() => setShowCfModal(false)}>Cancel</Button>
+                <Button type="submit">Record</Button>
               </div>
             </form>
           </div>
@@ -2762,7 +2762,7 @@ function GroupManager({ toast, hideHeader }) {
           <label style={{ fontSize: 11, color: "#888" }}>Color</label>
           <input type="color" value={newColor} onChange={e => setNewColor(e.target.value)} style={{ width: 42, height: 38, border: "1px solid #DDD", borderRadius: 4, cursor: "pointer" }} />
         </div>
-        <button type="submit" style={btnStyle}>Create Group</button>
+        <Button type="submit">Create Group</Button>
       </form>
 
       <div style={{ display: "flex", gap: 20 }}>
@@ -3017,7 +3017,7 @@ function StaffManager({ toast, hideHeader }) {
         <h1 style={{ fontSize: 28, fontWeight: 300 }}>Company Staff</h1>
       </div>}
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
-        <button onClick={() => setShowAdd(!showAdd)} style={btnStyle}>{showAdd ? "Cancel" : "Add Staff"}</button>
+        <Button onClick={() => setShowAdd(!showAdd)}>{showAdd ? "Cancel" : "Add Staff"}</Button>
       </div>
 
       {showAdd && (
@@ -3037,7 +3037,7 @@ function StaffManager({ toast, hideHeader }) {
               <option value="GP">General Partner</option>
             </select>
           </div>
-          <button type="submit" style={btnStyle}>Add</button>
+          <Button type="submit">Add</Button>
         </form>
       )}
 
@@ -3065,11 +3065,11 @@ function StaffManager({ toast, hideHeader }) {
                     <option value="ADMIN">Admin</option>
                     <option value="GP">GP</option>
                   </select>
-                  <button onClick={e => { e.stopPropagation(); handleResetPassword(s); }} title="Reset password" style={{ ...btnOutline, padding: "3px 8px", fontSize: 10 }}>Reset PW</button>
+                  <Button variant="outline" onClick={e => { e.stopPropagation(); handleResetPassword(s); }} title="Reset password" style={{ padding: "3px 8px", fontSize: 10 }}>Reset PW</Button>
                   {s.status === "ACTIVE" ? (
-                    <button onClick={e => { e.stopPropagation(); handleDeactivate(s); }} title="Deactivate" style={{ ...btnOutline, padding: "3px 8px", fontSize: 10, color: colors.red, borderColor: colors.red }}>Deactivate</button>
+                    <Button variant="outline" onClick={e => { e.stopPropagation(); handleDeactivate(s); }} title="Deactivate" style={{ padding: "3px 8px", fontSize: 10, color: colors.red, borderColor: colors.red }}>Deactivate</Button>
                   ) : (
-                    <button onClick={e => { e.stopPropagation(); handleReactivate(s); }} title="Reactivate" style={{ ...btnOutline, padding: "3px 8px", fontSize: 10, color: colors.green, borderColor: colors.green }}>Reactivate</button>
+                    <Button variant="outline" onClick={e => { e.stopPropagation(); handleReactivate(s); }} title="Reactivate" style={{ padding: "3px 8px", fontSize: 10, color: colors.green, borderColor: colors.green }}>Reactivate</Button>
                   )}
                   <span style={{ padding: "2px 8px", borderRadius: 3, fontSize: 10, background: s.status === "ACTIVE" ? "#EFE" : "#FEE", color: s.status === "ACTIVE" ? colors.green : colors.red }}>{s.status}</span>
                 </div>
@@ -3087,7 +3087,7 @@ function StaffManager({ toast, hideHeader }) {
                 <div style={{ fontSize: 15, fontWeight: 500 }}>Permissions: {selectedStaff.name}</div>
                 <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>Role: {selectedStaff.role}</div>
               </div>
-              <button onClick={() => setSelectedStaff(null)} style={{ ...btnOutline, padding: "4px 12px", fontSize: 11 }}>Close</button>
+              <Button variant="outline" onClick={() => setSelectedStaff(null)} style={{ padding: "4px 12px", fontSize: 11 }}>Close</Button>
             </div>
 
             {/* Quick presets */}
@@ -3095,14 +3095,12 @@ function StaffManager({ toast, hideHeader }) {
               <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 10 }}>Quick Presets</div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {Object.keys(PRESETS).map(p => (
-                  <button key={p} onClick={() => applyPreset(p)} style={{
-                    ...btnOutline, padding: "5px 12px", fontSize: 11, borderRadius: 16,
-                    background: colors.white, borderColor: "#DDD",
-                  }}
+                  <Button variant="outline" key={p} onClick={() => applyPreset(p)} 
                     onMouseEnter={e => { e.currentTarget.style.borderColor = colors.red; e.currentTarget.style.color = colors.red; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = "#DDD"; e.currentTarget.style.color = colors.darkText; }}>
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = "#DDD"; e.currentTarget.style.color = colors.darkText; }} style={{ padding: "5px 12px", fontSize: 11, borderRadius: 16,
+                    background: colors.white, borderColor: "#DDD" }}>
                     {p}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
@@ -3143,8 +3141,8 @@ function StaffManager({ toast, hideHeader }) {
               <div>Password: <strong>{credentialDialog.tempPassword}</strong></div>
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <button onClick={() => { navigator.clipboard.writeText(credentialDialog.tempPassword); toast("Password copied"); }} style={btnOutline}>Copy Password</button>
-              <button onClick={() => setCredentialDialog(null)} style={btnStyle}>Done</button>
+              <Button variant="outline" onClick={() => { navigator.clipboard.writeText(credentialDialog.tempPassword); toast("Password copied"); }}>Copy Password</Button>
+              <Button onClick={() => setCredentialDialog(null)}>Done</Button>
             </div>
           </div>
         </div>
@@ -3332,9 +3330,9 @@ function StatementManager({ toast }) {
             </span>
           )}
         </div>
-        <button onClick={() => setShowGenerateForm(!showGenerateForm)} disabled={generating} style={btnStyle}>
+        <Button onClick={() => setShowGenerateForm(!showGenerateForm)} disabled={generating}>
           {generating ? "Generating..." : "Generate All"}
-        </button>
+        </Button>
       </div>
 
       {/* Generate form with period inputs */}
@@ -3356,10 +3354,10 @@ function StatementManager({ toast }) {
             </div>
           </div>
           <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-            <button onClick={() => setShowGenerateForm(false)} style={btnOutline}>Cancel</button>
-            <button onClick={handleGenerate} disabled={generating} style={{ ...btnStyle, opacity: generating ? 0.5 : 1 }}>
+            <Button variant="outline" onClick={() => setShowGenerateForm(false)}>Cancel</Button>
+            <Button onClick={handleGenerate} disabled={generating} style={{ opacity: generating ? 0.5 : 1 }}>
               {generating ? "Generating..." : "Generate Draft Statements"}
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -3377,7 +3375,7 @@ function StatementManager({ toast }) {
                 <div style={{ fontSize: 28, fontWeight: 300, color: c.color }}>{c.count}</div>
                 <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>{c.label}</div>
               </div>
-              {c.action && <button onClick={c.onClick} style={{ ...btnOutline, padding: "6px 14px", fontSize: 11, color: c.color, borderColor: c.color }}>{c.action}</button>}
+              {c.action && <Button variant="outline" onClick={c.onClick} style={{ padding: "6px 14px", fontSize: 11, color: c.color, borderColor: c.color }}>{c.action}</Button>}
             </div>
           </div>
         ))}
@@ -3409,11 +3407,10 @@ function StatementManager({ toast }) {
               placeholder="Describe what needs to be revised..."
               style={{ ...inputStyle, resize: "vertical", marginBottom: 16 }} />
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-              <button onClick={() => { setRejectingId(null); setRejectReason(""); }} style={btnOutline}>Cancel</button>
-              <button onClick={() => handleReject(rejectingId, rejectReason)}
-                style={{ ...btnStyle, background: colors.red }}>
+              <Button variant="outline" onClick={() => { setRejectingId(null); setRejectReason(""); }}>Cancel</Button>
+              <Button onClick={() => handleReject(rejectingId, rejectReason)} style={{ background: colors.red }}>
                 Reject Statement
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -3424,7 +3421,7 @@ function StatementManager({ toast }) {
         <div style={{ background: colors.white, borderRadius: 12, boxShadow: cardShadow, marginBottom: 24, overflow: "hidden" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px", borderBottom: "1px solid #E8E5DE" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <button onClick={closeDetail} style={{ ...btnOutline, padding: "4px 10px", fontSize: 11 }}>Back</button>
+              <Button variant="outline" onClick={closeDetail} style={{ padding: "4px 10px", fontSize: 11 }}>Back</Button>
               <span style={{ fontWeight: 500, fontSize: 15 }}>Statement Detail</span>
               {detail && (
                 <span style={{
@@ -3438,14 +3435,14 @@ function StatementManager({ toast }) {
               <div style={{ display: "flex", gap: 8 }}>
                 {detail.status === "DRAFT" && (
                   <>
-                    <button onClick={() => handleApprove(detail.id)} style={{ ...btnOutline, padding: "6px 14px", fontSize: 11, color: colors.green, borderColor: colors.green }}>Approve</button>
-                    <button onClick={() => { setRejectingId(detail.id); }} style={{ ...btnOutline, padding: "6px 14px", fontSize: 11, color: "#999" }}>Reject</button>
+                    <Button variant="outline" onClick={() => handleApprove(detail.id)} style={{ padding: "6px 14px", fontSize: 11, color: colors.green, borderColor: colors.green }}>Approve</Button>
+                    <Button variant="outline" onClick={() => { setRejectingId(detail.id); }} style={{ padding: "6px 14px", fontSize: 11, color: "#999" }}>Reject</Button>
                   </>
                 )}
                 {detail.status === "APPROVED" && (
                   <>
-                    <button onClick={() => handleSend(detail.id)} style={{ ...btnStyle, padding: "6px 14px", fontSize: 11 }}>Send</button>
-                    <button onClick={() => { setRejectingId(detail.id); }} style={{ ...btnOutline, padding: "6px 14px", fontSize: 11, color: "#999" }}>Reject</button>
+                    <Button onClick={() => handleSend(detail.id)} style={{ padding: "6px 14px", fontSize: 11 }}>Send</Button>
+                    <Button variant="outline" onClick={() => { setRejectingId(detail.id); }} style={{ padding: "6px 14px", fontSize: 11, color: "#999" }}>Reject</Button>
                   </>
                 )}
               </div>
@@ -3647,12 +3644,12 @@ function StatementManager({ toast }) {
                 <span style={{ fontSize: 12, color: "#888" }}>{new Date(s.createdAt).toLocaleDateString()}</span>
                 <div style={{ display: "flex", gap: 6 }} onClick={e => e.stopPropagation()}>
                   {s.status === "DRAFT" && (
-                    <button onClick={() => handleApprove(s.id)} style={{ ...btnOutline, padding: "4px 10px", fontSize: 10, color: colors.green, borderColor: colors.green }}>Approve</button>
+                    <Button variant="outline" onClick={() => handleApprove(s.id)} style={{ padding: "4px 10px", fontSize: 10, color: colors.green, borderColor: colors.green }}>Approve</Button>
                   )}
                   {s.status === "APPROVED" && (
                     <>
-                      <button onClick={() => handleSend(s.id)} style={{ ...btnStyle, padding: "4px 10px", fontSize: 10 }}>Send</button>
-                      <button onClick={() => { setRejectingId(s.id); }} style={{ ...btnOutline, padding: "4px 10px", fontSize: 10, color: "#999" }}>Reject</button>
+                      <Button onClick={() => handleSend(s.id)} style={{ padding: "4px 10px", fontSize: 10 }}>Send</Button>
+                      <Button variant="outline" onClick={() => { setRejectingId(s.id); }} style={{ padding: "4px 10px", fontSize: 10, color: "#999" }}>Reject</Button>
                     </>
                   )}
                   {s.status === "SENT" && s.sentAt && <span style={{ fontSize: 10, color: "#999" }}>Sent {new Date(s.sentAt).toLocaleDateString()}</span>}
@@ -3666,7 +3663,7 @@ function StatementManager({ toast }) {
       {/* Generate Capital Call */}
       <div style={{ marginTop: 32 }}>
         {!showCapCallForm ? (
-          <button onClick={() => setShowCapCallForm(true)} style={btnOutline}>Generate Capital Call</button>
+          <Button variant="outline" onClick={() => setShowCapCallForm(true)}>Generate Capital Call</Button>
         ) : (
           <div style={{ background: colors.white, borderRadius: 12, padding: "24px", boxShadow: cardShadow }}>
             <h3 style={{ fontSize: 16, fontWeight: 400, marginBottom: 20 }}>Generate Capital Call</h3>
@@ -3694,8 +3691,8 @@ function StatementManager({ toast }) {
               </div>
             </div>
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-              <button onClick={() => setShowCapCallForm(false)} style={btnOutline}>Cancel</button>
-              <button disabled={capCallGenerating || !capCallProjectId || !capCallAmount} onClick={async () => {
+              <Button variant="outline" onClick={() => setShowCapCallForm(false)}>Cancel</Button>
+              <Button disabled={capCallGenerating || !capCallProjectId || !capCallAmount} onClick={async () => {
                 setCapCallGenerating(true);
                 try {
                   const res = await fetch("/api/v1/statements/generate-capital-call", {
@@ -3713,9 +3710,9 @@ function StatementManager({ toast }) {
                   setCapCallProjectId(""); setCapCallAmount(""); setCapCallDueDate(""); setCapCallWireInstructions("");
                 } catch (e) { toast(e.message, "error"); }
                 finally { setCapCallGenerating(false); }
-              }} style={{ ...btnStyle, opacity: capCallGenerating ? 0.5 : 1 }}>
+              }} style={{ opacity: capCallGenerating ? 0.5 : 1 }}>
                 {capCallGenerating ? "Generating..." : "Generate PDF"}
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -3724,7 +3721,7 @@ function StatementManager({ toast }) {
       {/* Generate Quarterly Report */}
       <div style={{ marginTop: 16 }}>
         {!showQtrReportForm ? (
-          <button onClick={() => setShowQtrReportForm(true)} style={btnOutline}>Generate Quarterly Report</button>
+          <Button variant="outline" onClick={() => setShowQtrReportForm(true)}>Generate Quarterly Report</Button>
         ) : (
           <div style={{ background: colors.white, borderRadius: 12, padding: "24px", boxShadow: cardShadow }}>
             <h3 style={{ fontSize: 16, fontWeight: 400, marginBottom: 20 }}>Generate Quarterly Report</h3>
@@ -3746,8 +3743,8 @@ function StatementManager({ toast }) {
               <textarea value={qtrReportSummary} onChange={e => setQtrReportSummary(e.target.value)} rows={4} placeholder="Quarterly performance summary..." style={{ ...inputStyle, resize: "vertical" }} />
             </div>
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-              <button onClick={() => setShowQtrReportForm(false)} style={btnOutline}>Cancel</button>
-              <button disabled={qtrReportGenerating || !qtrReportProjectId || !qtrReportQuarter} onClick={async () => {
+              <Button variant="outline" onClick={() => setShowQtrReportForm(false)}>Cancel</Button>
+              <Button disabled={qtrReportGenerating || !qtrReportProjectId || !qtrReportQuarter} onClick={async () => {
                 setQtrReportGenerating(true);
                 try {
                   const res = await fetch("/api/v1/statements/generate-quarterly-report", {
@@ -3765,9 +3762,9 @@ function StatementManager({ toast }) {
                   setQtrReportProjectId(""); setQtrReportQuarter(""); setQtrReportSummary("");
                 } catch (e) { toast(e.message, "error"); }
                 finally { setQtrReportGenerating(false); }
-              }} style={{ ...btnStyle, opacity: qtrReportGenerating ? 0.5 : 1 }}>
+              }} style={{ opacity: qtrReportGenerating ? 0.5 : 1 }}>
                 {qtrReportGenerating ? "Generating..." : "Generate PDF"}
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -3848,7 +3845,7 @@ function SignatureManager({ toast, hideHeader }) {
               <span style={{ padding: "2px 10px", borderRadius: 3, fontSize: 11, background: statusBg(sig.status), color: statusColor(sig.status), display: "inline-block", width: "fit-content" }}>{sig.status}</span>
               <div>
                 {sig.status === "pending" && (
-                  <button onClick={() => handleCancel(sig.id)} style={{ ...btnOutline, fontSize: 11, padding: "4px 12px", color: colors.red, borderColor: colors.red }}>Cancel</button>
+                  <Button variant="outline" onClick={() => handleCancel(sig.id)} style={{ fontSize: 11, padding: "4px 12px", color: colors.red, borderColor: colors.red }}>Cancel</Button>
                 )}
               </div>
             </div>
@@ -4014,7 +4011,7 @@ function ProspectManager({ toast }) {
                           ))}
                         </select>
                         {p.status !== "converted" && (
-                          <button onClick={async () => {
+                          <Button onClick={async () => {
                             if (!confirm(`Convert "${p.name}" to an investor? This will send them an invitation.`)) return;
                             try {
                               await inviteInvestor({ name: p.name, email: p.email });
@@ -4022,7 +4019,7 @@ function ProspectManager({ toast }) {
                               toast(`${p.name} converted to investor`);
                               load();
                             } catch (e) { toast(e.message, "error"); }
-                          }} style={{ ...btnStyle, padding: "4px 12px", fontSize: 11, background: "#7C3AED" }}>Convert to Investor</button>
+                          }} style={{ padding: "4px 12px", fontSize: 11, background: "#7C3AED" }}>Convert to Investor</Button>
                         )}
                       </div>
                     </td>
@@ -4177,9 +4174,9 @@ function AdminInbox({ user, toast }) {
           <textarea value={reply} onChange={e => setReply(e.target.value)} placeholder="Write a reply..." rows={3}
             style={{ ...inputStyle, border: "none", padding: 0, resize: "vertical" }} />
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
-            <button onClick={handleReply} disabled={sending || !reply.trim()} style={{ ...btnStyle, opacity: sending || !reply.trim() ? 0.5 : 1 }}>
+            <Button onClick={handleReply} disabled={sending || !reply.trim()} style={{ opacity: sending || !reply.trim() ? 0.5 : 1 }}>
               {sending ? "Sending..." : "Reply"}
-            </button>
+            </Button>
           </div>
         </div>
       </>
@@ -4198,10 +4195,8 @@ function AdminInbox({ user, toast }) {
             <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Send To</label>
             <div style={{ display: "flex", gap: 8 }}>
               {[{ val: "ALL", label: "All Investors" }, { val: "PROJECT", label: "Project" }, { val: "INDIVIDUAL", label: "Specific Investors" }].map(t => (
-                <button key={t.val} type="button" onClick={() => { setTargetType(t.val); setRecipients([]); }} style={{
-                  ...btnOutline, fontSize: 12, padding: "6px 14px",
-                  background: targetType === t.val ? colors.red : colors.white, color: targetType === t.val ? colors.white : colors.darkText, borderColor: targetType === t.val ? colors.red : "#DDD",
-                }}>{t.label}</button>
+                <Button variant="outline" key={t.val} type="button" onClick={() => { setTargetType(t.val); setRecipients([]); }} style={{ fontSize: 12, padding: "6px 14px",
+                  background: targetType === t.val ? colors.red : colors.white, color: targetType === t.val ? colors.white : colors.darkText, borderColor: targetType === t.val ? colors.red : "#DDD" }}>{t.label}</Button>
               ))}
             </div>
           </div>
@@ -4285,10 +4280,10 @@ function AdminInbox({ user, toast }) {
             <textarea value={body} onChange={e => setBody(e.target.value)} placeholder="Write your message..." rows={6} style={{ ...inputStyle, resize: "vertical" }} required />
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-            <button type="button" onClick={() => setComposing(false)} style={btnOutline}>Cancel</button>
-            <button type="submit" disabled={sending} style={{ ...btnStyle, padding: "10px 24px", opacity: sending ? 0.5 : 1 }}>
+            <Button variant="outline" type="button" onClick={() => setComposing(false)}>Cancel</Button>
+            <Button type="submit" disabled={sending} style={{ padding: "10px 24px", opacity: sending ? 0.5 : 1 }}>
               {sending ? "Sending..." : "Send Message"}
-            </button>
+            </Button>
           </div>
         </form>
       </>
@@ -4304,16 +4299,14 @@ function AdminInbox({ user, toast }) {
           <h1 style={{ fontSize: 28, fontWeight: 300 }}>Inbox</h1>
           <p style={{ fontSize: 13, color: colors.mutedText, marginTop: 4 }}>{unreadCount} unread · {threads.length} conversations</p>
         </div>
-        <button onClick={() => setComposing(true)} style={btnStyle}>New Message</button>
+        <Button onClick={() => setComposing(true)}>New Message</Button>
       </div>
 
       {/* Filters */}
       <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
         {[{ val: "all", label: "All" }, { val: "unread", label: "Unread" }, { val: "from-investors", label: "From Investors" }].map(f => (
-          <button key={f.val} onClick={() => setFilter(f.val)} style={{
-            ...btnOutline, fontSize: 12, padding: "5px 14px",
-            background: filter === f.val ? colors.lightBorder : colors.white, fontWeight: filter === f.val ? 500 : 400,
-          }}>{f.label}{f.val === "unread" && unreadCount > 0 ? ` (${unreadCount})` : ""}</button>
+          <Button variant="outline" key={f.val} onClick={() => setFilter(f.val)} style={{ fontSize: 12, padding: "5px 14px",
+            background: filter === f.val ? colors.lightBorder : colors.white, fontWeight: filter === f.val ? 500 : 400 }}>{f.label}{f.val === "unread" && unreadCount > 0 ? ` (${unreadCount})` : ""}</Button>
         ))}
       </div>
 
@@ -4590,9 +4583,9 @@ function EmailSettingsManager({ toast }) {
               {settings._providerConfigured ? "Configured" : "Not configured"}
             </span>
           </div>
-          <button onClick={handleTestEmail} disabled={testing} style={{ ...btnOutline, fontSize: 12, marginLeft: "auto" }}>
+          <Button variant="outline" onClick={handleTestEmail} disabled={testing} style={{ fontSize: 12, marginLeft: "auto" }}>
             {testing ? "Sending..." : "Send Test Email"}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -4624,9 +4617,9 @@ function EmailSettingsManager({ toast }) {
           ))}
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
-          <button onClick={() => handleSave({})} disabled={saving} style={btnStyle}>
+          <Button onClick={() => handleSave({})} disabled={saving}>
             {saving ? "Saving..." : "Save Branding"}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -4648,9 +4641,9 @@ function EmailSettingsManager({ toast }) {
           ))}
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
-          <button onClick={() => handleSave({})} disabled={saving} style={btnStyle}>
+          <Button onClick={() => handleSave({})} disabled={saving}>
             {saving ? "Saving..." : "Save Subjects"}
-          </button>
+          </Button>
         </div>
       </div>
 
