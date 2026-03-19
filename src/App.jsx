@@ -4,6 +4,7 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, 
 import { login as apiLogin, logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, downloadDocument, fetchThreads, fetchThread, createThread, replyToThread, updateProfile, fetchSignatureRequests, signDocument, fetchNotificationPreferences, updateNotificationPreferences, fetchCapitalAccount, fetchCashFlows, calculateWaterfallApi, fetchEntities, createEntity, updateEntity, deleteEntity, runFinancialModel, changePassword, forgotPassword, resetPassword, fetchLoginHistory, setupMFA, verifyMFASetup, verifyMFA, disableMFA, getMFAStatus, regenerateBackupCodes, setToken, fmt, fmtCurrency, fetchMyFlags, fetchNotifications } from "./api.js";
 import { colors, fonts, inputStyle, btnStyle, btnOutline, shadows, radius, labelStyle } from "./styles/theme.js";
 import Button from "./components/Button.jsx";
+import Card from "./components/Card.jsx";
 
 // Lazy load heavy components — they get their own chunks
 const AdminPanel = lazy(() => import("./Admin.jsx"));
@@ -459,11 +460,11 @@ function Overview({ onNavigate, investor, projects, myProjects, allDistributions
       {(() => {
         if (myProjects.length === 0) {
           return (
-            <div style={{ padding: 40, textAlign: "center", background: surface, borderRadius: 12, marginBottom: 48, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+            <Card padding="40px" style={{ textAlign: "center", marginBottom: 48 }}>
               <div style={{ fontSize: 32, marginBottom: 12 }}>📊</div>
               <div style={{ fontSize: 15, color: t1, fontWeight: 500, marginBottom: 8 }}>Welcome to your investor portal</div>
               <div style={{ fontSize: 13, color: t3, lineHeight: 1.6, maxWidth: 400, margin: "0 auto" }}>Your portfolio is being set up. You'll see your investments here once assigned by your administrator.</div>
-            </div>
+            </Card>
           );
         }
         const totalContributed = myProjects.reduce((s, p) => s + (p.investorCommitted || 0), 0);
@@ -501,7 +502,7 @@ function Overview({ onNavigate, investor, projects, myProjects, allDistributions
         const totalCurrentValue = myProjects.reduce((s, p) => s + (p.currentValue || 0), 0);
         const totalDists = allDistributions.reduce((s, d) => s + d.amount, 0);
         return (
-          <div style={{ borderRadius: 12, padding: "24px", background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", marginBottom: 48 }}>
+          <Card padding="24px" style={{ marginBottom: 48 }}>
             <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: t3, fontWeight: 600, marginBottom: 16 }}>Capital Summary Across All Projects</div>
             <div className="stat-grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16 }}>
               {[
@@ -516,7 +517,7 @@ function Overview({ onNavigate, investor, projects, myProjects, allDistributions
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
         );
       })()}
 
@@ -579,7 +580,7 @@ function Overview({ onNavigate, investor, projects, myProjects, allDistributions
       <div className="chart-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 48 }}>
         {myProjects.length === 0 && <div style={{ padding: 24, textAlign: "center", color: t3, fontSize: 13 }}>No performance data yet.</div>}
         {myProjects.map(p => (
-          <div key={p.id} style={{ borderRadius: 12, padding: "24px", background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+          <Card key={p.id} padding="24px">
             <div style={{ fontSize: 13, fontFamily: serif, fontWeight: 500, marginBottom: 4 }}>{p.name}</div>
             <div style={{ fontSize: 11, color: t3, marginBottom: 16 }}>{p.status} · <span title="Multiple on Invested Capital">{p.moic}x MOIC</span></div>
             <ResponsiveContainer width="100%" height={140}>
@@ -597,7 +598,7 @@ function Overview({ onNavigate, investor, projects, myProjects, allDistributions
                 <Area type="monotone" dataKey="benchmark" stroke={t3} strokeWidth={1} strokeDasharray="3 3" fill="none" name="Cost Basis" />
               </AreaChart>
             </ResponsiveContainer>
-          </div>
+          </Card>
         ))}
       </div>
 
@@ -605,7 +606,7 @@ function Overview({ onNavigate, investor, projects, myProjects, allDistributions
       {allDistributions.length > 0 && (
         <>
           <SectionHeader title="Recent Distributions" right={<span style={{ color: red, cursor: "pointer" }} onClick={() => onNavigate("distributions")}>View all →</span>} />
-          <div style={{ borderRadius: 12, padding: "24px", background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", marginBottom: 48 }}>
+          <Card padding="24px" style={{ marginBottom: 48 }}>
             <ResponsiveContainer width="100%" height={120}>
               <BarChart data={allDistributions.slice().reverse().map(d => ({ q: `${d.quarter.replace("20", "'")}`, v: d.amount / 1000, project: d.project }))} barSize={20}>
                 <XAxis dataKey="q" axisLine={false} tickLine={false} tick={{ fill: t3, fontSize: 10 }} />
@@ -618,7 +619,7 @@ function Overview({ onNavigate, investor, projects, myProjects, allDistributions
               <span style={{ color: t3 }}>Total Distributed: <span style={{ color: t1 }}>${fmt(allDistributions.reduce((s, d) => s + d.amount, 0))}</span></span>
               <span style={{ color: t3 }}>From: <span style={{ color: t2 }}>{[...new Set(allDistributions.map(d => d.project))].join(", ")}</span></span>
             </div>
-          </div>
+          </Card>
         </>
       )}
 
@@ -627,7 +628,7 @@ function Overview({ onNavigate, investor, projects, myProjects, allDistributions
       {msgs.length === 0 ? (
         <EmptyState title="No messages yet" subtitle="Start a conversation with Northstar." />
       ) : (
-      <div style={{ borderRadius: 12, overflow: "hidden", background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", padding: "8px 0" }}>
+      <Card padding="8px 0" style={{ overflow: "hidden" }}>
         {msgs.slice(0, 3).map((m, i) => (
           <div key={m.id} onClick={() => { onNavigate("messages", { threadId: m.threadId || m.id }); }} style={{ display: "flex", gap: 12, padding: "14px 20px", borderBottom: i < 2 ? `1px solid ${line}` : "none", cursor: "pointer", transition: "background .12s", alignItems: "flex-start" }}
             onMouseEnter={e => e.currentTarget.style.background = hover}
@@ -642,7 +643,7 @@ function Overview({ onNavigate, investor, projects, myProjects, allDistributions
             {m.unread && <div style={{ width: 8, height: 8, borderRadius: "50%", background: red, flexShrink: 0, marginTop: 6 }} />}
           </div>
         ))}
-      </div>
+      </Card>
       )}
     </>
   );
@@ -696,11 +697,11 @@ function Portfolio({ myProjects, investor, initialProjectId }) {
             { label: "Net IRR", value: displayIRR != null ? `${displayIRR}%` : "--", sub: capitalAccount ? "calculated" : null, accent: "#D4A574", tooltip: "Internal Rate of Return" },
             { label: "MOIC", value: displayMOIC != null ? `${displayMOIC}x` : "--", sub: capitalAccount ? "calculated" : null, accent: "#5B8DEF", tooltip: "Multiple on Invested Capital" },
           ].map((m, i) => (
-            <div key={i} style={{ background: surface, padding: "24px", borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", borderLeft: `3px solid ${m.accent}` }}>
+            <Card key={i} accent={m.accent} padding="24px">
               <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: t3, marginBottom: 10, fontWeight: 500 }} title={m.tooltip || ""}>{m.label}</div>
               <div style={{ fontSize: 22, fontFamily: serif, fontWeight: 400 }}>{m.value}</div>
               {m.sub && <div style={{ fontSize: 9, color: green, marginTop: 4, textTransform: "uppercase", letterSpacing: ".06em" }}>{m.sub}</div>}
-            </div>
+            </Card>
           ))}
         </div>
         {/* Detail tabs */}
@@ -727,7 +728,7 @@ function Portfolio({ myProjects, investor, initialProjectId }) {
         {detailTab === "overview" && !detailLoading && (<>
         {/* Capital Account Statement */}
         <SectionHeader title="Capital Account" />
-        <div style={{ borderRadius: 12, overflow: "hidden", marginBottom: 40, background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+        <Card padding="0" style={{ overflow: "hidden", marginBottom: 40 }}>
           {(() => {
             const contributed = capitalAccount ? ca.called : (project.investorCalled || project.investorCommitted || 0);
             const distributed = capitalAccount ? ca.totalDistributed : (project.distributions || []).reduce((s, d) => s + d.amount, 0);
@@ -750,7 +751,7 @@ function Portfolio({ myProjects, investor, initialProjectId }) {
               </div>
             ));
           })()}
-        </div>
+        </Card>
 
         {/* Cash Flow Timeline */}
         {cashFlows.length > 0 && (
@@ -801,7 +802,7 @@ function Portfolio({ myProjects, investor, initialProjectId }) {
         {detailTab === "documents" && (<>
         <SectionHeader title="Documents" />
         {project.documents && project.documents.length > 0 ? (
-          <div style={{ borderRadius: 12, overflow: "hidden", marginBottom: 40, background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+          <Card padding="0" style={{ overflow: "hidden", marginBottom: 40 }}>
             {project.documents.map((d, i) => (
               <div key={d.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: i < project.documents.length - 1 ? `1px solid ${line}` : "none" }}>
                 <div>
@@ -811,7 +812,7 @@ function Portfolio({ myProjects, investor, initialProjectId }) {
                 <span onClick={() => downloadDocument(d.id).catch(err => alert(err.message || "Download failed"))} style={{ fontSize: 12, color: red, cursor: "pointer" }}>Download</span>
               </div>
             ))}
-          </div>
+          </Card>
         ) : (
           <div style={{ padding: 24, textAlign: "center", color: t3, fontSize: 13 }}>No documents yet.</div>
         )}
@@ -933,14 +934,14 @@ function CapTablePage({ myProjects, investor, toast }) {
       {/* Project selector */}
       <div style={{ display: "flex", gap: 4, marginBottom: 24, background: `${line}55`, borderRadius: 8, padding: 2, width: "fit-content" }}>
         {myProjects.map((p, i) => (
-          <button key={p.id} onClick={() => setSelectedIdx(i)} style={{
+          <Button key={p.id} onClick={() => setSelectedIdx(i)} variant="ghost" style={{
             fontSize: 12, padding: "6px 16px", borderRadius: 6, cursor: "pointer",
             color: selectedIdx === i ? t1 : t3,
             background: selectedIdx === i ? surface : "transparent",
             boxShadow: selectedIdx === i ? "0 1px 3px rgba(0,0,0,.08)" : "none",
             fontWeight: selectedIdx === i ? 500 : 400,
             transition: "all .15s", border: "none", fontFamily: sans, lineHeight: "inherit",
-          }}>{p.name}</button>
+          }}>{p.name}</Button>
         ))}
       </div>
 
@@ -1206,12 +1207,12 @@ function DocumentsPage({ toast, allDocuments, myProjects, investor }) {
                 <div style={{ fontSize: 14, fontWeight: 500, color: t1 }}>{sig.document?.name || sig.subject}</div>
                 <div style={{ fontSize: 12, color: t3, marginTop: 2 }}>{sig.subject}</div>
               </div>
-              <button onClick={() => handleSignNow(sig)} disabled={signingId !== null} style={{
-                padding: "8px 20px", background: red, color: colors.white, border: "none", borderRadius: 4,
+              <Button onClick={() => handleSignNow(sig)} disabled={signingId !== null} style={{
+                padding: "8px 20px", border: "none", borderRadius: 4,
                 fontSize: 13, fontFamily: sans, cursor: signingId ? "default" : "pointer", opacity: signingId === sig.id ? 0.5 : 1,
               }}>
                 {signingId === sig.id ? "Signing..." : "Sign Now"}
-              </button>
+              </Button>
             </div>
           ))}
         </div>
@@ -3182,16 +3183,16 @@ export default function App() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           {/* Notification bell */}
-          <button aria-label={`Notifications${notifCount > 0 ? ` (${notifCount} unread)` : ""}`} onClick={() => navigateTo("activity")} style={{ position: "relative", fontSize: 16, cursor: "pointer", padding: "4px 8px", borderRadius: 6, border: `1px solid ${th.line}`, transition: "border-color .15s", lineHeight: 1, background: "transparent", color: "inherit" }}>
+          <Button aria-label={`Notifications${notifCount > 0 ? ` (${notifCount} unread)` : ""}`} onClick={() => navigateTo("activity")} variant="ghost" style={{ position: "relative", fontSize: 16, cursor: "pointer", padding: "4px 8px", borderRadius: 6, border: `1px solid ${th.line}`, transition: "border-color .15s", lineHeight: 1, background: "transparent", color: "inherit" }}>
             &#x1F514;
             {notifCount > 0 && (
               <span style={{ position: "absolute", top: -4, right: -4, minWidth: 16, height: 16, borderRadius: "50%", background: red, color: colors.white, fontSize: 10, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", lineHeight: 1 }}>{notifCount > 99 ? "99+" : notifCount}</span>
             )}
-          </button>
-          <button className="theme-toggle" onClick={toggleTheme} aria-label={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"} style={{ fontSize: 14, cursor: "pointer", padding: "4px 8px", borderRadius: 6, border: `1px solid ${th.line}`, transition: "border-color .15s", lineHeight: 1, background: "transparent", color: "inherit" }}
+          </Button>
+          <Button className="theme-toggle" onClick={toggleTheme} aria-label={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"} variant="ghost" style={{ fontSize: 14, cursor: "pointer", padding: "4px 8px", borderRadius: 6, border: `1px solid ${th.line}`, transition: "border-color .15s", lineHeight: 1, background: "transparent", color: "inherit" }}
             title={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}>
             {themeMode === "dark" ? "\u2600" : "\u263D"}
-          </button>
+          </Button>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span className="user-name" style={{ fontSize: 12, color: th.t3, fontWeight: 400 }}>{investor.name}</span>
             <div style={{
@@ -3201,11 +3202,11 @@ export default function App() {
               justifyContent: "center", fontSize: 12, fontWeight: 600, color: colors.white,
             }}>{investor.initials}</div>
           </div>
-          <button onClick={handleLogout} aria-label="Sign out of your account" style={{ fontSize: 12, color: th.t3, cursor: "pointer", padding: "5px 14px", border: `1px solid ${th.line}`, borderRadius: 6, transition: "color .15s, border-color .15s", background: "transparent", fontFamily: sans }}
+          <Button onClick={handleLogout} aria-label="Sign out of your account" variant="ghost" style={{ fontSize: 12, color: th.t3, cursor: "pointer", padding: "5px 14px", border: `1px solid ${th.line}`, borderRadius: 6, transition: "color .15s, border-color .15s", background: "transparent", fontFamily: sans }}
             onMouseEnter={e => { e.currentTarget.style.color = red; e.currentTarget.style.borderColor = red; }}
             onMouseLeave={e => { e.currentTarget.style.color = th.t3; e.currentTarget.style.borderColor = th.line; }}>
             Sign Out
-          </button>
+          </Button>
         </div>
       </header>
 
@@ -3224,7 +3225,7 @@ export default function App() {
             if (e.key === "ArrowLeft" && idx > 0) { e.preventDefault(); setView(items[idx - 1]); setAnnouncement(`Navigated to ${navItems[idx - 1].label}`); }
           }}>
           {navItems.map(n => (
-            <button key={n.id} aria-current={view === n.id ? "page" : undefined} onClick={() => { setView(n.id); setAnnouncement(`Navigated to ${n.label}`); }} style={{
+            <Button key={n.id} aria-current={view === n.id ? "page" : undefined} onClick={() => { setView(n.id); setAnnouncement(`Navigated to ${n.label}`); }} variant="ghost" style={{
               fontSize: 13, fontWeight: view === n.id ? 500 : 400, cursor: "pointer", userSelect: "none",
               color: view === n.id ? red : th.t3,
               padding: "8px 16px",
@@ -3239,7 +3240,7 @@ export default function App() {
               {n.id === "messages" && msgs.some(m => m.unread) && (
                 <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: red, marginLeft: 6, verticalAlign: "middle" }} />
               )}
-            </button>
+            </Button>
           ))}
         </div>
       </nav>
@@ -3251,7 +3252,7 @@ export default function App() {
         padding: "0 8px",
       }}>
         {navItems.map(n => (
-          <button key={n.id} role="tab" aria-selected={view === n.id} onClick={() => { setView(n.id); setAnnouncement(`Navigated to ${n.label}`); }} style={{
+          <Button key={n.id} role="tab" aria-selected={view === n.id} onClick={() => { setView(n.id); setAnnouncement(`Navigated to ${n.label}`); }} variant="ghost" style={{
             fontSize: 12, padding: "8px 14px", cursor: "pointer", userSelect: "none",
             color: view === n.id ? red : th.t3,
             background: view === n.id ? "#EA20280D" : "transparent",
@@ -3262,7 +3263,7 @@ export default function App() {
             {n.id === "messages" && msgs.some(m => m.unread) && (
               <span style={{ display: "inline-block", width: 5, height: 5, borderRadius: "50%", background: red, marginLeft: 3, verticalAlign: "middle" }} />
             )}
-          </button>
+          </Button>
         ))}
       </nav>
 

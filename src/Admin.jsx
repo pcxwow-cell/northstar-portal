@@ -655,7 +655,7 @@ function CredentialDialog({ name, email, tempPassword, onClose }) {
   }
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: colors.white, borderRadius: 12, padding: "32px", maxWidth: 440, width: "90%", boxShadow: "0 20px 60px rgba(0,0,0,.15)" }}>
+      <Card onClick={e => e.stopPropagation()} padding="32px" style={{ maxWidth: 440, width: "90%", boxShadow: "0 20px 60px rgba(0,0,0,.15)" }}>
         <div style={{ fontSize: 18, fontWeight: 500, marginBottom: 4 }}>Investor Created</div>
         <p style={{ fontSize: 13, color: colors.mutedText, marginBottom: 20 }}>Save these credentials — the password cannot be retrieved later.</p>
         <div style={{ background: colors.cardBg, border: "1px solid #ECEAE5", borderRadius: 8, padding: "16px 20px", marginBottom: 20, fontFamily: "monospace", fontSize: 13, lineHeight: 2 }}>
@@ -672,7 +672,7 @@ function CredentialDialog({ name, email, tempPassword, onClose }) {
           </button>
         </div>
         <p style={{ fontSize: 11, color: "#AAA", marginTop: 12 }}>A welcome email has been sent to {email}.</p>
-      </div>
+      </Card>
     </div>
   );
 }
@@ -782,7 +782,7 @@ function InvestorManager({ toast, onViewProfile, hideHeader }) {
       </div>
 
       {/* Column headers */}
-      <div className="admin-table-scroll" style={{ background: colors.white, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+      <Card className="admin-table-scroll" padding="0" style={{ overflow: "hidden" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 100px 120px 120px 140px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE" }}>
           <SortableHeader columns={[
             { key: "name", label: "Name" },
@@ -859,7 +859,7 @@ function InvestorManager({ toast, onViewProfile, hideHeader }) {
           </div>
         ))}
         {investors.length === 0 && <div style={{ padding: 24, color: colors.mutedText, textAlign: "center" }}>No investors found</div>}
-      </div>
+      </Card>
     </>
   );
 }
@@ -1672,7 +1672,7 @@ function DocumentManager({ toast, hideHeader }) {
         {showSignModal && (
           <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,.4)", display: "flex", alignItems: "center", justifyContent: "center" }}
             onClick={() => setShowSignModal(false)}>
-            <div onClick={e => e.stopPropagation()} style={{ background: colors.white, borderRadius: 12, padding: "28px 24px", maxWidth: 480, width: "90%", maxHeight: "70vh", overflow: "auto", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+            <Card onClick={e => e.stopPropagation()} padding="28px 24px" style={{ maxWidth: 480, width: "90%", maxHeight: "70vh", overflow: "auto" }}>
               <h3 style={{ fontSize: 18, fontWeight: 400, marginBottom: 20 }}>Request Signature</h3>
               <p style={{ fontSize: 13, color: "#666", marginBottom: 16 }}>Select investors to sign <strong>{docDetail.name}</strong></p>
               <div style={{ marginBottom: 16 }}>
@@ -1699,12 +1699,12 @@ function DocumentManager({ toast, hideHeader }) {
                   {sigSending ? "Sending..." : "Send Request"}
                 </Button>
               </div>
-            </div>
+            </Card>
           </div>
         )}
 
         {/* Access audit table */}
-        <div className="admin-table-scroll" style={{ background: colors.white, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+        <Card className="admin-table-scroll" padding="0" style={{ overflow: "hidden" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 120px 120px 120px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: colors.mutedText, textTransform: "uppercase", letterSpacing: ".06em" }}>
             <span>Investor</span><span>Email</span><span>Viewed</span><span>Downloaded</span><span>Acknowledged</span>
           </div>
@@ -1722,11 +1722,11 @@ function DocumentManager({ toast, hideHeader }) {
           )) : (
             <div style={{ padding: 20, color: colors.mutedText, textAlign: "center", fontSize: 13 }}>No investor access records</div>
           )}
-        </div>
+        </Card>
 
         {/* Signer Status Section (B.5 + B.7) */}
         {docDetail.signatureRequests && docDetail.signatureRequests.length > 0 && (
-          <div style={{ background: colors.white, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", marginTop: 20 }}>
+          <Card padding="0" style={{ overflow: "hidden", marginTop: 20 }}>
             <div style={{ padding: "14px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 13, fontWeight: 600, color: "#666" }}>Signature Status</div>
             {docDetail.signatureRequests.map(req => (
               <div key={req.id}>
@@ -1752,7 +1752,7 @@ function DocumentManager({ toast, hideHeader }) {
                 ))}
               </div>
             ))}
-          </div>
+          </Card>
         )}
 
         {/* Assign Investors */}
@@ -1765,7 +1765,7 @@ function DocumentManager({ toast, hideHeader }) {
               setShowAssignInvestors(true);
             }}>Assign to Investors</Button>
           ) : (
-            <div style={{ background: colors.white, borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+            <Card>
               <h3 style={{ fontSize: 16, fontWeight: 400, marginBottom: 16 }}>Assign Investors</h3>
               <div style={{ border: "1px solid #DDD", borderRadius: 4, maxHeight: 260, overflow: "auto", marginBottom: 16 }}>
                 {assignInvestors.map(inv => (
@@ -1794,7 +1794,7 @@ function DocumentManager({ toast, hideHeader }) {
                   {assignSaving ? "Saving..." : "Save Assignments"}
                 </Button>
               </div>
-            </div>
+            </Card>
           )}
         </div>
       </>
@@ -1861,7 +1861,7 @@ function DocumentManager({ toast, hideHeader }) {
 
       {/* Bulk K-1 Upload */}
       {showBulkK1 && (
-        <div style={{ background: colors.white, borderRadius: 12, padding: "24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", marginBottom: 24 }}>
+        <Card padding="24px" style={{ marginBottom: 24 }}>
           <div style={{ fontSize: 16, fontWeight: 500, marginBottom: 16 }}>Bulk K-1 Upload</div>
           <p style={{ fontSize: 12, color: colors.mutedText, marginBottom: 16 }}>Upload multiple K-1 documents at once. Files are auto-matched to investors by name in the filename (e.g., "K1_JamesChen_2025.pdf").</p>
           <div className="admin-form-row" style={{ display: "flex", gap: 12, alignItems: "flex-end", marginBottom: 16 }}>
@@ -1926,7 +1926,7 @@ function DocumentManager({ toast, hideHeader }) {
               ))}
             </div>
           )}
-        </div>
+        </Card>
       )}
 
       {/* Filters */}
@@ -1944,7 +1944,7 @@ function DocumentManager({ toast, hideHeader }) {
 
       {/* Document table */}
       {loading ? <Spinner /> : (
-        <div className="admin-table-scroll" style={{ background: colors.white, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+        <Card className="admin-table-scroll" padding="0" style={{ overflow: "hidden" }}>
           <div style={{ display: "grid", gridTemplateColumns: "2fr 100px 100px 80px 80px 80px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE" }}>
             <SortableHeader columns={[
               { key: "name", label: "Document" },
@@ -1975,7 +1975,7 @@ function DocumentManager({ toast, hideHeader }) {
             </div>
           ))}
           {docs.length === 0 && <div style={{ padding: 24, color: colors.mutedText, textAlign: "center" }}>No documents found</div>}
-        </div>
+        </Card>
       )}
     </>
   );
@@ -2323,7 +2323,7 @@ function ProjectUpdatesTab({ project, updateText, setUpdateText, handlePostUpdat
       </div>
 
       {compareMode && updates.length >= 2 ? (
-        <div style={{ background: colors.white, borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", marginBottom: 16 }}>
+        <Card style={{ marginBottom: 16 }}>
           <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
             <div style={{ flex: 1 }}>
               <label style={{ fontSize: 11, color: "#888" }}>Earlier Update</label>
@@ -2370,7 +2370,7 @@ function ProjectUpdatesTab({ project, updateText, setUpdateText, handlePostUpdat
               </div>
             </div>
           )}
-        </div>
+        </Card>
       ) : (
         <Card style={{ marginBottom: 16 }}>
           {updates.length > 0 ? updates.map((u, i) => (
@@ -2529,7 +2529,7 @@ function ProjectCashFlowsTab({ project, projectId, cashFlowsList, cfInvestors, s
       {/* Record Cash Flow Modal */}
       {showCfModal && (
         <div onClick={() => setShowCfModal(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: colors.white, borderRadius: 8, padding: 32, width: 420, boxShadow: "0 8px 32px rgba(0,0,0,.15)" }}>
+          <Card onClick={e => e.stopPropagation()} padding="32px" style={{ width: 420, boxShadow: "0 8px 32px rgba(0,0,0,.15)" }}>
             <h3 style={{ fontSize: 18, fontWeight: 500, marginBottom: 20 }}>Record Cash Flow</h3>
             <form onSubmit={handleRecordCashFlow}>
               <div style={{ marginBottom: 12 }}>
@@ -2567,7 +2567,7 @@ function ProjectCashFlowsTab({ project, projectId, cashFlowsList, cfInvestors, s
                 <Button type="submit">Record</Button>
               </div>
             </form>
-          </div>
+          </Card>
         </div>
       )}
     </Card>
@@ -2771,7 +2771,7 @@ function GroupManager({ toast, hideHeader }) {
       <div style={{ display: "flex", gap: 20 }}>
         {/* Group list */}
         <div style={{ width: 300, flexShrink: 0 }}>
-          <div style={{ background: colors.white, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+          <Card padding="0" style={{ overflow: "hidden" }}>
             {groups.length === 0 ? <div style={{ padding: 20, color: colors.mutedText, textAlign: "center", fontSize: 13 }}>No groups yet</div> : (() => {
               const renderGroup = (g, indent = 0) => {
                 const children = childGroupsOf(g.id);
@@ -2797,13 +2797,13 @@ function GroupManager({ toast, hideHeader }) {
               };
               return rootGroups.flatMap(g => renderGroup(g));
             })()}
-          </div>
+          </Card>
         </div>
 
         {/* Group detail */}
         <div style={{ flex: 1 }}>
           {groupDetail ? (
-            <div style={{ background: colors.white, borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+            <Card>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
                 <div style={{ width: 14, height: 14, borderRadius: "50%", background: groupDetail.color || "#CCC" }} />
                 <h2 style={{ fontSize: 18, fontWeight: 500 }}>{groupDetail.name}</h2>
@@ -2849,7 +2849,7 @@ function GroupManager({ toast, hideHeader }) {
                 </div>
               ))}
               {groupDetail.members.length === 0 && <div style={{ color: "#BBB", fontSize: 13, fontStyle: "italic" }}>No members — search above to add investors</div>}
-            </div>
+            </Card>
           ) : (
             <div style={{ padding: 40, textAlign: "center", color: colors.mutedText }}>Select a group to manage members</div>
           )}
@@ -3046,7 +3046,7 @@ function StaffManager({ toast, hideHeader }) {
 
       <div className="admin-perm-grid" style={{ display: "grid", gridTemplateColumns: selectedStaff ? "1fr 1fr" : "1fr", gap: 24 }}>
         {/* Staff list */}
-        <div style={{ background: colors.white, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+        <Card padding="0" style={{ overflow: "hidden" }}>
           <div style={{ padding: "12px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: colors.mutedText, textTransform: "uppercase", letterSpacing: ".06em" }}>
             {staff.length} Staff Members — click to manage permissions
           </div>
@@ -3080,7 +3080,7 @@ function StaffManager({ toast, hideHeader }) {
             </div>
           ))}
           {staff.length === 0 && <div style={{ padding: 24, color: colors.mutedText, textAlign: "center" }}>No staff members</div>}
-        </div>
+        </Card>
 
         {/* Permissions panel */}
         {selectedStaff && (
