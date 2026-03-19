@@ -357,16 +357,16 @@ function Dashboard({ onNavigate }) {
           { label: "Post Update", icon: "\u270E", nav: "projects", accent: colors.red },
           { label: "Record Distribution", icon: "$", nav: "projects", accent: "#5B8DEF" },
         ].map((a, i) => (
-          <button key={i} onClick={() => onNavigate(a.nav)} style={{
+          <Button key={i} onClick={() => onNavigate(a.nav)} style={{
             background: colors.white, border: "1px solid #ECEAE5", borderRadius: 10, padding: "16px 20px",
-            cursor: "pointer", fontFamily: fonts.sans, fontSize: 13, fontWeight: 500, color: colors.darkText,
+            fontFamily: fonts.sans, fontSize: 13, fontWeight: 500, color: colors.darkText,
             display: "flex", alignItems: "center", gap: 10, transition: "all .15s",
           }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = a.accent; e.currentTarget.style.background = colors.cardBg; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = "#ECEAE5"; e.currentTarget.style.background = colors.white; }}>
             <span style={{ width: 28, height: 28, borderRadius: 6, background: `${a.accent}15`, color: a.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 600 }}>{a.icon}</span>
             {a.label}
-          </button>
+          </Button>
         ))}
       </div>
 
