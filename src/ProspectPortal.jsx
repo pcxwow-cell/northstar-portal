@@ -2,6 +2,13 @@ import { useState, useEffect } from "react";
 import { NorthstarIcon, NorthstarWordmark, sans, serif, red, darkText, cream, green } from "./App.jsx";
 import { submitProspectInterest, fetchProjects, isDemoMode, fmtCurrency } from "./api.js";
 
+// ─── RESPONSIVE HOOK ────────────────────────────────────
+function useWindowWidth() {
+  const [w, setW] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
+  useEffect(() => { const h = () => setW(window.innerWidth); window.addEventListener("resize", h); return () => window.removeEventListener("resize", h); }, []);
+  return w;
+}
+
 // ─── PROJECT IMAGES ─────────────────────────────────────
 const projectImages = {
   1: "https://northstardevelopment.ca/public/images/porthaven-1.jpg",
@@ -63,6 +70,7 @@ const fallbackProspectProjects = [
 
 // ─── INTEREST FORM MODAL ─────────────────────────────────
 function InterestFormModal({ open, onClose, projectId, projectName }) {
+  const width = useWindowWidth();
   const [form, setForm] = useState({
     name: "", email: "", phone: "", entityType: "", accreditationStatus: "",
     investmentRange: "", message: "",
@@ -78,6 +86,8 @@ function InterestFormModal({ open, onClose, projectId, projectName }) {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!form.name || !form.email) { setError("Name and email are required."); return; }
+    if (!form.entityType) { setError("Entity type is required."); return; }
+    if (!form.accreditationStatus) { setError("Accreditation status is required."); return; }
     setError("");
     setSubmitting(true);
     try {
@@ -109,6 +119,7 @@ function InterestFormModal({ open, onClose, projectId, projectName }) {
   };
   const labelStyle = { display: "block", fontSize: 11, color: "#888", fontWeight: 500, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".06em" };
   const selectStyle = { ...inputStyle, appearance: "none", cursor: "pointer" };
+  const formGridCols = width < 768 ? "1fr" : "1fr 1fr";
 
   return (
     <div onClick={handleClose} onKeyDown={e => { if (e.key === "Escape") handleClose(); }} style={{
@@ -147,7 +158,7 @@ function InterestFormModal({ open, onClose, projectId, projectName }) {
               {error && (
                 <div role="alert" style={{ fontSize: 12, color: red, padding: "10px 14px", border: `1px solid ${red}22`, borderRadius: 4, marginBottom: 16, background: `${red}08` }}>{error}</div>
               )}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+              <div style={{ display: "grid", gridTemplateColumns: formGridCols, gap: 16, marginBottom: 16 }}>
                 <div>
                   <label style={labelStyle}>Full Name *</label>
                   <input value={form.name} onChange={e => handleChange("name", e.target.value)} required style={inputStyle} placeholder="John Smith" />
@@ -157,14 +168,14 @@ function InterestFormModal({ open, onClose, projectId, projectName }) {
                   <input type="email" value={form.email} onChange={e => handleChange("email", e.target.value)} required style={inputStyle} placeholder="john@example.com" />
                 </div>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+              <div style={{ display: "grid", gridTemplateColumns: formGridCols, gap: 16, marginBottom: 16 }}>
                 <div>
                   <label style={labelStyle}>Phone</label>
                   <input value={form.phone} onChange={e => handleChange("phone", e.target.value)} style={inputStyle} placeholder="604-555-0000" />
                 </div>
                 <div>
-                  <label style={labelStyle}>Entity Type</label>
-                  <select value={form.entityType} onChange={e => handleChange("entityType", e.target.value)} style={selectStyle}>
+                  <label style={labelStyle}>Entity Type *</label>
+                  <select value={form.entityType} onChange={e => handleChange("entityType", e.target.value)} required style={selectStyle}>
                     <option value="">Select...</option>
                     <option value="Individual">Individual</option>
                     <option value="LLC">LLC</option>
@@ -173,10 +184,10 @@ function InterestFormModal({ open, onClose, projectId, projectName }) {
                   </select>
                 </div>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+              <div style={{ display: "grid", gridTemplateColumns: formGridCols, gap: 16, marginBottom: 16 }}>
                 <div>
-                  <label style={labelStyle}>Accreditation Status</label>
-                  <select value={form.accreditationStatus} onChange={e => handleChange("accreditationStatus", e.target.value)} style={selectStyle}>
+                  <label style={labelStyle}>Accreditation Status *</label>
+                  <select value={form.accreditationStatus} onChange={e => handleChange("accreditationStatus", e.target.value)} required style={selectStyle}>
                     <option value="">Select...</option>
                     <option value="Accredited">Accredited Investor</option>
                     <option value="Not Yet">Not Yet Accredited</option>
@@ -208,6 +219,9 @@ function InterestFormModal({ open, onClose, projectId, projectName }) {
               <p style={{ fontSize: 11, color: "#888", textAlign: "center", marginTop: 12 }}>
                 Your information is kept confidential and will only be used to contact you regarding investment opportunities.
               </p>
+              <p style={{ fontSize: 10, color: "#999", textAlign: "center", marginTop: 8, lineHeight: 1.5 }}>
+                This is not an offer to sell or a solicitation of an offer to buy any securities. Any such offer may only be made pursuant to applicable offering documents. Past performance is not indicative of future results.
+              </p>
             </form>
           </>
         )}
@@ -218,13 +232,14 @@ function InterestFormModal({ open, onClose, projectId, projectName }) {
 
 // ─── PROJECT DETAIL PAGE ─────────────────────────────────
 function ProjectDetailPage({ project, onBack, onOpenInterest }) {
+  const width = useWindowWidth();
   const img = projectImages[project.id] || projectImagesByName[project.name];
 
   return (
     <div style={{ animation: "fadeIn .4s ease" }}>
       {/* Hero */}
       <div style={{
-        position: "relative", height: 360, borderRadius: 12, overflow: "hidden", marginBottom: 40,
+        position: "relative", height: width < 768 ? 240 : 360, borderRadius: 12, overflow: "hidden", marginBottom: 40,
         backgroundImage: `url(${img})`, backgroundSize: "cover", backgroundPosition: "center",
       }}>
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(0deg, rgba(0,0,0,.65) 0%, rgba(0,0,0,.1) 50%, transparent 100%)" }} />
@@ -233,22 +248,22 @@ function ProjectDetailPage({ project, onBack, onOpenInterest }) {
           border: "none", borderRadius: 8, fontSize: 13, cursor: "pointer", fontFamily: sans, color: darkText,
           backdropFilter: "blur(4px)",
         }}>&#8592; Back to Opportunities</button>
-        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "32px 40px" }}>
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: width < 768 ? "20px 20px" : "32px 40px" }}>
           <span style={{
             fontSize: 10, padding: "4px 10px", borderRadius: 2, letterSpacing: ".06em", textTransform: "uppercase",
             background: project.status === "Completed" ? green : project.status === "Under Construction" ? "#8B7128" : red,
             color: "#fff", marginBottom: 12, display: "inline-block",
           }}>{project.status}</span>
-          <h1 style={{ fontSize: 36, fontWeight: 300, color: "#fff", marginBottom: 4, fontFamily: sans }}>{project.name}</h1>
-          <p style={{ fontSize: 14, color: "rgba(255,255,255,.7)" }}>{project.location} &middot; {project.type}</p>
+          <h1 style={{ fontSize: width < 768 ? 24 : 36, fontWeight: 300, color: "#fff", marginBottom: 4, fontFamily: sans }}>{project.name}</h1>
+          <p style={{ fontSize: width < 768 ? 12 : 14, color: "rgba(255,255,255,.7)" }}>{project.location} &middot; {project.type}</p>
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 40, alignItems: "start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: width < 768 ? "1fr" : "2fr 1fr", gap: width < 768 ? 24 : 40, alignItems: "start" }}>
         {/* Left column */}
         <div>
           {/* Key Metrics */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 40 }}>
+          <div style={{ display: "grid", gridTemplateColumns: width < 768 ? "1fr 1fr" : "repeat(3, 1fr)", gap: 16, marginBottom: 40 }}>
             {[
               { label: "Target Raise", value: fmtCurrency(project.totalRaise) },
               { label: "Min. Investment", value: fmtCurrency(project.minInvestment) },
@@ -259,7 +274,7 @@ function ProjectDetailPage({ project, onBack, onOpenInterest }) {
             ].map((m, i) => (
               <div key={i} style={{ padding: "20px", background: "#fff", borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
                 <div style={{ fontSize: 10, color: "#767168", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 6 }}>{m.label}</div>
-                <div style={{ fontSize: 20, fontWeight: 400, color: darkText }}>{m.value}</div>
+                <div style={{ fontSize: width < 768 ? 16 : 20, fontWeight: 400, color: darkText }}>{m.value}</div>
               </div>
             ))}
           </div>
@@ -292,6 +307,7 @@ function ProjectDetailPage({ project, onBack, onOpenInterest }) {
                 <div key={i} style={{
                   display: "flex", justifyContent: "space-between", alignItems: "center",
                   padding: "16px 20px", borderBottom: i < 2 ? "1px solid #ECEAE5" : "none",
+                  flexWrap: "wrap", gap: 8,
                 }}>
                   <span style={{ fontSize: 13, color: "#777" }}>{item.label}</span>
                   <span style={{ fontSize: 14, color: darkText, fontWeight: 500 }}>{item.value}</span>
@@ -315,8 +331,8 @@ function ProjectDetailPage({ project, onBack, onOpenInterest }) {
           )}
         </div>
 
-        {/* Right column — CTA */}
-        <div style={{ position: "sticky", top: 100 }}>
+        {/* Right column — CTA (stacks below on mobile) */}
+        <div style={{ position: width < 768 ? "static" : "sticky", top: 100 }}>
           <div style={{ padding: "32px", background: "#fff", borderRadius: 12, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
             <h3 style={{ fontSize: 16, fontWeight: 500, color: darkText, marginBottom: 16, fontFamily: sans }}>Interested in {project.name}?</h3>
             <p style={{ fontSize: 13, color: "#777", lineHeight: 1.7, marginBottom: 24 }}>
@@ -354,6 +370,7 @@ function ProjectDetailPage({ project, onBack, onOpenInterest }) {
 
 // ─── MAIN PROSPECT PORTAL ────────────────────────────────
 export default function ProspectPortal({ onNavigateLogin }) {
+  const width = useWindowWidth();
   const [page, setPage] = useState("home"); // home | opportunities | about | project
   const [selectedProject, setSelectedProject] = useState(null);
   const [statusFilter, setStatusFilter] = useState("All");
@@ -407,11 +424,13 @@ export default function ProspectPortal({ onNavigateLogin }) {
     ? prospectProjects
     : prospectProjects.filter(p => p.status === statusFilter);
 
+  const isMobile = width < 768;
+
   // ─── Navigation ───
   const nav = (
     <header style={{
       display: "flex", justifyContent: "space-between", alignItems: "center",
-      padding: "0 48px", height: 64, background: "#fff",
+      padding: isMobile ? "0 20px" : "0 48px", height: 64, background: "#fff",
       position: "sticky", top: 0, zIndex: 100, backdropFilter: "blur(8px)",
       backgroundColor: "rgba(255,255,255,.95)", boxShadow: "0 1px 3px rgba(0,0,0,.04)",
     }}>
@@ -473,15 +492,15 @@ export default function ProspectPortal({ onNavigateLogin }) {
     <div style={{ animation: "fadeIn .5s ease" }}>
       {/* Hero Section */}
       <section style={{
-        padding: "100px 48px 80px", textAlign: "center",
+        padding: isMobile ? "60px 20px 48px" : "100px 48px 80px", textAlign: "center",
         background: "linear-gradient(180deg, #fff 0%, #FAFAF8 100%)",
       }}>
-        <NorthstarIcon size={48} color={red} />
+        <NorthstarIcon size={isMobile ? 36 : 48} color={red} />
         <p style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".14em", color: red, fontWeight: 500, marginTop: 24, marginBottom: 20 }}>Investment Opportunities</p>
-        <h1 style={{ fontSize: 44, fontWeight: 300, lineHeight: 1.2, color: darkText, marginBottom: 20, fontFamily: sans, maxWidth: 600, margin: "0 auto 20px" }}>
+        <h1 style={{ fontSize: isMobile ? 28 : 44, fontWeight: 300, lineHeight: 1.2, color: darkText, marginBottom: 20, fontFamily: sans, maxWidth: 600, margin: "0 auto 20px", textAlign: "center" }}>
           Enlivening Communities Through Mindful Development
         </h1>
-        <p style={{ fontSize: 16, color: "#777", lineHeight: 1.7, maxWidth: 540, margin: "0 auto 48px" }}>
+        <p style={{ fontSize: isMobile ? 14 : 16, color: "#777", lineHeight: 1.7, maxWidth: 540, margin: "0 auto 48px", textAlign: "center" }}>
           Northstar Pacific Development Group creates thoughtful, community-enriching real estate projects in British Columbia. Invest directly at the project level alongside our team.
         </p>
         <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
@@ -498,7 +517,7 @@ export default function ProspectPortal({ onNavigateLogin }) {
 
       {/* Stats Bar */}
       <section style={{
-        display: "flex", justifyContent: "center", gap: 80, padding: "48px", borderTop: "1px solid #ECEAE5",
+        display: "flex", justifyContent: "center", gap: isMobile ? 32 : 80, padding: isMobile ? "32px 20px" : "48px", borderTop: "1px solid #ECEAE5",
         borderBottom: "1px solid #ECEAE5", background: "#fff", flexWrap: "wrap",
       }}>
         {[
@@ -507,23 +526,23 @@ export default function ProspectPortal({ onNavigateLogin }) {
           { value: "212+", label: "Residential Units" },
           { value: "2019", label: "Year Founded" },
         ].map((s, i) => (
-          <div key={i} style={{ textAlign: "center", minWidth: 120 }}>
-            <div style={{ fontSize: 32, fontWeight: 300, color: darkText, marginBottom: 4 }}>{s.value}</div>
+          <div key={i} style={{ textAlign: "center", minWidth: isMobile ? 80 : 120 }}>
+            <div style={{ fontSize: isMobile ? 24 : 32, fontWeight: 300, color: darkText, marginBottom: 4 }}>{s.value}</div>
             <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: "#888" }}>{s.label}</div>
           </div>
         ))}
       </section>
 
       {/* Investment Approach */}
-      <section style={{ padding: "80px 48px", maxWidth: 900, margin: "0 auto" }}>
-        <div style={{ textAlign: "center", marginBottom: 56 }}>
+      <section style={{ padding: isMobile ? "48px 20px" : "80px 48px", maxWidth: 900, margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: isMobile ? 32 : 56 }}>
           <p style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".12em", color: red, fontWeight: 500, marginBottom: 16 }}>Our Approach</p>
-          <h2 style={{ fontSize: 30, fontWeight: 300, color: darkText, marginBottom: 16, fontFamily: sans }}>Project-Level Investing</h2>
+          <h2 style={{ fontSize: isMobile ? 24 : 30, fontWeight: 300, color: darkText, marginBottom: 16, fontFamily: sans }}>Project-Level Investing</h2>
           <p style={{ fontSize: 15, color: "#777", lineHeight: 1.7, maxWidth: 560, margin: "0 auto" }}>
             Unlike pooled funds, we offer direct investment into individual projects. Each development has its own capital structure, waterfall, and returns profile, giving investors transparency and control.
           </p>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 24 }}>
           {[
             { icon: "&#9670;", title: "Direct Ownership", desc: "Invest in specific projects you believe in, not a commingled fund. Know exactly where your capital is deployed." },
             { icon: "&#9670;", title: "Transparent Structure", desc: "Each project has its own cap table, waterfall, and reporting. Real-time visibility through your investor portal." },
@@ -539,13 +558,13 @@ export default function ProspectPortal({ onNavigateLogin }) {
       </section>
 
       {/* Featured Projects */}
-      <section style={{ padding: "60px 48px 80px", background: "#FAFAF8", borderTop: "1px solid #ECEAE5" }}>
+      <section style={{ padding: isMobile ? "40px 20px 60px" : "60px 48px 80px", background: "#FAFAF8", borderTop: "1px solid #ECEAE5" }}>
         <div style={{ maxWidth: 1000, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 48 }}>
             <p style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".12em", color: red, fontWeight: 500, marginBottom: 16 }}>Current Portfolio</p>
-            <h2 style={{ fontSize: 30, fontWeight: 300, color: darkText, fontFamily: sans }}>Active Opportunities</h2>
+            <h2 style={{ fontSize: isMobile ? 24 : 30, fontWeight: 300, color: darkText, fontFamily: sans }}>Active Opportunities</h2>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: 20 }}>
             {prospectProjects.filter(p => p.status !== "Completed").map(p => (
               <div key={p.id} onClick={() => openProject(p)} style={{
                 borderRadius: 12, overflow: "hidden", cursor: "pointer", background: "#fff",
@@ -566,7 +585,7 @@ export default function ProspectPortal({ onNavigateLogin }) {
                 <div style={{ padding: "20px 24px" }}>
                   <h3 style={{ fontSize: 18, fontWeight: 500, color: darkText, marginBottom: 4 }}>{p.name}</h3>
                   <p style={{ fontSize: 13, color: "#767168", marginBottom: 16 }}>{p.location} &middot; {p.type}</p>
-                  <div style={{ display: "flex", gap: 32, fontSize: 12, color: "#777" }}>
+                  <div style={{ display: "flex", gap: 32, fontSize: 12, color: "#777", flexWrap: "wrap" }}>
                     <div><span style={{ color: "#888" }}>Target:</span> {fmtCurrency(p.totalRaise)}</div>
                     <div><span style={{ color: "#888" }}>Min:</span> {fmtCurrency(p.minInvestment)}</div>
                     {p.units && <div><span style={{ color: "#888" }}>Units:</span> {p.units}</div>}
@@ -585,24 +604,30 @@ export default function ProspectPortal({ onNavigateLogin }) {
       </section>
 
       {/* Leadership */}
-      <section style={{ padding: "80px 48px", maxWidth: 900, margin: "0 auto" }}>
-        <div style={{ textAlign: "center", marginBottom: 48 }}>
+      <section style={{ padding: isMobile ? "48px 20px" : "80px 48px", maxWidth: 900, margin: "0 auto" }}>
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
           <p style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".12em", color: red, fontWeight: 500, marginBottom: 16 }}>Leadership</p>
-          <h2 style={{ fontSize: 30, fontWeight: 300, color: darkText, fontFamily: sans }}>Our Team</h2>
+          <h2 style={{ fontSize: isMobile ? 24 : 30, fontWeight: 300, color: darkText, fontFamily: sans }}>Our Team</h2>
         </div>
-        <div style={{ display: "flex", justifyContent: "center", gap: 60, flexWrap: "wrap" }}>
+        <p style={{ fontSize: 14, color: "#777", lineHeight: 1.7, textAlign: "center", maxWidth: 520, margin: "0 auto 40px" }}>
+          Led by experienced principals with deep roots in Western Canadian real estate, our team brings decades of combined expertise in development, finance, and construction management.
+        </p>
+        <div style={{ display: "flex", justifyContent: "center", gap: isMobile ? 32 : 60, flexWrap: "wrap" }}>
           {[
-            { name: "Gord Wylie", title: "Principal", initials: "GW" },
-            { name: "Jeff Brown", title: "Principal", initials: "JB" },
+            { name: "Gord Wylie", role: "Co-Founder & Principal", subtitle: "Development & Construction", initials: "GW" },
+            { name: "Jeff Brown", role: "Co-Founder & Principal", subtitle: "Finance & Investor Relations", initials: "JB" },
           ].map((person, i) => (
             <div key={i} style={{ textAlign: "center" }}>
               <div style={{
-                width: 100, height: 100, borderRadius: "50%", background: "#ECEAE5",
+                width: 100, height: 100, borderRadius: "50%",
+                background: "linear-gradient(135deg, #2C2C2C 0%, #555 50%, #767168 100%)",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                margin: "0 auto 16px", fontSize: 28, color: "#767168", fontWeight: 300, fontFamily: sans,
+                margin: "0 auto 16px", fontSize: 32, color: "#fff", fontWeight: 300, fontFamily: sans,
+                boxShadow: "0 4px 12px rgba(0,0,0,.15)",
               }}>{person.initials}</div>
               <div style={{ fontSize: 16, fontWeight: 500, color: darkText, marginBottom: 2 }}>{person.name}</div>
-              <div style={{ fontSize: 13, color: "#767168" }}>{person.title}</div>
+              <div style={{ fontSize: 13, color: red, marginBottom: 2 }}>{person.role}</div>
+              <div style={{ fontSize: 12, color: "#999" }}>{person.subtitle}</div>
             </div>
           ))}
         </div>
@@ -610,12 +635,12 @@ export default function ProspectPortal({ onNavigateLogin }) {
 
       {/* Partners */}
       <section style={{
-        padding: "40px 48px", borderTop: "1px solid #ECEAE5", borderBottom: "1px solid #ECEAE5",
+        padding: isMobile ? "32px 20px" : "40px 48px", borderTop: "1px solid #ECEAE5", borderBottom: "1px solid #ECEAE5",
         background: "#FAFAF8",
       }}>
         <div style={{ maxWidth: 800, margin: "0 auto", textAlign: "center" }}>
           <p style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".14em", color: "#888", marginBottom: 20 }}>Partners & Affiliates</p>
-          <div style={{ display: "flex", justifyContent: "center", gap: 48, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", justifyContent: "center", gap: isMobile ? 24 : 48, flexWrap: "wrap" }}>
             {["Farris LLP", "Smythe CPA", "RHA Architecture", "Magnum Projects"].map((partner, i) => (
               <span key={i} style={{ fontSize: 14, color: "#888", fontWeight: 400, letterSpacing: ".02em" }}>{partner}</span>
             ))}
@@ -624,8 +649,8 @@ export default function ProspectPortal({ onNavigateLogin }) {
       </section>
 
       {/* CTA */}
-      <section style={{ padding: "80px 48px", textAlign: "center", background: "#fff" }}>
-        <h2 style={{ fontSize: 28, fontWeight: 300, color: darkText, marginBottom: 16, fontFamily: sans }}>Ready to Invest?</h2>
+      <section style={{ padding: isMobile ? "48px 20px" : "80px 48px", textAlign: "center", background: "#fff" }}>
+        <h2 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 300, color: darkText, marginBottom: 16, fontFamily: sans }}>Ready to Invest?</h2>
         <p style={{ fontSize: 15, color: "#777", lineHeight: 1.7, maxWidth: 480, margin: "0 auto 32px" }}>
           Join our community of investors and gain access to thoughtfully developed real estate opportunities in British Columbia.
         </p>
@@ -639,17 +664,17 @@ export default function ProspectPortal({ onNavigateLogin }) {
 
   // ─── OPPORTUNITIES PAGE ───
   const opportunitiesPage = (
-    <div style={{ padding: "48px", maxWidth: 1000, margin: "0 auto", animation: "fadeIn .4s ease" }}>
+    <div style={{ padding: isMobile ? "32px 20px" : "48px", maxWidth: 1000, margin: "0 auto", animation: "fadeIn .4s ease" }}>
       <div style={{ marginBottom: 40 }}>
         <p style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".12em", color: red, fontWeight: 500, marginBottom: 12 }}>Current Portfolio</p>
-        <h2 style={{ fontSize: 32, fontWeight: 300, color: darkText, marginBottom: 12, fontFamily: sans }}>Investment Opportunities</h2>
+        <h2 style={{ fontSize: isMobile ? 24 : 32, fontWeight: 300, color: darkText, marginBottom: 12, fontFamily: sans }}>Investment Opportunities</h2>
         <p style={{ fontSize: 14, color: "#888", maxWidth: 520 }}>
           Browse our current and completed projects. Each investment is structured independently with its own returns profile.
         </p>
       </div>
 
       {/* Filters */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 32 }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 32, flexWrap: "wrap" }}>
         {["All", "Under Construction", "Pre-Development", "Completed"].map(f => (
           <button key={f} onClick={() => setStatusFilter(f)} style={{
             padding: "8px 16px", borderRadius: 8, fontSize: 12, cursor: "pointer", fontFamily: sans,
@@ -662,7 +687,7 @@ export default function ProspectPortal({ onNavigateLogin }) {
       </div>
 
       {/* Project Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: 24 }}>
         {filteredProjects.map(p => (
           <div key={p.id} onClick={() => openProject(p)} style={{
             borderRadius: 8, overflow: "hidden", cursor: "pointer", background: "#fff",
@@ -709,22 +734,22 @@ export default function ProspectPortal({ onNavigateLogin }) {
   const aboutPage = (
     <div style={{ animation: "fadeIn .4s ease" }}>
       {/* About Hero */}
-      <section style={{ padding: "80px 48px", textAlign: "center", background: "#fff" }}>
-        <NorthstarIcon size={44} color={red} />
+      <section style={{ padding: isMobile ? "48px 20px" : "80px 48px", textAlign: "center", background: "#fff" }}>
+        <NorthstarIcon size={isMobile ? 36 : 44} color={red} />
         <p style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: ".14em", color: red, fontWeight: 500, marginTop: 24, marginBottom: 20 }}>About Northstar</p>
-        <h1 style={{ fontSize: 38, fontWeight: 300, lineHeight: 1.2, color: darkText, marginBottom: 20, fontFamily: sans, maxWidth: 550, margin: "0 auto 20px" }}>
+        <h1 style={{ fontSize: isMobile ? 26 : 38, fontWeight: 300, lineHeight: 1.2, color: darkText, marginBottom: 20, fontFamily: sans, maxWidth: 550, margin: "0 auto 20px", textAlign: "center" }}>
           Building with Purpose, Investing with Integrity
         </h1>
-        <p style={{ fontSize: 16, color: "#777", lineHeight: 1.7, maxWidth: 560, margin: "0 auto" }}>
+        <p style={{ fontSize: isMobile ? 14 : 16, color: "#777", lineHeight: 1.7, maxWidth: 560, margin: "0 auto", textAlign: "center" }}>
           Northstar Pacific Development Group is a Vancouver-based real estate developer focused on creating communities that enrich the neighborhoods they serve. Founded in 2019, we bring institutional-quality development to projects sized for sophisticated private investors.
         </p>
       </section>
 
       {/* Our Approach Detail */}
-      <section style={{ padding: "60px 48px", borderTop: "1px solid #ECEAE5", background: "#FAFAF8" }}>
+      <section style={{ padding: isMobile ? "40px 20px" : "60px 48px", borderTop: "1px solid #ECEAE5", background: "#FAFAF8" }}>
         <div style={{ maxWidth: 800, margin: "0 auto" }}>
           <h3 style={{ fontSize: 14, fontWeight: 600, color: darkText, marginBottom: 24, textTransform: "uppercase", letterSpacing: ".06em" }}>Investment Philosophy</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? 16 : 32 }}>
             {[
               { title: "Project-Level Structure", desc: "Each investment is structured as an independent project entity with its own capital stack, waterfall, and returns. No commingling of assets." },
               { title: "Co-Investment", desc: "The Northstar team invests its own capital alongside every LP, ensuring full alignment of interests from ground-breaking to exit." },
@@ -741,24 +766,30 @@ export default function ProspectPortal({ onNavigateLogin }) {
       </section>
 
       {/* Team */}
-      <section style={{ padding: "80px 48px", background: "#fff" }}>
+      <section style={{ padding: isMobile ? "48px 20px" : "80px 48px", background: "#fff" }}>
         <div style={{ maxWidth: 800, margin: "0 auto" }}>
-          <div style={{ textAlign: "center", marginBottom: 48 }}>
-            <h2 style={{ fontSize: 28, fontWeight: 300, color: darkText, fontFamily: sans }}>Leadership Team</h2>
+          <div style={{ textAlign: "center", marginBottom: 16 }}>
+            <h2 style={{ fontSize: isMobile ? 24 : 28, fontWeight: 300, color: darkText, fontFamily: sans }}>Leadership Team</h2>
           </div>
-          <div style={{ display: "flex", justifyContent: "center", gap: 80, flexWrap: "wrap" }}>
+          <p style={{ fontSize: 14, color: "#777", lineHeight: 1.7, textAlign: "center", maxWidth: 520, margin: "0 auto 40px" }}>
+            Led by experienced principals with deep roots in Western Canadian real estate, our team brings decades of combined expertise in development, finance, and construction management.
+          </p>
+          <div style={{ display: "flex", justifyContent: "center", gap: isMobile ? 40 : 80, flexWrap: "wrap" }}>
             {[
-              { name: "Gord Wylie", title: "Principal", initials: "GW", bio: "Over 20 years of experience in real estate development and construction management across Western Canada." },
-              { name: "Jeff Brown", title: "Principal", initials: "JB", bio: "Extensive background in real estate finance, project structuring, and investor relations in the BC market." },
+              { name: "Gord Wylie", role: "Co-Founder & Principal", subtitle: "Development & Construction", initials: "GW", bio: "Over 20 years of experience in real estate development and construction management across Western Canada." },
+              { name: "Jeff Brown", role: "Co-Founder & Principal", subtitle: "Finance & Investor Relations", initials: "JB", bio: "Extensive background in real estate finance, project structuring, and investor relations in the BC market." },
             ].map((person, i) => (
               <div key={i} style={{ textAlign: "center", maxWidth: 280 }}>
                 <div style={{
-                  width: 120, height: 120, borderRadius: "50%", background: "#ECEAE5",
+                  width: 120, height: 120, borderRadius: "50%",
+                  background: "linear-gradient(135deg, #2C2C2C 0%, #555 50%, #767168 100%)",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  margin: "0 auto 20px", fontSize: 32, color: "#767168", fontWeight: 300, fontFamily: sans,
+                  margin: "0 auto 20px", fontSize: 36, color: "#fff", fontWeight: 300, fontFamily: sans,
+                  boxShadow: "0 4px 12px rgba(0,0,0,.15)",
                 }}>{person.initials}</div>
                 <div style={{ fontSize: 18, fontWeight: 500, color: darkText, marginBottom: 4 }}>{person.name}</div>
-                <div style={{ fontSize: 13, color: red, marginBottom: 12 }}>{person.title}</div>
+                <div style={{ fontSize: 13, color: red, marginBottom: 2 }}>{person.role}</div>
+                <div style={{ fontSize: 12, color: "#999", marginBottom: 12 }}>{person.subtitle}</div>
                 <p style={{ fontSize: 13, color: "#888", lineHeight: 1.6 }}>{person.bio}</p>
               </div>
             ))}
@@ -767,18 +798,18 @@ export default function ProspectPortal({ onNavigateLogin }) {
       </section>
 
       {/* Partners Section */}
-      <section style={{ padding: "60px 48px", borderTop: "1px solid #ECEAE5", background: "#FAFAF8" }}>
+      <section style={{ padding: isMobile ? "40px 20px" : "60px 48px", borderTop: "1px solid #ECEAE5", background: "#FAFAF8" }}>
         <div style={{ maxWidth: 800, margin: "0 auto", textAlign: "center" }}>
           <h3 style={{ fontSize: 14, fontWeight: 600, color: darkText, marginBottom: 32, textTransform: "uppercase", letterSpacing: ".06em" }}>Our Partners & Affiliates</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 24 }}>
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: isMobile ? 12 : 24 }}>
             {[
               { name: "Farris LLP", role: "Legal Counsel" },
               { name: "Smythe CPA", role: "Accounting & Tax" },
               { name: "RHA Architecture", role: "Architecture & Design" },
               { name: "Magnum Projects", role: "Project Management" },
             ].map((partner, i) => (
-              <div key={i} style={{ padding: "24px 16px", border: "1px solid #ECEAE5", borderRadius: 6, background: "#fff" }}>
-                <div style={{ fontSize: 15, fontWeight: 500, color: darkText, marginBottom: 4 }}>{partner.name}</div>
+              <div key={i} style={{ padding: isMobile ? "16px 12px" : "24px 16px", border: "1px solid #ECEAE5", borderRadius: 6, background: "#fff" }}>
+                <div style={{ fontSize: isMobile ? 13 : 15, fontWeight: 500, color: darkText, marginBottom: 4 }}>{partner.name}</div>
                 <div style={{ fontSize: 11, color: "#888" }}>{partner.role}</div>
               </div>
             ))}
@@ -787,8 +818,8 @@ export default function ProspectPortal({ onNavigateLogin }) {
       </section>
 
       {/* Contact CTA */}
-      <section style={{ padding: "80px 48px", textAlign: "center", background: "#fff" }}>
-        <h2 style={{ fontSize: 28, fontWeight: 300, color: darkText, marginBottom: 12, fontFamily: sans }}>Get in Touch</h2>
+      <section style={{ padding: isMobile ? "48px 20px" : "80px 48px", textAlign: "center", background: "#fff" }}>
+        <h2 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 300, color: darkText, marginBottom: 12, fontFamily: sans }}>Get in Touch</h2>
         <p style={{ fontSize: 14, color: "#888", marginBottom: 8 }}>710 - 1199 W Pender St, Vancouver BC V6E 2R1</p>
         <p style={{ fontSize: 14, color: "#888", marginBottom: 32 }}>ir@northstardevelopment.ca</p>
         <button onClick={() => openInterest(null, null)} style={{
@@ -802,12 +833,22 @@ export default function ProspectPortal({ onNavigateLogin }) {
   // ─── Footer ───
   const footer = (
     <footer style={{
-      padding: "28px 48px", display: "flex", justifyContent: "space-between",
-      fontSize: 11, color: "#888", borderTop: "1px solid #ECEAE5", background: "#fff",
-      flexWrap: "wrap", gap: 8,
+      padding: isMobile ? "24px 20px" : "28px 48px", borderTop: "1px solid #ECEAE5", background: "#fff",
     }}>
-      <span>&copy; 2026 Northstar Pacific Development Group</span>
-      <span>710 - 1199 W Pender St, Vancouver BC V6E 2R1</span>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
+        <span style={{ fontSize: 11, color: "#888" }}>&copy; {new Date().getFullYear()} Northstar Pacific Development Group</span>
+        <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 11, color: "#888", cursor: "pointer" }}>Privacy Policy</span>
+          <span style={{ fontSize: 11, color: "#888", cursor: "pointer" }}>Terms of Use</span>
+          <span onClick={() => openInterest(null, null)} style={{ fontSize: 11, color: "#888", cursor: "pointer" }}>Contact</span>
+        </div>
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+        <span style={{ fontSize: 10, color: "#AAA", lineHeight: 1.5, maxWidth: 600 }}>
+          This is not an offer to sell or a solicitation of an offer to buy any securities. Any such offer may only be made pursuant to applicable offering documents.
+        </span>
+        <span style={{ fontSize: 10, color: "#AAA" }}>710 - 1199 W Pender St, Vancouver BC V6E 2R1</span>
+      </div>
     </footer>
   );
 
@@ -815,7 +856,7 @@ export default function ProspectPortal({ onNavigateLogin }) {
   let content;
   if (page === "project" && selectedProject) {
     content = (
-      <div style={{ padding: "32px 48px 80px", maxWidth: 1100, margin: "0 auto" }}>
+      <div style={{ padding: isMobile ? "20px 16px 60px" : "32px 48px 80px", maxWidth: 1100, margin: "0 auto", boxSizing: "border-box", overflowX: "hidden" }}>
         <ProjectDetailPage project={selectedProject} onBack={() => { setPage("opportunities"); setSelectedProject(null); }} onOpenInterest={openInterest} />
       </div>
     );
@@ -828,7 +869,7 @@ export default function ProspectPortal({ onNavigateLogin }) {
   }
 
   return (
-    <div style={{ fontFamily: sans, color: darkText, minHeight: "100vh", display: "flex", flexDirection: "column", background: "#fff" }}>
+    <div style={{ fontFamily: sans, color: darkText, minHeight: "100vh", display: "flex", flexDirection: "column", background: "#fff", overflowX: "hidden" }}>
       <style>{`
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         *:focus-visible { outline: 2px solid #EA2028; outline-offset: 2px; border-radius: 4px; }
@@ -842,7 +883,7 @@ export default function ProspectPortal({ onNavigateLogin }) {
           .prospect-mobile-toggle { display: none !important; }
         }
         @media (max-width: 600px) {
-          section { padding-left: 24px !important; padding-right: 24px !important; }
+          section { padding-left: 20px !important; padding-right: 20px !important; }
         }
       `}</style>
       {nav}

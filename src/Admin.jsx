@@ -40,6 +40,22 @@ function AdminEmpty({ title, subtitle }) {
   );
 }
 
+// ─── CONFIRM MODAL ───
+function ConfirmModal({ title, message, onConfirm, onCancel, danger }) {
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={onCancel}>
+      <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 12, padding: "28px 32px", maxWidth: 400, width: "90%", boxShadow: "0 8px 32px rgba(0,0,0,.15)" }}>
+        <h3 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 500 }}>{title}</h3>
+        <p style={{ fontSize: 13, color: "#666", margin: "0 0 20px", lineHeight: 1.5 }}>{message}</p>
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <button onClick={onCancel} style={btnOutline}>Cancel</button>
+          <button onClick={onConfirm} style={{ ...btnStyle, background: danger ? "#dc3545" : red }}>{danger ? "Delete" : "Confirm"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── SORTABLE HEADER ───
 function SortableHeader({ columns, sortBy, sortDir, onSort }) {
   return columns.map(col => (
@@ -261,36 +277,189 @@ export default function AdminPanel({ user, onLogout }) {
 function Dashboard({ onNavigate }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
-  useEffect(() => { fetchDashboard().then(setData).catch(e => setError(e.message)); }, []);
+  const [pendingInvestors, setPendingInvestors] = useState([]);
+  const [signatureRequests, setSignatureRequests] = useState([]);
+  const [auditLog, setAuditLog] = useState([]);
+  const [pendingLoading, setPendingLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDashboard().then(setData).catch(e => setError(e.message));
+    // Fetch pending actions data in parallel
+    Promise.allSettled([
+      fetchAdminInvestors({ status: "PENDING" }),
+      fetchSignatureRequests(),
+      fetchAuditLog(),
+    ]).then(([invResult, sigResult, auditResult]) => {
+      if (invResult.status === "fulfilled") {
+        const inv = invResult.value;
+        setPendingInvestors(Array.isArray(inv) ? inv : inv.investors || []);
+      }
+      if (sigResult.status === "fulfilled") {
+        const sigs = Array.isArray(sigResult.value) ? sigResult.value : sigResult.value?.requests || [];
+        setSignatureRequests(sigs);
+      }
+      if (auditResult.status === "fulfilled") {
+        const logs = Array.isArray(auditResult.value) ? auditResult.value : auditResult.value?.entries || [];
+        setAuditLog(logs.slice(0, 10));
+      }
+      setPendingLoading(false);
+    });
+  }, []);
+
+  async function handleQuickApprove(id) {
+    try {
+      await approveInvestor(id);
+      setPendingInvestors(prev => prev.filter(i => i.id !== id));
+    } catch (e) { console.error(e); }
+  }
+  async function handleQuickReject(id) {
+    try {
+      await deactivateInvestor(id);
+      setPendingInvestors(prev => prev.filter(i => i.id !== id));
+    } catch (e) { console.error(e); }
+  }
+
   if (error) return <AdminError message={error} onRetry={() => { setError(null); fetchDashboard().then(setData).catch(e => setError(e.message)); }} />;
   if (!data) return <AdminSpinner />;
+
   const statCards = [
     { label: "Projects", value: data.projectCount, accent: red, nav: "projects" },
     { label: "Investors", value: data.investorCount, accent: green, nav: "investors" },
     { label: "Documents", value: data.docCount, accent: "#D4A574", nav: "documents" },
     { label: "Unread Messages", value: data.unreadMessages, accent: "#5B8DEF", nav: "inbox" },
   ];
+
+  const pendingSigs = signatureRequests.filter(s => s.status === "pending" || s.status === "sent");
+  const cardShadow = "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)";
+
   return (
     <>
       <h1 style={{ fontSize: 28, fontWeight: 300, marginBottom: 32 }}>Admin Dashboard</h1>
-      <div className="admin-stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 40 }}>
+
+      {/* Stat Cards */}
+      <div className="admin-stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 32 }}>
         {statCards.map((s, i) => (
-          <div key={i} onClick={() => onNavigate(s.nav)} style={{ background: "#fff", borderRadius: 10, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", borderLeft: `3px solid ${s.accent}`, transition: "transform .15s, box-shadow .15s", cursor: "pointer" }}
+          <div key={i} onClick={() => onNavigate(s.nav)} style={{ background: "#fff", borderRadius: 10, padding: "20px 24px", boxShadow: cardShadow, borderLeft: `3px solid ${s.accent}`, transition: "transform .15s, box-shadow .15s", cursor: "pointer" }}
             onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,.08)"; e.currentTarget.style.background = "#FAFAF8"; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)"; e.currentTarget.style.background = "#fff"; }}>
+            onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = cardShadow; e.currentTarget.style.background = "#fff"; }}>
             <div style={{ fontSize: 28, fontWeight: 300, marginBottom: 4 }}>{s.value}</div>
             <div style={{ fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".08em" }}>{s.label}</div>
           </div>
         ))}
       </div>
-      <h2 style={{ fontSize: 16, fontWeight: 500, marginBottom: 16 }}>Recent Documents</h2>
-      <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
-        {data.recentDocs.map((d, i) => (
-          <div key={d.id} style={{ padding: "12px 20px", borderBottom: i < data.recentDocs.length - 1 ? "1px solid #F0EDE8" : "none", display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-            <span>{d.name}</span>
-            <span style={{ color: "#767168" }}>{d.project?.name || "General"} · {d.date}</span>
+
+      {/* Pending Actions */}
+      <div style={{ background: "#fff", borderRadius: 12, boxShadow: cardShadow, padding: "24px 28px", marginBottom: 24 }}>
+        <h2 style={{ fontSize: 16, fontWeight: 500, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+          Pending Actions
+          {!pendingLoading && (pendingInvestors.length + pendingSigs.length) > 0 && (
+            <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 10, background: `${red}15`, color: red, fontWeight: 600 }}>
+              {pendingInvestors.length + pendingSigs.length}
+            </span>
+          )}
+        </h2>
+        {pendingLoading ? (
+          <div style={{ padding: "12px 0", fontSize: 13, color: "#767168" }}>Checking for pending items...</div>
+        ) : (pendingInvestors.length === 0 && pendingSigs.length === 0) ? (
+          <div style={{ padding: "12px 0", fontSize: 13, color: "#767168" }}>No pending actions. You are all caught up.</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {/* Pending Investors */}
+            {pendingInvestors.length > 0 && (
+              <div style={{ border: "1px solid #F0EDE8", borderRadius: 8, overflow: "hidden" }}>
+                <div style={{ padding: "10px 16px", background: "#FAFAF8", fontSize: 12, fontWeight: 500, color: "#767168", borderBottom: "1px solid #F0EDE8" }}>
+                  Investors Awaiting Approval ({pendingInvestors.length})
+                </div>
+                {pendingInvestors.map(inv => (
+                  <div key={inv.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", borderBottom: "1px solid #F8F7F4", fontSize: 13 }}>
+                    <div>
+                      <span style={{ fontWeight: 500 }}>{inv.name}</span>
+                      <span style={{ color: "#767168", marginLeft: 8 }}>{inv.email}</span>
+                    </div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button onClick={() => handleQuickApprove(inv.id)} style={{ ...btnStyle, padding: "4px 12px", fontSize: 11, background: green }}>Approve</button>
+                      <button onClick={() => handleQuickReject(inv.id)} style={{ ...btnOutline, padding: "4px 12px", fontSize: 11, color: red, borderColor: red }}>Reject</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* Pending Signatures */}
+            {pendingSigs.length > 0 && (
+              <div style={{ border: "1px solid #F0EDE8", borderRadius: 8, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ fontSize: 13 }}>
+                  <span style={{ fontWeight: 500 }}>{pendingSigs.length}</span> document{pendingSigs.length !== 1 ? "s" : ""} awaiting signature
+                </div>
+                <button onClick={() => onNavigate("documents")} style={{ ...btnOutline, padding: "4px 12px", fontSize: 11 }}>Review</button>
+              </div>
+            )}
           </div>
+        )}
+      </div>
+
+      {/* Quick Actions */}
+      <div className="admin-stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
+        {[
+          { label: "Invite Investor", icon: "+", nav: "investors", accent: green },
+          { label: "Upload Document", icon: "\u2191", nav: "documents", accent: "#D4A574" },
+          { label: "Post Update", icon: "\u270E", nav: "projects", accent: red },
+          { label: "Record Distribution", icon: "$", nav: "projects", accent: "#5B8DEF" },
+        ].map((a, i) => (
+          <button key={i} onClick={() => onNavigate(a.nav)} style={{
+            background: "#fff", border: "1px solid #ECEAE5", borderRadius: 10, padding: "16px 20px",
+            cursor: "pointer", fontFamily: sans, fontSize: 13, fontWeight: 500, color: darkText,
+            display: "flex", alignItems: "center", gap: 10, transition: "all .15s",
+          }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = a.accent; e.currentTarget.style.background = "#FAFAF8"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "#ECEAE5"; e.currentTarget.style.background = "#fff"; }}>
+            <span style={{ width: 28, height: 28, borderRadius: 6, background: `${a.accent}15`, color: a.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 600 }}>{a.icon}</span>
+            {a.label}
+          </button>
         ))}
+      </div>
+
+      {/* Recent Activity Timeline */}
+      <div style={{ background: "#fff", borderRadius: 12, boxShadow: cardShadow, padding: "24px 28px", marginBottom: 24 }}>
+        <h2 style={{ fontSize: 16, fontWeight: 500, marginBottom: 16 }}>Recent Activity</h2>
+        {auditLog.length === 0 ? (
+          <div style={{ fontSize: 13, color: "#767168", padding: "8px 0" }}>No recent activity recorded.</div>
+        ) : (
+          <div style={{ position: "relative", paddingLeft: 24 }}>
+            {/* Timeline line */}
+            <div style={{ position: "absolute", left: 5, top: 6, bottom: 6, width: 2, background: "#ECEAE5" }} />
+            {auditLog.map((entry, i) => (
+              <div key={entry.id || i} style={{ position: "relative", paddingBottom: i < auditLog.length - 1 ? 16 : 0, fontSize: 13 }}>
+                {/* Timeline dot */}
+                <div style={{ position: "absolute", left: -20, top: 5, width: 10, height: 10, borderRadius: "50%", background: "#fff", border: `2px solid ${red}`, zIndex: 1 }} />
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                  <div>
+                    <span style={{ fontWeight: 500 }}>{entry.action || entry.type}</span>
+                    {entry.userName && <span style={{ color: "#767168" }}> by {entry.userName}</span>}
+                    {entry.resource && <span style={{ color: "#767168" }}> on {entry.resource}</span>}
+                  </div>
+                  <span style={{ fontSize: 11, color: "#AAA", whiteSpace: "nowrap", flexShrink: 0 }}>
+                    {entry.timestamp ? new Date(entry.timestamp).toLocaleString() : entry.date || ""}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Recent Documents */}
+      <div style={{ background: "#fff", borderRadius: 12, boxShadow: cardShadow, padding: "24px 28px" }}>
+        <h2 style={{ fontSize: 16, fontWeight: 500, marginBottom: 16 }}>Recent Documents</h2>
+        {data.recentDocs.length === 0 ? (
+          <div style={{ fontSize: 13, color: "#767168" }}>No recent documents.</div>
+        ) : (
+          data.recentDocs.map((d, i) => (
+            <div key={d.id} style={{ padding: "10px 0", borderBottom: i < data.recentDocs.length - 1 ? "1px solid #F0EDE8" : "none", display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+              <span>{d.name}</span>
+              <span style={{ color: "#767168" }}>{d.project?.name || "General"} · {d.date}</span>
+            </div>
+          ))
+        )}
       </div>
     </>
   );
@@ -299,13 +468,24 @@ function Dashboard({ onNavigate }) {
 // ─── PROJECT MANAGER ───
 function ProjectManager({ toast, onViewProject }) {
   const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null);
   const [updateText, setUpdateText] = useState("");
   const [showCreate, setShowCreate] = useState(false);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [confirmAction, setConfirmAction] = useState(null);
   const [cpForm, setCpForm] = useState({ name: "", location: "", type: "Residential", status: "Pre-Development", description: "", sqft: "", units: "", totalRaise: "", estimatedCompletion: "", unitsSold: "", revenue: "", prefReturnPct: "8", gpCatchupPct: "100", carryPct: "20" });
 
-  function reload() { fetchAdminProjects().then(setProjects); }
+  function reload() { setLoading(true); fetchAdminProjects().then(setProjects).finally(() => setLoading(false)); }
   useEffect(() => { reload(); }, []);
+
+  const filteredProjects = projects.filter(p => {
+    const q = search.toLowerCase();
+    const matchSearch = !q || (p.name || "").toLowerCase().includes(q) || (p.location || "").toLowerCase().includes(q);
+    const matchStatus = !statusFilter || p.status === statusFilter;
+    return matchSearch && matchStatus;
+  });
 
   async function handleSave(id, field, value) {
     try { await updateProject(id, { [field]: value }); setProjects(p => p.map(x => x.id === id ? { ...x, [field === "completionPct" ? "completion" : field]: value } : x)); toast("Updated"); } catch (e) { toast(e.message, "error"); }
@@ -333,16 +513,37 @@ function ProjectManager({ toast, onViewProject }) {
       reload();
     } catch (err) { toast(err.message, "error"); }
   }
-  async function handleDeleteProject(id, name) {
-    if (!confirm(`Delete project "${name}"? This will permanently remove all related data (investors, documents, distributions, etc). This cannot be undone.`)) return;
-    try { await deleteProject(id); toast(`Project "${name}" deleted`); reload(); } catch (e) { toast(e.message, "error"); }
+  function handleDeleteProject(id, name) {
+    setConfirmAction({
+      title: "Delete Project",
+      message: `Delete project "${name}"? This will permanently remove all related data (investors, documents, distributions, etc). This cannot be undone.`,
+      danger: true,
+      onConfirm: async () => {
+        setConfirmAction(null);
+        try { await deleteProject(id); toast(`Project "${name}" deleted`); reload(); } catch (e) { toast(e.message, "error"); }
+      },
+    });
   }
+
+  if (loading && projects.length === 0) return <AdminSpinner />;
 
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+      {confirmAction && <ConfirmModal {...confirmAction} onCancel={() => setConfirmAction(null)} />}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <h1 style={{ fontSize: 28, fontWeight: 300 }}>Projects</h1>
         <button onClick={() => setShowCreate(!showCreate)} style={btnStyle}>{showCreate ? "Cancel" : "Create Project"}</button>
+      </div>
+
+      {/* Search & Filter */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or location..." style={{ ...inputStyle, flex: 1 }} />
+        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ ...inputStyle, width: 180 }}>
+          <option value="">All Statuses</option>
+          <option value="Pre-Development">Pre-Development</option>
+          <option value="Under Construction">Under Construction</option>
+          <option value="Completed">Completed</option>
+        </select>
       </div>
 
       {/* Create Project Form */}
@@ -418,7 +619,10 @@ function ProjectManager({ toast, onViewProject }) {
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        {projects.map(p => {
+        {filteredProjects.length === 0 && !loading && (
+          <AdminEmpty title="No projects found" subtitle={search || statusFilter ? "Try adjusting your search or filter." : "Create your first project to get started."} />
+        )}
+        {filteredProjects.map(p => {
           // Project thumbnail from Northstar's actual images
           const thumbs = {
             "Porthaven": "https://northstardevelopment.ca/public/images/porthaven-1.jpg",
@@ -531,9 +735,12 @@ function InvestorManager({ toast, onViewProfile, hideHeader }) {
   const [inviteEmail, setInviteEmail] = useState("");
   const [editing, setEditing] = useState(null);
   const [editingKPI, setEditingKPI] = useState(null);
+  const [invLoading, setInvLoading] = useState(true);
+  const [confirmAction, setConfirmAction] = useState(null);
 
   function reload() {
-    fetchAdminInvestors({ search, status: statusFilter, projectId: projectFilter, sortBy, sortDir }).then(setInvestors);
+    setInvLoading(true);
+    fetchAdminInvestors({ search, status: statusFilter, projectId: projectFilter, sortBy, sortDir }).then(setInvestors).finally(() => setInvLoading(false));
   }
   useEffect(() => { reload(); }, [search, statusFilter, projectFilter, sortBy, sortDir]);
   useEffect(() => { fetchAdminProjects().then(setProjects); }, []);
@@ -576,8 +783,11 @@ function InvestorManager({ toast, onViewProfile, hideHeader }) {
 
   const statusBadge = (s) => ({ fontSize: 11, padding: "2px 8px", borderRadius: 3, background: s === "ACTIVE" ? "#EFE" : s === "PENDING" ? "#FFF8E1" : "#FEE", color: s === "ACTIVE" ? green : s === "PENDING" ? "#B8860B" : red });
 
+  if (invLoading && investors.length === 0) return <AdminSpinner />;
+
   return (
     <>
+      {confirmAction && <ConfirmModal {...confirmAction} onCancel={() => setConfirmAction(null)} />}
       {credentialDialog && <CredentialDialog {...credentialDialog} onClose={() => setCredentialDialog(null)} />}
       {!hideHeader && <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <h1 style={{ fontSize: 28, fontWeight: 300 }}>Investors</h1>
@@ -641,8 +851,8 @@ function InvestorManager({ toast, onViewProfile, hideHeader }) {
                 <button onClick={() => onViewProfile?.(inv.id)} style={{ ...btnStyle, padding: "4px 10px", fontSize: 11 }}>View</button>
                 <button onClick={() => setEditing(editing === inv.id ? null : inv.id)} style={{ ...btnOutline, padding: "4px 10px", fontSize: 11 }}>Edit</button>
                 {inv.status === "PENDING" && <button onClick={() => handleApprove(inv.id)} style={{ ...btnStyle, padding: "4px 10px", fontSize: 11, background: green }}>Approve</button>}
-                {inv.status === "PENDING" && <button onClick={() => { if (confirm(`Reject investor "${inv.name}"? This will deactivate their account.`)) handleDeactivate(inv.id); }} style={{ ...btnOutline, padding: "4px 10px", fontSize: 11, color: red, borderColor: red }}>Reject</button>}
-                {inv.status === "ACTIVE" && <button onClick={() => handleDeactivate(inv.id)} style={{ ...btnOutline, padding: "4px 10px", fontSize: 11, color: red, borderColor: red }}>Deactivate</button>}
+                {inv.status === "PENDING" && <button onClick={() => setConfirmAction({ title: "Reject Investor", message: `Reject investor "${inv.name}"? This will deactivate their account.`, danger: true, onConfirm: () => { setConfirmAction(null); handleDeactivate(inv.id); } })} style={{ ...btnOutline, padding: "4px 10px", fontSize: 11, color: red, borderColor: red }}>Reject</button>}
+                {inv.status === "ACTIVE" && <button onClick={() => setConfirmAction({ title: "Deactivate Investor", message: `Deactivate ${inv.name}? They will no longer be able to log in.`, danger: true, onConfirm: () => { setConfirmAction(null); handleDeactivate(inv.id); } })} style={{ ...btnOutline, padding: "4px 10px", fontSize: 11, color: red, borderColor: red }}>Deactivate</button>}
               </div>
             </div>
 
@@ -1399,6 +1609,7 @@ function DocumentManager({ toast, hideHeader }) {
   const [sigSelectedIds, setSigSelectedIds] = useState([]);
   const [sigSubject, setSigSubject] = useState("");
   const [sigSending, setSigSending] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
 
   // Assign investors state
   const [showAssignInvestors, setShowAssignInvestors] = useState(false);
@@ -1486,6 +1697,7 @@ function DocumentManager({ toast, hideHeader }) {
   if (docDetail) {
     return (
       <>
+        {confirmAction && <ConfirmModal {...confirmAction} onCancel={() => setConfirmAction(null)} />}
         <p style={{ fontSize: 12, color: red, cursor: "pointer", marginBottom: 24 }} onClick={() => { setSelectedDoc(null); setDocDetail(null); }}>← Back to documents</p>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
           <div>
@@ -1497,10 +1709,7 @@ function DocumentManager({ toast, hideHeader }) {
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={openSignModal} style={{ ...btnStyle, fontSize: 12 }}>Request Signature</button>
-            <button onClick={async () => {
-              if (!confirm(`Delete "${docDetail.name}"? This cannot be undone.`)) return;
-              try { await deleteDocument(docDetail.id); toast("Document deleted"); setSelectedDoc(null); setDocDetail(null); loadDocs(); } catch (e) { toast(e.message, "error"); }
-            }} style={{ ...btnOutline, fontSize: 12, color: red, borderColor: red }}>Delete</button>
+            <button onClick={() => setConfirmAction({ title: "Delete Document", message: `Delete "${docDetail.name}"? This cannot be undone.`, danger: true, onConfirm: async () => { setConfirmAction(null); try { await deleteDocument(docDetail.id); toast("Document deleted"); setSelectedDoc(null); setDocDetail(null); loadDocs(); } catch (e) { toast(e.message, "error"); } } })} style={{ ...btnOutline, fontSize: 12, color: red, borderColor: red }}>Delete</button>
           </div>
         </div>
 
@@ -1779,7 +1988,7 @@ function DocumentManager({ toast, hideHeader }) {
       </div>
 
       {/* Document table */}
-      {loading ? <p style={{ color: "#767168" }}>Loading...</p> : (
+      {loading ? <AdminSpinner /> : (
         <div className="admin-table-scroll" style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
           <div style={{ display: "grid", gridTemplateColumns: "2fr 100px 100px 80px 80px 80px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE" }}>
             <SortableHeader columns={[
@@ -2788,6 +2997,7 @@ function StaffManager({ toast, hideHeader }) {
   const [staffFlags, setStaffFlags] = useState(null);
   const [loadingFlags, setLoadingFlags] = useState(false);
   const [credentialDialog, setCredentialDialog] = useState(null);
+  const [confirmAction, setConfirmAction] = useState(null);
 
   useEffect(() => { loadStaff(); }, []);
   function loadStaff() { fetchStaff().then(setStaff).catch(() => toast("Failed to load staff", "error")); }
@@ -2801,26 +3011,24 @@ function StaffManager({ toast, hideHeader }) {
     } catch (err) { toast(err.message, "error"); }
   }
 
-  async function handleUpdate(id, data) {
-    if (data.role && !confirm(`Change this user's role to ${data.role}?`)) return;
-    try { await updateStaff(id, data); toast("Updated"); loadStaff(); } catch (e) { toast(e.message, "error"); }
+  function handleUpdate(id, data) {
+    if (data.role) {
+      setConfirmAction({ title: "Change Role", message: `Change this user's role to ${data.role}?`, onConfirm: async () => { setConfirmAction(null); try { await updateStaff(id, data); toast("Updated"); loadStaff(); } catch (e) { toast(e.message, "error"); } } });
+      return;
+    }
+    updateStaff(id, data).then(() => { toast("Updated"); loadStaff(); }).catch(e => toast(e.message, "error"));
   }
 
-  async function handleDeactivate(s) {
-    if (!confirm(`Deactivate ${s.name}? They will no longer be able to log in.`)) return;
-    try { await deactivateStaff(s.id); toast(`${s.name} deactivated`); loadStaff(); if (selectedStaff?.id === s.id) setSelectedStaff(null); } catch (e) { toast(e.message, "error"); }
+  function handleDeactivate(s) {
+    setConfirmAction({ title: "Deactivate Staff", message: `Deactivate ${s.name}? They will no longer be able to log in.`, danger: true, onConfirm: async () => { setConfirmAction(null); try { await deactivateStaff(s.id); toast(`${s.name} deactivated`); loadStaff(); if (selectedStaff?.id === s.id) setSelectedStaff(null); } catch (e) { toast(e.message, "error"); } } });
   }
 
   async function handleReactivate(s) {
     try { await reactivateStaff(s.id); toast(`${s.name} reactivated`); loadStaff(); } catch (e) { toast(e.message, "error"); }
   }
 
-  async function handleResetPassword(s) {
-    if (!confirm(`Reset password for ${s.name}? A new temporary password will be emailed to them.`)) return;
-    try {
-      const result = await resetStaffPassword(s.id);
-      setCredentialDialog({ name: s.name, email: s.email, tempPassword: result.tempPassword, action: "reset" });
-    } catch (e) { toast(e.message, "error"); }
+  function handleResetPassword(s) {
+    setConfirmAction({ title: "Reset Password", message: `Reset password for ${s.name}? A new temporary password will be emailed to them.`, onConfirm: async () => { setConfirmAction(null); try { const result = await resetStaffPassword(s.id); setCredentialDialog({ name: s.name, email: s.email, tempPassword: result.tempPassword, action: "reset" }); } catch (e) { toast(e.message, "error"); } } });
   }
 
   async function openPermissions(s) {
@@ -2852,6 +3060,7 @@ function StaffManager({ toast, hideHeader }) {
 
   return (
     <>
+      {confirmAction && <ConfirmModal {...confirmAction} onCancel={() => setConfirmAction(null)} />}
       {!hideHeader && <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <h1 style={{ fontSize: 28, fontWeight: 300 }}>Company Staff</h1>
       </div>}

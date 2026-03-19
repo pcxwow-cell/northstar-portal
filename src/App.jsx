@@ -81,6 +81,13 @@ function useToast() {
   return { toasts, add, dismiss };
 }
 
+// ─── RESPONSIVE WIDTH HOOK ───────────────────────────────
+function useWindowWidth() {
+  const [w, setW] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
+  useEffect(() => { const h = () => setW(window.innerWidth); window.addEventListener("resize", h); return () => window.removeEventListener("resize", h); }, []);
+  return w;
+}
+
 // ─── MODAL ───────────────────────────────────────────────
 function Modal({ open, onClose, children, ariaLabel }) {
   const { bg, surface, line, t1, t2, t3 } = useTheme();
@@ -285,6 +292,9 @@ function exportCSV(headers, rows, filename) {
   a.href = url; a.download = filename; a.click();
   URL.revokeObjectURL(url);
 }
+
+// ─── FORMAT TYPE UTILITY ─────────────────────────────────
+const formatType = (t) => t ? t.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) : "";
 
 function ProgressBar({ value, color }) {
   const { bg, surface, line, t1, t2, t3 } = useTheme();
@@ -507,12 +517,12 @@ function Overview({ onNavigate, investor, projects, myProjects, allDistributions
               { label: "Total Contributed", value: `$${fmt(totalContributed)}`, rawValue: totalContributed, prefix: "$", sub: `across ${myProjects.length} projects`, accent: red },
               { label: "Current Value", value: `$${fmt(totalValue)}`, rawValue: totalValue, prefix: "$", sub: gainLoss >= 0 ? `+$${fmt(gainLoss)} gain` : `-$${fmt(Math.abs(gainLoss))} loss`, subColor: gainLoss >= 0 ? green : red, accent: green },
               { label: "Total Distributed", value: `$${fmt(totalDistributed)}`, rawValue: totalDistributed, prefix: "$", sub: `${allDistributions.length} payments`, accent: "#D4A574" },
-              { label: "Weighted IRR", value: weightedIRR, sub: "blended across projects", accent: "#5B8DEF" },
+              { label: "Weighted IRR", value: weightedIRR, sub: "blended across projects", accent: "#5B8DEF", tooltip: "Internal Rate of Return" },
             ].map((s, i) => (
               <div key={i} role="region" aria-label={`${s.label}: ${s.value}`} style={{ background: surface, padding: "20px 24px", borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", borderLeft: `3px solid ${s.accent}`, transition: "transform .15s, box-shadow .15s, border-color .2s", cursor: "default", border: "1px solid transparent", borderLeftWidth: 3, borderLeftColor: s.accent }}
                 onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,.08)"; e.currentTarget.style.borderColor = `${s.accent}33`; e.currentTarget.style.borderLeftColor = s.accent; }}
                 onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)"; e.currentTarget.style.borderColor = "transparent"; e.currentTarget.style.borderLeftColor = s.accent; }}>
-                <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: t3, marginBottom: 8, fontWeight: 500 }}>{s.label}</div>
+                <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: t3, marginBottom: 8, fontWeight: 500 }} title={s.tooltip || ""}>{s.label}</div>
                 <div style={{ fontSize: 26, fontWeight: 300, color: t1 }}>{s.rawValue != null ? <AnimatedNumber value={s.rawValue} prefix={s.prefix || ""} /> : s.value}</div>
                 <div style={{ fontSize: 11, color: s.subColor || t3, marginTop: 4 }}>{s.sub}</div>
               </div>
@@ -608,7 +618,7 @@ function Overview({ onNavigate, investor, projects, myProjects, allDistributions
         {myProjects.map(p => (
           <div key={p.id} style={{ borderRadius: 12, padding: "24px", background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
             <div style={{ fontSize: 13, fontFamily: serif, fontWeight: 500, marginBottom: 4 }}>{p.name}</div>
-            <div style={{ fontSize: 11, color: t3, marginBottom: 16 }}>{p.status} · {p.moic}x MOIC</div>
+            <div style={{ fontSize: 11, color: t3, marginBottom: 16 }}>{p.status} · <span title="Multiple on Invested Capital">{p.moic}x MOIC</span></div>
             <ResponsiveContainer width="100%" height={140}>
               <AreaChart data={p.performanceHistory}>
                 <defs>
@@ -688,12 +698,16 @@ function Portfolio({ myProjects, investor, initialProjectId }) {
   const [capitalAccount, setCapitalAccount] = useState(null);
   const [cashFlows, setCashFlows] = useState([]);
   const [detailTab, setDetailTab] = useState("overview");
+  const [detailLoading, setDetailLoading] = useState(false);
   const project = selected !== null ? myProjects[selected] : null;
 
   useEffect(() => {
     if (project && investor) {
-      fetchCapitalAccount(investor.id, project.id).then(setCapitalAccount).catch(() => setCapitalAccount(null));
-      fetchCashFlows(investor.id, project.id).then(setCashFlows).catch(() => setCashFlows([]));
+      setDetailLoading(true);
+      Promise.all([
+        fetchCapitalAccount(investor.id, project.id).then(setCapitalAccount).catch(() => setCapitalAccount(null)),
+        fetchCashFlows(investor.id, project.id).then(setCashFlows).catch(() => setCashFlows([])),
+      ]).finally(() => setDetailLoading(false));
     }
   }, [selected, project?.id, investor?.id]);
 
@@ -716,11 +730,11 @@ function Portfolio({ myProjects, investor, initialProjectId }) {
           {[
             { label: "Your Committed", value: `$${fmt(project.investorCommitted)}`, accent: red },
             { label: "Current Value", value: `$${fmt(project.currentValue)}`, accent: green },
-            { label: "Net IRR", value: displayIRR != null ? `${displayIRR}%` : "--", sub: capitalAccount ? "calculated" : null, accent: "#D4A574" },
-            { label: "MOIC", value: displayMOIC != null ? `${displayMOIC}x` : "--", sub: capitalAccount ? "calculated" : null, accent: "#5B8DEF" },
+            { label: "Net IRR", value: displayIRR != null ? `${displayIRR}%` : "--", sub: capitalAccount ? "calculated" : null, accent: "#D4A574", tooltip: "Internal Rate of Return" },
+            { label: "MOIC", value: displayMOIC != null ? `${displayMOIC}x` : "--", sub: capitalAccount ? "calculated" : null, accent: "#5B8DEF", tooltip: "Multiple on Invested Capital" },
           ].map((m, i) => (
             <div key={i} style={{ background: surface, padding: "24px", borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", borderLeft: `3px solid ${m.accent}` }}>
-              <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: t3, marginBottom: 10, fontWeight: 500 }}>{m.label}</div>
+              <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: t3, marginBottom: 10, fontWeight: 500 }} title={m.tooltip || ""}>{m.label}</div>
               <div style={{ fontSize: 22, fontFamily: serif, fontWeight: 400 }}>{m.value}</div>
               {m.sub && <div style={{ fontSize: 9, color: green, marginTop: 4, textTransform: "uppercase", letterSpacing: ".06em" }}>{m.sub}</div>}
             </div>
@@ -742,7 +756,12 @@ function Portfolio({ myProjects, investor, initialProjectId }) {
           ))}
         </div>
 
-        {detailTab === "overview" && (<>
+        {detailLoading && (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 0" }}>
+            <LoadingSpinner size={28} />
+          </div>
+        )}
+        {detailTab === "overview" && !detailLoading && (<>
         {/* Capital Account Statement */}
         <SectionHeader title="Capital Account" />
         <div style={{ borderRadius: 12, overflow: "hidden", marginBottom: 40, background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
@@ -756,12 +775,12 @@ function Portfolio({ myProjects, investor, initialProjectId }) {
               { label: "Capital Called / Contributed", value: contributed },
               { label: "Unfunded Commitment", value: capitalAccount ? ca.unfunded : ((project.investorCommitted || 0) - contributed) },
               { label: "Total Distributions Received", value: distributed },
-              { label: "Current Value (NAV)", value: endingBalance },
+              { label: "Current Value (NAV)", value: endingBalance, tooltip: "Net Asset Value" },
               { label: "Unrealized Gain / (Loss)", value: unrealizedGain, highlight: true },
             ];
             return rows.map((r, i) => (
               <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "12px 20px", borderBottom: i < rows.length - 1 ? `1px solid ${line}` : "none", background: r.highlight ? `${line}44` : "transparent" }}>
-                <span style={{ fontSize: 13, color: r.highlight ? t1 : t2, fontWeight: r.highlight ? 500 : 400 }}>{r.label}</span>
+                <span style={{ fontSize: 13, color: r.highlight ? t1 : t2, fontWeight: r.highlight ? 500 : 400 }} title={r.tooltip || ""}>{r.label}</span>
                 <span style={{ fontSize: 13, fontWeight: r.highlight ? 600 : 400, color: r.highlight ? (r.value >= 0 ? green : red) : t1 }}>
                   {r.value < 0 ? `-$${fmt(Math.abs(r.value))}` : `$${fmt(r.value)}`}
                 </span>
@@ -785,11 +804,11 @@ function Portfolio({ myProjects, investor, initialProjectId }) {
               {cashFlows.map((cf, i) => (
                 <div key={cf.id || i} style={{ display: "grid", gridTemplateColumns: "120px 1fr 120px 100px", padding: "12px 20px", borderBottom: i < cashFlows.length - 1 ? `1px solid ${line}` : "none", alignItems: "center" }}>
                   <span style={{ fontSize: 12, color: t3 }}>{new Date(cf.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
-                  <span style={{ fontSize: 13, color: t2 }}>{cf.description || cf.type}</span>
+                  <span style={{ fontSize: 13, color: t2 }}>{cf.description || formatType(cf.type)}</span>
                   <span style={{ fontSize: 13, fontWeight: 500, textAlign: "right", color: cf.amount < 0 ? red : green }}>
                     {cf.amount < 0 ? `-$${fmt(Math.abs(cf.amount))}` : `+$${fmt(cf.amount)}`}
                   </span>
-                  <span style={{ fontSize: 11, textAlign: "right", color: t3, textTransform: "capitalize" }}>{(cf.type || "").replace(/_/g, " ")}</span>
+                  <span style={{ fontSize: 11, textAlign: "right", color: t3 }}>{formatType(cf.type)}</span>
                 </div>
               ))}
               </div>
@@ -882,7 +901,7 @@ function Portfolio({ myProjects, investor, initialProjectId }) {
             {cashFlows.filter(cf => cf.type === "distribution" || cf.amount > 0).map((cf, i, arr) => (
               <div key={cf.id || i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: i < arr.length - 1 ? `1px solid ${line}` : "none" }}>
                 <div>
-                  <div style={{ fontSize: 13, color: t1 }}>{cf.description || cf.type}</div>
+                  <div style={{ fontSize: 13, color: t1 }}>{cf.description || formatType(cf.type)}</div>
                   <div style={{ fontSize: 11, color: t3, marginTop: 2 }}>{new Date(cf.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>
                 </div>
                 <span style={{ fontSize: 13, fontWeight: 500, color: green }}>+${fmt(Math.abs(cf.amount))}</span>
@@ -914,8 +933,8 @@ function Portfolio({ myProjects, investor, initialProjectId }) {
           { key: "status", label: "Status", render: r => <StatusBadge status={r.status} /> },
           { key: "investorCommitted", label: "Committed", render: r => `$${fmt(r.investorCommitted)}` },
           { key: "currentValue", label: "Current Value", render: r => `$${fmt(r.currentValue)}` },
-          { key: "irr", label: "Net IRR", render: r => <span style={{ color: green }}>{r.irr}%</span> },
-          { key: "moic", label: "MOIC", render: r => <span style={{ color: t2 }}>{r.moic}x</span> },
+          { key: "irr", label: "Net IRR", render: r => <span style={{ color: green }} title="Internal Rate of Return">{r.irr}%</span> },
+          { key: "moic", label: "MOIC", render: r => <span style={{ color: t2 }} title="Multiple on Invested Capital">{r.moic}x</span> },
           { key: "completion", label: "Progress", width: 120, render: r => <ProgressBar value={r.completion} color={r.completion === 100 ? green : red} /> },
         ]}
         rows={myProjects}
@@ -951,14 +970,14 @@ function CapTablePage({ myProjects, investor, toast }) {
       {/* Project selector */}
       <div style={{ display: "flex", gap: 4, marginBottom: 24, background: `${line}55`, borderRadius: 8, padding: 2, width: "fit-content" }}>
         {myProjects.map((p, i) => (
-          <span key={p.id} onClick={() => setSelectedIdx(i)} style={{
+          <button key={p.id} onClick={() => setSelectedIdx(i)} style={{
             fontSize: 12, padding: "6px 16px", borderRadius: 6, cursor: "pointer",
             color: selectedIdx === i ? t1 : t3,
             background: selectedIdx === i ? surface : "transparent",
             boxShadow: selectedIdx === i ? "0 1px 3px rgba(0,0,0,.08)" : "none",
             fontWeight: selectedIdx === i ? 500 : 400,
-            transition: "all .15s",
-          }}>{p.name}</span>
+            transition: "all .15s", border: "none", fontFamily: sans, lineHeight: "inherit",
+          }}>{p.name}</button>
         ))}
       </div>
 
@@ -1400,7 +1419,7 @@ function DistributionsPage({ allDistributions, myProjects }) {
         )} style={{ fontSize: 11, padding: "5px 12px", borderRadius: 2, border: `1px solid ${line}`, color: t3, cursor: "pointer" }}>Export CSV</span>
       </div>
       {allDistributions.length === 0 ? (
-        <EmptyState icon="$" title="No distributions have been made yet" subtitle="Distribution payments will appear here when they are processed." />
+        <EmptyState icon="$" title="No distributions have been recorded yet" subtitle="Distributions are typically paid quarterly and will appear here after processing." />
       ) : (
         <ResponsiveTable
           sortable
@@ -1409,8 +1428,8 @@ function DistributionsPage({ allDistributions, myProjects }) {
             { key: "quarter", label: "Period" },
             { key: "date", label: "Payment Date", render: r => <span style={{ color: t2 }}>{r.date}</span> },
             { key: "amount", label: "Amount", render: r => `$${fmt(r.amount)}` },
-            { key: "type", label: "Type", render: r => <span style={{ color: t3 }}>{r.type}</span> },
-            { key: "status", label: "Status", align: "right", sortKey: false, render: () => <span style={{ fontSize: 11, color: green }}>Paid</span> },
+            { key: "type", label: "Type", render: r => <span style={{ color: t3 }}>{formatType(r.type)}</span> },
+            { key: "status", label: "Status", align: "right", sortKey: false, render: (d) => <span style={{ fontSize: 11, color: green }}>{d.type ? formatType(d.type) : "Paid"}</span> },
           ]}
           rows={allDistributions}
           emptyMessage="No distributions yet"
@@ -1449,14 +1468,18 @@ function MessagesPage({ toast, investor, initialThreadId }) {
     finally { setLoading(false); }
   }
 
+  const [threadLoading, setThreadLoading] = useState(false);
+
   async function openThread(thread) {
     setSelectedThread(thread);
+    setThreadLoading(true);
     try {
       const detail = await fetchThread(thread.id);
       setThreadDetail(detail);
       // Update unread status in list
       setThreads(prev => prev.map(t => t.id === thread.id ? { ...t, unread: false } : t));
     } catch (e) { toast.add("Failed to load thread", "error"); }
+    finally { setThreadLoading(false); }
   }
 
   async function handleReply() {
@@ -1485,6 +1508,16 @@ function MessagesPage({ toast, investor, initialThreadId }) {
   }
 
   // Thread detail view
+  if (selectedThread && threadLoading) {
+    return (
+      <>
+        <p style={{ fontSize: 12, color: red, cursor: "pointer", marginBottom: 24 }} onClick={() => { setSelectedThread(null); setThreadDetail(null); setReply(""); }}>← Back to messages</p>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "60px 0" }}>
+          <LoadingSpinner size={28} />
+        </div>
+      </>
+    );
+  }
   if (threadDetail) {
     return (
       <>
@@ -1580,7 +1613,7 @@ function MessagesPage({ toast, investor, initialThreadId }) {
       </div>
       {/* Search and sort controls */}
       {!loading && threads.length > 0 && (
-        <div style={{ display: "flex", gap: 12, marginBottom: 16, alignItems: "center" }}>
+        <div className="msg-search-row" style={{ display: "flex", gap: 12, marginBottom: 16, alignItems: "center" }}>
           <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Search messages..." style={{ flex: 1, padding: "10px 14px", background: "transparent", border: `1px solid ${line}`, borderRadius: 6, color: t1, fontSize: 13, fontFamily: sans, outline: "none", boxSizing: "border-box" }} />
           <select value={sortMode} onChange={e => setSortMode(e.target.value)} style={{ padding: "10px 14px", background: surface, border: `1px solid ${line}`, borderRadius: 6, color: t1, fontSize: 12, fontFamily: sans, outline: "none", cursor: "pointer" }}>
             <option value="newest">Newest first</option>
@@ -1708,16 +1741,16 @@ function FinancialModelerPage({ myProjects, investor }) {
         <div style={{ fontSize: 12, color: t3, marginBottom: 16 }}>
           Total Investment: ${fmt(project.totalRaise || 0)} | Pref: {project.waterfall?.prefReturn || 8}% | Carry: {project.waterfall?.carry || 20}%
         </div>
-        <div style={{ display: "flex", gap: 16, alignItems: "flex-end" }}>
-          <div style={{ flex: 1 }}>
+        <div className="modeler-inputs" style={{ display: "flex", gap: 16, alignItems: "flex-end", flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 140 }}>
             <div style={{ fontSize: 11, color: t3, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>Exit Value ($)</div>
             <input type="number" value={exitValue} onChange={e => setExitValue(e.target.value)} placeholder={`e.g. ${fmt((project.totalRaise || 0) * 2)}`} style={inputSt} />
           </div>
-          <div style={{ width: 140 }}>
+          <div style={{ minWidth: 120 }}>
             <div style={{ fontSize: 11, color: t3, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>Hold Period (yrs)</div>
             <input type="number" min="1" max="30" value={holdYears} onChange={e => setHoldYears(e.target.value)} style={inputSt} />
           </div>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, minWidth: 140 }}>
             <div style={{ fontSize: 11, color: t3, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>Annual Cash Flow ($)</div>
             <input type="number" value={annualCF} onChange={e => setAnnualCF(e.target.value)} placeholder="0" style={inputSt} />
           </div>
@@ -3065,7 +3098,7 @@ export default function App() {
   const { investor, projects, myProjects, allDocuments, allDistributions } = appData;
 
   const pages = {
-    overview: <Overview onNavigate={navigateTo} investor={investor} projects={projects} myProjects={myProjects} allDistributions={allDistributions} msgs={msgs} onOpenThread={(threadId) => { navigateTo("messages", { threadId }); }} />,
+    overview: loading ? <OverviewSkeleton /> : <Overview onNavigate={navigateTo} investor={investor} projects={projects} myProjects={myProjects} allDistributions={allDistributions} msgs={msgs} onOpenThread={(threadId) => { navigateTo("messages", { threadId }); }} />,
     portfolio: <Portfolio myProjects={myProjects} investor={investor} initialProjectId={navParams.projectId} />,
     captable: <CapTablePage myProjects={myProjects} investor={investor} toast={toast} />,
     modeler: <FinancialModelerPage myProjects={myProjects} investor={investor} />,
@@ -3141,6 +3174,15 @@ export default function App() {
           }
           .cashflow-grid > div, .waterfall-grid > div, .captable-grid > div,
           .modeler-grid > div, .dist-grid > div, .data-grid > div, .login-history-grid > div { min-width: 480px; }
+
+          /* Message search + sort controls stack on mobile */
+          .msg-search-row { flex-direction: column !important; }
+          .msg-search-row select { width: 100%; }
+
+          /* Financial modeler inputs stack on mobile */
+          .modeler-inputs { flex-direction: column !important; align-items: stretch !important; }
+          .modeler-inputs > div { width: 100% !important; min-width: 0 !important; }
+          .modeler-inputs > button { width: 100%; }
 
           /* Multi-col stat/info grids collapse */
           .inline-stats-3 { grid-template-columns: 1fr !important; }
@@ -3229,13 +3271,14 @@ export default function App() {
             if (e.key === "ArrowLeft" && idx > 0) { e.preventDefault(); setView(items[idx - 1]); setAnnouncement(`Navigated to ${navItems[idx - 1].label}`); }
           }}>
           {navItems.map(n => (
-            <span key={n.id} role="link" tabIndex={0} aria-current={view === n.id ? "page" : undefined} onClick={() => { setView(n.id); setAnnouncement(`Navigated to ${n.label}`); }} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setView(n.id); setAnnouncement(`Navigated to ${n.label}`); } }} style={{
+            <button key={n.id} aria-current={view === n.id ? "page" : undefined} onClick={() => { setView(n.id); setAnnouncement(`Navigated to ${n.label}`); }} style={{
               fontSize: 13, fontWeight: view === n.id ? 500 : 400, cursor: "pointer", userSelect: "none",
               color: view === n.id ? red : th.t3,
               padding: "8px 16px",
               borderRadius: 6,
               background: view === n.id ? "#EA20280D" : "transparent",
               transition: "all .15s",
+              border: "none", fontFamily: sans, lineHeight: "inherit",
             }}
               onMouseEnter={e => { if (view !== n.id) { e.currentTarget.style.background = th.hover; e.currentTarget.style.color = th.t1; } }}
               onMouseLeave={e => { if (view !== n.id) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = th.t3; } }}>
@@ -3243,7 +3286,7 @@ export default function App() {
               {n.id === "messages" && msgs.some(m => m.unread) && (
                 <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: red, marginLeft: 6, verticalAlign: "middle" }} />
               )}
-            </span>
+            </button>
           ))}
         </div>
       </nav>
@@ -3255,18 +3298,18 @@ export default function App() {
         padding: "0 8px",
       }}>
         {navItems.map(n => (
-          <span key={n.id} role="tab" tabIndex={0} aria-selected={view === n.id} onClick={() => { setView(n.id); setAnnouncement(`Navigated to ${n.label}`); }} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setView(n.id); setAnnouncement(`Navigated to ${n.label}`); } }} style={{
+          <button key={n.id} role="tab" aria-selected={view === n.id} onClick={() => { setView(n.id); setAnnouncement(`Navigated to ${n.label}`); }} style={{
             fontSize: 12, padding: "8px 14px", cursor: "pointer", userSelect: "none",
             color: view === n.id ? red : th.t3,
             background: view === n.id ? "#EA20280D" : "transparent",
-            borderRadius: 6,
+            borderRadius: 6, border: "none", fontFamily: sans, lineHeight: "inherit",
             whiteSpace: "nowrap", transition: "all .15s",
           }}>
             {n.label}
             {n.id === "messages" && msgs.some(m => m.unread) && (
               <span style={{ display: "inline-block", width: 5, height: 5, borderRadius: "50%", background: red, marginLeft: 3, verticalAlign: "middle" }} />
             )}
-          </span>
+          </button>
         ))}
       </nav>
 
