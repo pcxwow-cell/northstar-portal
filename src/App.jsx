@@ -2,18 +2,19 @@ import { useState, useCallback, useEffect, useRef, createContext, useContext, us
 import { ToastProvider, useToast } from "./context/ToastContext.jsx";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { login as apiLogin, logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, downloadDocument, fetchThreads, fetchThread, createThread, replyToThread, updateProfile, fetchSignatureRequests, signDocument, fetchNotificationPreferences, updateNotificationPreferences, fetchCapitalAccount, fetchCashFlows, calculateWaterfallApi, fetchEntities, createEntity, updateEntity, deleteEntity, runFinancialModel, changePassword, forgotPassword, resetPassword, fetchLoginHistory, setupMFA, verifyMFASetup, verifyMFA, disableMFA, getMFAStatus, regenerateBackupCodes, setToken, fmt, fmtCurrency, fetchMyFlags, fetchNotifications } from "./api.js";
+import { colors as themeColors, fonts } from "./styles/theme.js";
 
 // Lazy load heavy components — they get their own chunks
 const AdminPanel = lazy(() => import("./Admin.jsx"));
 const ProspectPortal = lazy(() => import("./ProspectPortal.jsx"));
 
 // ─── THEME ───────────────────────────────────────────────
-export const serif = "'Cormorant Garamond', Georgia, serif";
-export const sans = "'DM Sans', -apple-system, sans-serif";
-export const red = "#EA2028";
-export const darkText = "#231F20";
-export const cream = "#FDFAF2";
-export const green = "#3D7A54";
+export const serif = fonts.serif;
+export const sans = fonts.sans;
+export const red = themeColors.red;
+export const darkText = themeColors.darkText;
+export const cream = "#FDFAF2"; // not in theme.js
+export const green = themeColors.green;
 
 // Northstar "N" icon — two parallelogram shapes from brand
 export const NorthstarIcon = ({ size = 32, color = red }) => (
