@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useToast } from "./context/ToastContext.jsx";
+import { AdminDataProvider, useAdminData } from "./context/AdminDataContext.jsx";
 import Spinner from "./components/Spinner.jsx";
 import EmptyState from "./components/EmptyState.jsx";
 import ConfirmDialog from "./components/ConfirmDialog.jsx";
@@ -163,6 +164,7 @@ export default function AdminPanel({ user, onLogout }) {
   };
 
   return (
+    <AdminDataProvider>
     <div style={{ fontFamily: sans, color: darkText, minHeight: "100vh", background: "#F8F7F4" }}>
       <style>{`
         *:focus-visible { outline: 2px solid #EA2028; outline-offset: 2px; border-radius: 4px; }
@@ -224,6 +226,7 @@ export default function AdminPanel({ user, onLogout }) {
       </nav>
       <main className="admin-main" role="main" aria-label="Admin content" style={{ maxWidth: 1000, margin: "0 auto" }}>{pages[view]}</main>
     </div>
+    </AdminDataProvider>
   );
 }
 
@@ -1541,8 +1544,8 @@ function ProjectDetail({ projectId, onBack, toast }) {
 
 // ─── DOCUMENT MANAGER (dashboard + detail + upload) ───
 function DocumentManager({ toast, hideHeader }) {
+  const { projects } = useAdminData();
   const [docs, setDocs] = useState([]);
-  const [projects, setProjects] = useState([]);
   const [projectFilter, setProjectFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [search, setSearch] = useState("");
@@ -1578,7 +1581,7 @@ function DocumentManager({ toast, hideHeader }) {
   const [uploadFile, setUploadFile] = useState(null);
   const [uploading, setUploading] = useState(false);
 
-  useEffect(() => { loadDocs(); fetchAdminProjects().then(setProjects); }, []);
+  useEffect(() => { loadDocs(); }, []);
   useEffect(() => { loadDocs(); }, [projectFilter, categoryFilter, search]);
 
   async function loadDocs() {
@@ -2683,6 +2686,7 @@ function InvestorCashFlowsSection({ investorId, investorName, projects, toast })
 
 // ─── GROUP MANAGER ───
 function GroupManager({ toast, hideHeader }) {
+  const { investors } = useAdminData();
   const [groups, setGroups] = useState([]);
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState("#EA2028");
@@ -2690,10 +2694,9 @@ function GroupManager({ toast, hideHeader }) {
   const [newTier, setNewTier] = useState("primary");
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [groupDetail, setGroupDetail] = useState(null);
-  const [investors, setInvestors] = useState([]);
   const [addSearch, setAddSearch] = useState("");
 
-  useEffect(() => { loadGroups(); fetchAdminInvestors().then(setInvestors); }, []);
+  useEffect(() => { loadGroups(); }, []);
   function loadGroups() { fetchGroups().then(setGroups); }
 
   // Build tree structure
@@ -3157,10 +3160,10 @@ function StaffManager({ toast, hideHeader }) {
 
 // ─── STATEMENT MANAGER ───
 function StatementManager({ toast }) {
+  const { projects: stmtProjects } = useAdminData();
   const [statements, setStatements] = useState([]);
   const [filter, setFilter] = useState("all");
   const [generating, setGenerating] = useState(false);
-  const [stmtProjects, setStmtProjects] = useState([]);
   const [stmtSearch, setStmtSearch] = useState("");
   const stmtSort = useSortable("createdAt", "desc");
 
@@ -3197,7 +3200,7 @@ function StatementManager({ toast }) {
 
   const authHeader = { Authorization: `Bearer ${localStorage.getItem("northstar_token")}` };
 
-  useEffect(() => { loadStatements(); fetchAdminProjects().then(setStmtProjects); }, [filter]);
+  useEffect(() => { loadStatements(); }, [filter]);
 
   async function loadStatements() {
     try {
@@ -4042,6 +4045,7 @@ function ProspectManager({ toast }) {
 }
 
 function AdminInbox({ user, toast }) {
+  const { projects, investors } = useAdminData();
   const [threads, setThreads] = useState([]);
   const [selectedThread, setSelectedThread] = useState(null);
   const [threadDetail, setThreadDetail] = useState(null);
@@ -4050,10 +4054,6 @@ function AdminInbox({ user, toast }) {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all"); // all | unread | from-investors
   const [sending, setSending] = useState(false);
-
-  // Compose state
-  const [projects, setProjects] = useState([]);
-  const [investors, setInvestors] = useState([]);
   const [targetType, setTargetType] = useState("ALL");
   const [targetProjectId, setTargetProjectId] = useState("");
   const [recipients, setRecipients] = useState([]); // { id, name, email }
@@ -4062,7 +4062,7 @@ function AdminInbox({ user, toast }) {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
 
-  useEffect(() => { loadThreads(); fetchAdminProjects().then(setProjects); fetchAdminInvestors().then(setInvestors); }, []);
+  useEffect(() => { loadThreads(); }, []);
 
   async function loadThreads() {
     try { const t = await fetchThreads(); setThreads(t); } catch (e) { console.error(e); }
