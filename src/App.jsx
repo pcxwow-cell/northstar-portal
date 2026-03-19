@@ -5,6 +5,7 @@ import { login as apiLogin, logout as apiLogout, getMe, isAuthed as checkAuthed,
 import { colors, fonts, inputStyle, btnStyle, btnOutline, shadows, radius, labelStyle } from "./styles/theme.js";
 import Button from "./components/Button.jsx";
 import Card from "./components/Card.jsx";
+import FormInput from "./components/FormInput.jsx";
 
 // Lazy load heavy components — they get their own chunks
 const AdminPanel = lazy(() => import("./Admin.jsx"));
@@ -1837,7 +1838,7 @@ function PasswordStrengthBar({ password }) {
 }
 
 // ─── SECURITY SECTION (Password Change + MFA + Login History) ──
-function SecuritySection({ toast, inputStyle }) {
+function SecuritySection({ toast }) {
   const { bg, surface, line, t1, t2, t3 } = useTheme();
   const [currentPw, setCurrentPw] = useState("");
   const [newPw, setNewPw] = useState("");
@@ -1937,18 +1938,13 @@ function SecuritySection({ toast, inputStyle }) {
         <div style={{ fontSize: 12, fontWeight: 600, color: t3, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 16 }}>Change Password</div>
         <form onSubmit={handleChangePassword}>
           {pwError && <div style={{ fontSize: 12, color: red, padding: "8px 12px", border: `1px solid ${red}22`, borderRadius: 4, marginBottom: 12, background: `${red}08` }}>{pwError}</div>}
+          <FormInput label="Current Password" type="password" value={currentPw} onChange={e => setCurrentPw(e.target.value)} required style={{ marginBottom: 12 }} />
           <div style={{ marginBottom: 12 }}>
-            <label style={{ display: "block", fontSize: 11, color: t3, fontWeight: 500, marginBottom: 4 }}>Current Password</label>
-            <input type="password" value={currentPw} onChange={e => setCurrentPw(e.target.value)} required style={inputStyle} />
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ display: "block", fontSize: 11, color: t3, fontWeight: 500, marginBottom: 4 }}>New Password</label>
-            <input type="password" value={newPw} onChange={e => setNewPw(e.target.value)} required style={inputStyle} />
+            <FormInput label="New Password" type="password" value={newPw} onChange={e => setNewPw(e.target.value)} required />
             <PasswordStrengthBar password={newPw} />
           </div>
           <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", fontSize: 11, color: t3, fontWeight: 500, marginBottom: 4 }}>Confirm New Password</label>
-            <input type="password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} required style={inputStyle} />
+            <FormInput label="Confirm New Password" type="password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} required />
             {confirmPw && newPw !== confirmPw && <div style={{ fontSize: 11, color: red, marginTop: 4 }}>Passwords do not match</div>}
           </div>
           <Button type="submit" disabled={saving} style={{
@@ -2164,14 +2160,8 @@ function ProfilePage({ investor, toast, onUpdate }) {
                 <div style={{ fontSize: 12, color: t3 }}>{investor.role} · Joined {investor.joined}</div>
               </div>
             </div>
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", fontSize: 11, color: t3, fontWeight: 500, marginBottom: 6 }}>Full Name</label>
-              <input value={name} onChange={e => setName(e.target.value)} style={inputStyle} />
-            </div>
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", fontSize: 11, color: t3, fontWeight: 500, marginBottom: 6 }}>Email</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} />
-            </div>
+            <FormInput label="Full Name" value={name} onChange={e => setName(e.target.value)} style={{ marginBottom: 16 }} />
+            <FormInput label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} style={{ marginBottom: 16 }} />
             <div style={{ marginBottom: 24 }}>
               <label style={{ display: "block", fontSize: 11, color: t3, fontWeight: 500, marginBottom: 6 }}>Initials</label>
               <input value={initials} onChange={e => setInitials(e.target.value)} maxLength={3} style={{ ...inputStyle, width: 80 }} />
@@ -2198,7 +2188,7 @@ function ProfilePage({ investor, toast, onUpdate }) {
               <div style={{ fontSize: 13, color: t3, fontStyle: "italic" }}>No active investments</div>
             )}
           </div>
-          <SecuritySection toast={toast} inputStyle={inputStyle} />
+          <SecuritySection toast={toast} />
         </div>
       </div>
 
@@ -2211,10 +2201,7 @@ function ProfilePage({ investor, toast, onUpdate }) {
         {showEntityForm && (
           <form onSubmit={handleCreateEntity} style={{ borderRadius: 12, padding: "20px 24px", background: surface, marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
             <div className="entity-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
-              <div>
-                <label style={{ fontSize: 11, color: t3, display: "block", marginBottom: 4 }}>Entity Name</label>
-                <input value={entityForm.name} onChange={e => setEntityForm(f => ({ ...f, name: e.target.value }))} required style={inputStyle} placeholder="e.g. Chen Family Trust" />
-              </div>
+              <FormInput label="Entity Name" value={entityForm.name} onChange={e => setEntityForm(f => ({ ...f, name: e.target.value }))} required placeholder="e.g. Chen Family Trust" />
               <div>
                 <label style={{ fontSize: 11, color: t3, display: "block", marginBottom: 4 }}>Type</label>
                 <select value={entityForm.type} onChange={e => setEntityForm(f => ({ ...f, type: e.target.value }))} style={inputStyle}>
@@ -2223,20 +2210,11 @@ function ProfilePage({ investor, toast, onUpdate }) {
               </div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
-              <div>
-                <label style={{ fontSize: 11, color: t3, display: "block", marginBottom: 4 }}>Tax ID</label>
-                <input value={entityForm.taxId} onChange={e => setEntityForm(f => ({ ...f, taxId: e.target.value }))} style={inputStyle} placeholder="EIN or SSN" />
-              </div>
-              <div>
-                <label style={{ fontSize: 11, color: t3, display: "block", marginBottom: 4 }}>Address</label>
-                <input value={entityForm.address} onChange={e => setEntityForm(f => ({ ...f, address: e.target.value }))} style={inputStyle} placeholder="123 Main St, Vancouver BC" />
-              </div>
+              <FormInput label="Tax ID" value={entityForm.taxId} onChange={e => setEntityForm(f => ({ ...f, taxId: e.target.value }))} placeholder="EIN or SSN" />
+              <FormInput label="Address" value={entityForm.address} onChange={e => setEntityForm(f => ({ ...f, address: e.target.value }))} placeholder="123 Main St, Vancouver BC" />
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
-              <div>
-                <label style={{ fontSize: 11, color: t3, display: "block", marginBottom: 4 }}>State/Province</label>
-                <input value={entityForm.state} onChange={e => setEntityForm(f => ({ ...f, state: e.target.value }))} style={inputStyle} placeholder="e.g. BC" />
-              </div>
+              <FormInput label="State/Province" value={entityForm.state} onChange={e => setEntityForm(f => ({ ...f, state: e.target.value }))} placeholder="e.g. BC" />
               <div style={{ display: "flex", alignItems: "flex-end", gap: 12 }}>
                 <label style={{ fontSize: 12, color: t2, display: "flex", alignItems: "center", gap: 6 }}>
                   <input type="checkbox" checked={entityForm.isDefault} onChange={e => setEntityForm(f => ({ ...f, isDefault: e.target.checked }))} /> Default
