@@ -90,7 +90,7 @@
 | Distributions.jsx | 74 | App.jsx |
 | FinancialModeler.jsx | 193 | App.jsx |
 | CapTable.jsx | 235 | App.jsx |
-| Documents.jsx | 258 | App.jsx |
+| Documents.jsx | 301 | App.jsx |
 | Messages.jsx | 273 | App.jsx |
 | Profile.jsx | 461 | App.jsx (includes Security) |
 | Portfolio.jsx | 286 | App.jsx |
@@ -112,7 +112,7 @@
 | AdminDashboard.jsx | 202 | Admin.jsx |
 | ProjectManager.jsx | 225 | Admin.jsx |
 | InvestorManager.jsx | 234 | Admin.jsx |
-| DocumentManager.jsx | 446 | Admin.jsx |
+| DocumentManager.jsx | 458 | Admin.jsx |
 | InvestorProfile.jsx | 425 | Admin.jsx |
 | ProjectDetail.jsx | 939 | Admin.jsx |
 

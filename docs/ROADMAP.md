@@ -1,59 +1,70 @@
 # Northstar Investor Portal — Roadmap
 
-> Last updated: 2026-03-18
-> Honest assessment after comprehensive QA audit
+> Last updated: 2026-03-19
+> Honest assessment after comprehensive QA audit + extraction + functional fixes
 
 ## Current State
 
 **Architecture**: React 18 + Vite 5 (Vercel) → Express 4 + Prisma ORM (Railway) → PostgreSQL (Supabase)
-**Backend quality**: 7.5/10 — proper auth, service layer, 136 tests, adapter patterns
-**Frontend quality**: 3/10 — two monolithic files (8,132 lines), no component reuse, no tests
-**Overall**: 5/10 — strong foundation, poorly packaged frontend, 107 unfixed issues
+**Backend quality**: 8/10 — proper auth, service layer, 136 tests, adapter patterns, e-sign/email/storage adapters
+**Frontend quality**: 5.5/10 — extracted to 12 pages + 14 admin managers + 15 shared components, no tests yet
+**Overall**: 6.5/10 — architecture fixed, functional fixes in progress, ~100 issues remaining
 
 ### What Actually Works
 - JWT auth with bcrypt, MFA/TOTP, account lockout, role-based access
 - Express API with 40+ endpoints, Prisma ORM with 22 models
-- Document upload/download with access control
-- E-signature adapters (DocuSign/HelloSign) with demo fallback
+- Document upload/download with access control + PDF preview
+- Document assignment to individual investors AND investor groups
+- Document acknowledge workflow (investor marks as acknowledged)
+- E-signature: DocuSign embedded signing, signed doc download, demo fallback
 - Threaded bidirectional messaging
 - Capital account calculations (XIRR/MOIC) from real cash flows
 - Financial modeler with scenario analysis
 - Entity management (LLC, Trust, IRA, Individual)
-- Investor segments/groups
+- Investor segments/groups with member management
 - Statement generation with approval workflow
 - Email adapters (Resend/SendGrid) with demo fallback
 - 136 backend tests across 11 suites
 - Demo mode with static data fallback (82% coverage)
 - Vercel → Railway deployment pipeline
+- Frontend fully extracted: 12 investor pages, 14 admin managers, 15 shared components
 
-### What's Broken or Missing (107 issues)
+### What's Broken or Missing (~100 issues)
 
-**Critical (9):**
+**Critical (7 remaining):**
 - Investor onboarding trap (PENDING users get "invalid credentials")
 - 22 admin write functions crash in demo mode (no fallback)
-- Document downloads bypass tracking
 - No email notifications on new messages
 - Tax IDs stored/displayed in plain text
+
+**Fixed recently:**
+- ~~Document downloads bypass tracking~~ → Fixed: uses secure endpoint with tracking
+- ~~Document assignment destroys tracking history~~ → Fixed: upsert preserves timestamps
+- ~~No PDF preview~~ → Fixed: inline preview modal for investors + admin
+- ~~No group document assignment~~ → Fixed: assign to investor groups
+- ~~Acknowledged field not wired~~ → Fixed: POST endpoint + investor UI
+- ~~E-sign incomplete~~ → Fixed: embedded signing + signed doc download
 
 **Blocker (4):**
 - No empty states — new investors see all zeros
 - Cap table and waterfall tiers are read-only (no CRUD)
 - Bulk distribution/capital call recording doesn't update investor records
 
-**Broken (14):**
-- Document assignment destroys tracking history
+**Broken (11 remaining):**
 - Read receipts visible to investors (privacy violation)
 - Password validation doesn't match strength bar
 - 20+ admin actions have no audit trail
 
-**Missing (69) + UX (18):**
+**Missing (~65) + UX (18):**
 - See `docs/WORKFLOW-AUDIT.md` (57 items) and `docs/DEEP-AUDIT.md` (57 items)
 
-**Frontend architecture:**
-- Admin.jsx: 4,796 lines, ~160 useState, 15 managers in one file
-- App.jsx: 3,336 lines, ~100 useState, 10 pages in one file
-- 14 shared components exist in src/components/ but are NOT imported
-- Zero frontend tests
+**Frontend architecture (COMPLETE):**
+- Admin.jsx: 226 lines (was 4,796) — fully extracted
+- App.jsx: 724 lines (was 3,336) — fully extracted
+- 12 investor pages in src/pages/, 14 admin managers in src/admin/
+- 15 shared components in src/components/
+- 3 context providers (Toast, AdminData, InvestorData)
+- Zero frontend tests (Vitest setup pending)
 - No router — navigation via useState
 
 Full issue details: `docs/WORKFLOW-AUDIT.md`, `docs/DEEP-AUDIT.md`, `docs/UI-REVIEW.md`
@@ -62,18 +73,18 @@ Full issue details: `docs/WORKFLOW-AUDIT.md`, `docs/DEEP-AUDIT.md`, `docs/UI-REV
 
 ## The Path Forward
 
-### Step 1: Frontend Extraction (~35 commits)
+### Step 1: Frontend Extraction (~35 commits) — COMPLETE
 > Plan: `docs/FRONTEND-PLAN.md`
 
-| Phase | Commits | What happens |
-|-------|---------|-------------|
-| 0: Wire components | 2 | Import existing dead components, shrink monoliths ~35% |
-| 1: State & context | 1 | AdminDataContext, InvestorDataContext, eliminate redundant fetches |
-| 2: Extract App.jsx | 12 | One page per commit → 150-line shell |
-| 3: Extract Admin.jsx | 17 | One manager per commit → 120-line shell |
-| 4: Demo mode fixes | 1 | 22 missing fallbacks |
-| 5: Smoke tests | 1 | Vitest render tests for every page |
-| 6: Update docs | 1 | Fix stale file paths |
+| Phase | Commits | Status |
+|-------|---------|--------|
+| 0: Wire components | 15 | ✅ All 14 components wired |
+| 1: State & context | 2 | ✅ AdminDataContext + InvestorDataContext |
+| 2: Extract App.jsx | 12 | ✅ 12 pages extracted to src/pages/ |
+| 3: Extract Admin.jsx | 14 | ✅ 14 managers extracted to src/admin/ |
+| 4: Demo mode fixes | — | ○ 22 missing fallbacks (Sprint I in fix plan) |
+| 5: Smoke tests | — | ○ Vitest setup pending |
+| 6: Update docs | — | ○ File path updates needed |
 
 ### Step 2: Functional Fixes (12 sprints, 67 tasks)
 > Plan: `docs/FEATURE-FIX-PLAN.md`
@@ -97,7 +108,7 @@ Full issue details: `docs/WORKFLOW-AUDIT.md`, `docs/DEEP-AUDIT.md`, `docs/UI-REV
 - Sprint M: ARIA attributes, focus management, semantic elements
 - Sprint N: Mobile grids, stacking, breakpoints
 
-### After all steps: estimated 7.5-8/10 overall
+### After all steps: estimated 8-8.5/10 overall
 
 ---
 

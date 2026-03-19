@@ -10,23 +10,24 @@ These rules apply to ALL agents working on this project.
 - **Don't change git config.** Never modify the user's git identity.
 - **Push after every commit.** Auto-deploy via GitHub → Vercel.
 
-## Project State (as of 2026-03-18)
+## Project State (as of 2026-03-19)
 
-- **Overall: 5/10** — strong backend (7.5), broken frontend (3)
+- **Overall: 6.5/10** — strong backend (8), improving frontend (5.5)
 - **Deploy:** Vercel (frontend) → Railway (backend) → Supabase (PostgreSQL)
 - **Backend:** Express 4 + Prisma ORM, 22 models, 136 tests, adapter patterns for email/storage/e-sign
-- **Frontend:** React 18 + Vite 5, two monolithic files (Admin.jsx: 4,796 lines, App.jsx: 3,336 lines), 14 shared components exist but aren't imported
+- **Frontend:** React 18 + Vite 5, fully extracted: App.jsx (724 lines), Admin.jsx (226 lines), 12 pages, 14 admin managers, 15 shared components
 - **Auth:** JWT + bcrypt + TOTP MFA, roles: INVESTOR, ADMIN, GP
-- **Issues:** 114 found, 107 unfixed (9 critical, 4 blockers, 14 broken, 69 missing, 18 UX)
-- **Priority:** Frontend extraction first, then functional fixes
+- **Issues:** 114 found, ~100 unfixed (7 critical, 4 blockers, 11 broken, ~65 missing, 18 UX)
+- **Priority:** Functional fixes (Sprint A-L in FEATURE-FIX-PLAN.md), Sprint B complete
+- **Live URLs:** Frontend: https://northstar-portal-roan.vercel.app/ | API: https://northstar-portal-production.up.railway.app/
 
 ## Key Docs
 
 | Document | Purpose |
 |----------|---------|
 | `SKILLS.md` | Brand guidelines, Peter's workflow preferences |
-| `docs/FRONTEND-PLAN.md` | **Primary plan** — incremental frontend extraction (~35 commits) |
-| `docs/FEATURE-FIX-PLAN.md` | Sprint A-L functional fix tasks (67 tasks, 12 sprints) |
+| `docs/FRONTEND-PLAN.md` | Frontend extraction results — COMPLETE (33 commits) |
+| `docs/FEATURE-FIX-PLAN.md` | **Primary plan** — Sprint A-L functional fix tasks (67 tasks, 12 sprints). Sprint B done |
 | `docs/WORKFLOW-AUDIT.md` | 57 workflow audit issues |
 | `docs/DEEP-AUDIT.md` | 57 deep-dive audit issues |
 | `docs/UI-REVIEW.md` | View-by-view UI/UX review with competitor benchmarks |

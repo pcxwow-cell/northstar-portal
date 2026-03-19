@@ -58,7 +58,7 @@ npm run dev                  # Port 3000, proxies /api to 3003
 | **Overview** | KPI strip, action center, performance chart, distribution chart, project cards, activity feed |
 | **Portfolio** | Project table with IRR, MOIC, progress. Click any row for detail view with construction updates, docs, cap table |
 | **Cap Table** | LP/GP breakdown, commitment vs called, ownership bars, waterfall structure |
-| **Documents** | Filter by project/category, download tracking, signature status, action-required badges |
+| **Documents** | Filter by project/category, PDF preview, download tracking, signature status, acknowledge workflow, action-required badges |
 | **Distributions** | Full history table, YTD summary, capital account statements |
 | **Messages** | Threaded LP-GP messaging with read receipts, compose new |
 | **Profile** | Self-service editing, entity management, password change, MFA setup |
@@ -69,7 +69,7 @@ npm run dev                  # Port 3000, proxies /api to 3003
 | **Dashboard** | KPI summary, pending actions, project overview |
 | **People** | Investor CRM (profiles, activity timeline, groups, staff management) |
 | **Projects** | CRUD, KPI editing, waterfall config, construction updates, cap table |
-| **Documents** | Upload with targeting, bulk K-1 upload, access audit, view/download tracking |
+| **Documents** | Upload with targeting, bulk K-1 upload, group assignment, access audit, view/download tracking, signature status display |
 | **Messages** | Inbox, compose with recipient picker, threaded replies, read receipts |
 | **Finance** | XIRR/MOIC calculations, waterfall calculator, scenario modeling, cash flow CRUD |
 | **Statements** | Capital call + quarterly report PDF generation with approval workflow |
@@ -83,12 +83,19 @@ npm run dev                  # Port 3000, proxies /api to 3003
 ```
 northstar-portal/
 ├── src/
-│   ├── App.jsx              # Main investor portal (~2900 lines)
-│   ├── Admin.jsx             # Admin panel (~2600 lines)
+│   ├── App.jsx              # Investor portal shell (~724 lines)
+│   ├── Admin.jsx             # Admin panel shell (~226 lines)
 │   ├── ProspectPortal.jsx    # Public prospect intake (~830 lines)
-│   ├── api.js                # API client + demo mode fallback (~1500 lines)
+│   ├── api.js                # API client + demo mode fallback (~970 lines)
 │   ├── data.js               # Static demo data (~300 lines)
-│   └── main.jsx              # React entry point
+│   ├── main.jsx              # React entry point
+│   ├── pages/                # 12 investor-facing pages (extracted from App.jsx)
+│   ├── admin/                # 14 admin manager components (extracted from Admin.jsx)
+│   ├── components/           # 15 shared UI components
+│   ├── context/              # ToastContext, AdminDataContext, InvestorDataContext
+│   ├── hooks/                # useSortable, useSessionTimeout
+│   └── styles/
+│       └── theme.js          # Design tokens
 ├── server/
 │   ├── index.js              # Express app setup
 │   ├── prisma.js             # Prisma client singleton
@@ -100,7 +107,7 @@ northstar-portal/
 │   └── tests/                # 13 test files (136 tests)
 ├── prisma/
 │   └── schema.prisma         # 22 models
-├── docs/                     # ROADMAP, BACKLOG, TECH-STACK, flows
+├── docs/                     # ROADMAP, BACKLOG, FEATURE-FIX-PLAN, audits
 ├── public/                   # Static assets, northstar-logo.svg
 ├── Dockerfile                # Multi-stage production build
 ├── docker-compose.yml        # PostgreSQL + app

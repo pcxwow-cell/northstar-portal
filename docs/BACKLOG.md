@@ -1,19 +1,20 @@
 # Northstar Investor Portal — Backlog
 
-> Last updated: 2026-03-18
+> Last updated: 2026-03-19
 > Priority: P0 = must-have, P1 = should-have, P2 = nice-to-have, P3 = future
 > Status: ○ not started, ◐ in progress, ● done
 > Research baseline: Juniper Square, Agora, InvestNext, Covercy, CashFlow Portal
-> Audit status: 114 issues found, 107 unfixed — see audit docs for details
+> Audit status: 114 issues found, ~100 unfixed — see audit docs for details
 
 ---
 
-## Current Priority: Frontend Extraction
+## Current Priority: Functional Fixes (Feature Fix Plan)
 
-**Before any feature work, the frontend architecture must be fixed.**
-See `docs/FRONTEND-PLAN.md` for the ~35-commit extraction plan.
+**Frontend extraction is COMPLETE.** Admin.jsx: 226 lines, App.jsx: 724 lines, 12 pages + 14 admin managers extracted.
+See `docs/FRONTEND-PLAN.md` for completed extraction results.
 
-The two monolithic frontend files (Admin.jsx: 4,796 lines, App.jsx: 3,336 lines) make every bug fix risky and every feature addition harder. 14 shared components exist but aren't imported. The extraction is prerequisite to all functional fixes below.
+**Now working through functional fixes** per `docs/FEATURE-FIX-PLAN.md` (12 sprints, 67 tasks).
+Recent fixes (2026-03-19): group document assignment, PDF preview, acknowledge endpoint, signature request display, embedded signing, signed document download.
 
 ---
 
@@ -26,7 +27,7 @@ The two monolithic frontend files (Admin.jsx: 4,796 lines, App.jsx: 3,336 lines)
 | **Investor Dashboard** | KPI strip, project cards, charts | Portfolio overview with charts, live offerings | Backend data works, frontend has no empty states, NaN on missing IRR |
 | **Investment Detail** | Project detail with cap table, waterfall | Click-through with photos, map, transactions | Missing: drill-down from dashboard, tab interface, photo gallery |
 | **Capital Account** | Per-project with IRR/MOIC from cash flows | Per-investor statement across all projects | Missing: cross-project summary view |
-| **Documents** | Filter by project/category, signatures | Two-tab layout, download tracking | **Broken**: downloads bypass tracking, assignment destroys history |
+| **Documents** | Filter by project/category, signatures, PDF preview, group assignment, acknowledge | Two-tab layout, download tracking | Download tracking fixed, group assignment added, PDF preview added, acknowledge endpoint wired |
 | **Messaging** | Threaded messaging, compose | Threaded with email notifications | **Broken**: no email on new threads, read receipts exposed to investors |
 | **Self-Service** | Profile, entity management, MFA | Profile, banking, contact info | Missing: phone, address, banking |
 | **Onboarding** | Invite + credentials | Self-guided subscription flow | **Broken**: PENDING users get "invalid credentials" error |
@@ -107,7 +108,7 @@ The two monolithic frontend files (Admin.jsx: 4,796 lines, App.jsx: 3,336 lines)
 | M9.5 | **Track downloads**: when investor clicks download, record timestamp in DocumentAssignment | P0 | ● |
 | M9.6 | **Investor document center**: two tabs (General / Signature docs), filter by project + category | P1 | ● |
 | M9.7 | **Documents within investment detail page**: project-specific docs appear inline on project detail | P1 | ● |
-| M9.8 | **Action required workflow**: investor acknowledges "Action Required" docs, admin sees who acknowledged | P1 | ● |
+| M9.8 | **Action required workflow**: investor acknowledges "Action Required" docs, admin sees who acknowledged | P1 | ● (endpoint + UI wired 2026-03-19) |
 | M9.9 | **Bulk upload**: upload multiple files at once with batch assignment | P2 | ● |
 
 ---
@@ -263,3 +264,9 @@ The two monolithic frontend files (Admin.jsx: 4,796 lines, App.jsx: 3,336 lines)
 | — | PostgreSQL sequence fixes for seeding | 2026-03-18 |
 | — | Welcome/reset emails for new users + persistent credential dialog | 2026-03-18 |
 | — | Admin nav consolidation: People tab + Documents tab | 2026-03-18 |
+| — | Frontend extraction complete: App.jsx 3,336→724, Admin.jsx 4,796→226 | 2026-03-18 |
+| — | E-sign fixes: embedded signing URLs, signed document download, demo fallbacks | 2026-03-18 |
+| — | Group document assignment: assign docs to investor groups, resolve members server-side | 2026-03-19 |
+| — | PDF preview: inline preview modal for investors + admin, auth via query token | 2026-03-19 |
+| — | Acknowledge endpoint: POST /documents/:id/acknowledge, investor UI button | 2026-03-19 |
+| — | Signature request display: admin document detail shows signer status | 2026-03-19 |
