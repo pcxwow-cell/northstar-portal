@@ -33,50 +33,6 @@ import InvestorProfile from "./admin/InvestorProfile.jsx";
 import ProjectDetail from "./admin/ProjectDetail.jsx";
 
 
-// ─── SORTABLE HEADER ───
-function SortableHeader({ columns, sortBy, sortDir, onSort }) {
-  return columns.map(col => (
-    <span key={col.key} onClick={() => onSort(col.key)} style={{
-      fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: colors.mutedText,
-      cursor: "pointer", userSelect: "none", display: "flex", alignItems: "center", gap: 4,
-    }}>
-      {col.label}
-      {sortBy === col.key && <span style={{ fontSize: 8 }}>{sortDir === "asc" ? "▲" : "▼"}</span>}
-    </span>
-  ));
-}
-
-// ─── SEARCH BOX ───
-function SearchBox({ value, onChange, placeholder = "Search..." }) {
-  return (
-    <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-      style={{ padding: "8px 14px", border: "1px solid #DDD", borderRadius: 8, fontSize: 13, fontFamily: "'DM Sans', fonts.sans-serif", width: 260, boxSizing: "border-box" }} />
-  );
-}
-
-// ─── SORTABLE HOOK ───
-function useSortable(defaultSort = "", defaultDir = "asc") {
-  const [sortBy, setSortBy] = useState(defaultSort);
-  const [sortDir, setSortDir] = useState(defaultDir);
-  function onSort(key) {
-    if (sortBy === key) setSortDir(d => d === "asc" ? "desc" : "asc");
-    else { setSortBy(key); setSortDir("asc"); }
-  }
-  function sortData(data) {
-    if (!sortBy) return data;
-    return [...data].sort((a, b) => {
-      let va = a[sortBy], vb = b[sortBy];
-      if (va == null) return 1; if (vb == null) return -1;
-      if (typeof va === "string") va = va.toLowerCase();
-      if (typeof vb === "string") vb = vb.toLowerCase();
-      if (va < vb) return sortDir === "asc" ? -1 : 1;
-      if (va > vb) return sortDir === "asc" ? 1 : -1;
-      return 0;
-    });
-  }
-  return { sortBy, sortDir, onSort, sortData };
-}
-
 // ─── PEOPLE SECTION (consolidated: Investors + Groups + Staff) ───
 function PeopleSection({ profileId, setProfileId, peopleTab, setPeopleTab, toast }) {
   const subTabs = [

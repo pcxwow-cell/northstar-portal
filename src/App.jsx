@@ -1,21 +1,13 @@
-import { useState, useCallback, useEffect, useRef, useMemo, lazy, Suspense } from "react";
-import { ToastProvider, useToast } from "./context/ToastContext.jsx";
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-import { login as apiLogin, logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, downloadDocument, fetchThreads, fetchThread, createThread, replyToThread, updateProfile, fetchSignatureRequests, signDocument, fetchNotificationPreferences, updateNotificationPreferences, fetchCapitalAccount, fetchCashFlows, calculateWaterfallApi, fetchEntities, createEntity, updateEntity, deleteEntity, runFinancialModel, changePassword, forgotPassword, resetPassword, fetchLoginHistory, setupMFA, verifyMFASetup, verifyMFA, disableMFA, getMFAStatus, regenerateBackupCodes, setToken, fmt, fmtCurrency, fetchMyFlags, fetchNotifications } from "./api.js";
-import { colors, fonts, inputStyle, btnStyle, btnOutline, shadows, radius, labelStyle } from "./styles/theme.js";
+import { useState, useEffect, lazy, Suspense } from "react";
+import { useToast } from "./context/ToastContext.jsx";
+import { logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, fetchMyFlags, fetchNotifications } from "./api.js";
+import { colors, fonts } from "./styles/theme.js";
 import Button from "./components/Button.jsx";
 import Card from "./components/Card.jsx";
-import FormInput from "./components/FormInput.jsx";
-import Modal from "./components/Modal.jsx";
-import StatCard from "./components/StatCard.jsx";
-import StatusBadge from "./components/StatusBadge.jsx";
 import Spinner from "./components/Spinner.jsx";
-import EmptyState from "./components/EmptyState.jsx";
-import ConfirmDialog from "./components/ConfirmDialog.jsx";
-import Tabs from "./components/Tabs.jsx";
-import DataTable from "./components/DataTable.jsx";
-import SearchFilterBar from "./components/SearchFilterBar.jsx";
-import SectionHeaderShared from "./components/SectionHeader.jsx";
+import { NorthstarIcon, NorthstarWordmark } from "./components/NorthstarIcon.jsx";
+import SessionWarningModal from "./components/SessionWarningModal.jsx";
+import useSessionTimeout from "./hooks/useSessionTimeout.js";
 import ResetPasswordPage from "./pages/ResetPassword.jsx";
 import ActivityPage from "./pages/Activity.jsx";
 import DistributionsPage from "./pages/Distributions.jsx";
@@ -33,106 +25,8 @@ import { ThemeContext, useTheme, themes } from "./context/ThemeContext.jsx";
 const AdminPanel = lazy(() => import("./Admin.jsx"));
 const ProspectPortal = lazy(() => import("./ProspectPortal.jsx"));
 
-// ─── THEME ───────────────────────────────────────────────
-const serif = fonts.serif;
 const sans = fonts.sans;
 const red = colors.red;
-const green = colors.green;
-
-import { NorthstarIcon, NorthstarWordmark } from "./components/NorthstarIcon.jsx";
-
-
-const bg = "#060606", surface = "#0C0C0C", line = "#1A1A1A", t1 = "#E8E4DE", t2 = "#8C887F", t3 = "#4A4843";
-
-
-// ─── SHARED COMPONENTS ───────────────────────────────────
-function ChartTooltip({ active, payload, label, prefix = "$", suffix = "K" }) {
-  const { bg, surface, line, t1, t2, t3 } = useTheme();
-  if (!active || !payload?.length) return null;
-  return (
-    <div style={{ background: surface, border: `1px solid ${line}`, borderRadius: 8, padding: "8px 12px", fontSize: 12, fontFamily: sans, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
-      <div style={{ color: t3, marginBottom: 4 }}>{label}</div>
-      {payload.map((p, i) => (
-        <div key={i} style={{ color: p.color || t1 }}>{p.name}: {prefix}{fmt(p.value)}{suffix}</div>
-      ))}
-    </div>
-  );
-}
-
-
-function SectionHeader({ title, right }) {
-  const { bg, surface, line, t1, t2, t3 } = useTheme();
-  return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 20 }}>
-      <h2 style={{ fontFamily: serif, fontSize: 22, fontWeight: 400, color: t1 }}>{title}</h2>
-      {right && <span style={{ fontSize: 12, color: t3 }}>{right}</span>}
-    </div>
-  );
-}
-
-// ─── LOADING SPINNER ─────────────────────────────────────
-// Using shared Spinner component from ./components/Spinner.jsx
-
-// ─── ERROR BANNER ────────────────────────────────────────
-function ErrorBanner({ message, onRetry }) {
-  const th = useTheme();
-  return (
-    <div role="alert" style={{
-      padding: "14px 20px", borderRadius: 4,
-      background: `${red}10`, border: `1px solid ${red}30`,
-      display: "flex", alignItems: "center", justifyContent: "space-between",
-      fontFamily: sans, fontSize: 13, color: red,
-    }}>
-      <span>{message || "Something went wrong."}</span>
-      {onRetry && (
-        <span onClick={onRetry} style={{ fontSize: 12, padding: "5px 14px", borderRadius: 3, border: `1px solid ${red}44`, cursor: "pointer", marginLeft: 16, flexShrink: 0 }}>Retry</span>
-      )}
-    </div>
-  );
-}
-
-// ─── EMPTY STATE ─────────────────────────────────────────
-// Using shared EmptyState component from ./components/EmptyState.jsx
-
-// ─── LOADING PAGE (full-page loader for data fetch) ─────
-function LoadingPage() {
-  const th = useTheme();
-  return (
-    <div aria-busy="true" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 20px", gap: 16 }}>
-      <Spinner size={32} />
-      <span style={{ fontSize: 13, color: th.t3 }}>Loading...</span>
-    </div>
-  );
-}
-
-// ─── CSV EXPORT UTILITY ─────────────────────────────────
-function exportCSV(headers, rows, filename) {
-  const escape = (v) => {
-    const s = String(v == null ? "" : v);
-    return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s.replace(/"/g, '""')}"` : s;
-  };
-  const csv = [headers.map(escape).join(","), ...rows.map(r => r.map(escape).join(","))].join("\n");
-  const blob = new Blob([csv], { type: "text/csv" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = filename; a.click();
-  URL.revokeObjectURL(url);
-}
-
-// ─── FORMAT TYPE UTILITY ─────────────────────────────────
-const formatType = (t) => t ? t.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) : "";
-
-function ProgressBar({ value, color }) {
-  const { bg, surface, line, t1, t2, t3 } = useTheme();
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <div style={{ flex: 1, height: 6, background: `${line}88`, borderRadius: 20, overflow: "hidden" }}>
-        <div style={{ width: `${value}%`, height: "100%", background: color === green ? green : "linear-gradient(90deg, #EA2028, #ff4a4a)", borderRadius: 20, transition: "width .8s ease" }} />
-      </div>
-      <span style={{ fontSize: 11, color: t3, minWidth: 28, textAlign: "right" }}>{value}%</span>
-    </div>
-  );
-}
 
 
 // ─── SKELETON LOADING ───────────────────────────────────
@@ -189,109 +83,6 @@ function OverviewSkeleton() {
   );
 }
 
-function DocumentsSkeleton() {
-  const th = useTheme();
-  return (
-    <div aria-busy="true">
-      <div style={{ marginBottom: 40 }}>
-        <SkeletonBlock width={180} height={36} style={{ marginBottom: 8 }} />
-        <SkeletonBlock width={240} height={14} />
-      </div>
-      <Card padding="0" style={{ overflow: "hidden", background: th.surface }}>
-        {[0,1,2,3,4].map(i => (
-          <div key={i} style={{ padding: "16px 20px", borderBottom: i < 4 ? `1px solid ${th.line}` : "none", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ flex: 1 }}>
-              <SkeletonBlock width={200} height={14} style={{ marginBottom: 6 }} />
-              <SkeletonBlock width={280} height={11} />
-            </div>
-            <SkeletonBlock width={70} height={24} />
-          </div>
-        ))}
-      </Card>
-    </div>
-  );
-}
-
-function MessagesSkeleton() {
-  const th = useTheme();
-  return (
-    <div aria-busy="true">
-      <div style={{ marginBottom: 40 }}>
-        <SkeletonBlock width={180} height={36} style={{ marginBottom: 8 }} />
-        <SkeletonBlock width={200} height={14} />
-      </div>
-      <Card padding="0" style={{ overflow: "hidden", background: th.surface }}>
-        {[0,1,2,3].map(i => (
-          <div key={i} style={{ display: "flex", gap: 14, padding: "18px 20px", borderBottom: i < 3 ? `1px solid ${th.line}` : "none" }}>
-            <SkeletonBlock width={7} height={7} style={{ borderRadius: "50%", marginTop: 7, flexShrink: 0 }} />
-            <div style={{ flex: 1 }}>
-              <SkeletonBlock width={220} height={14} style={{ marginBottom: 8 }} />
-              <SkeletonBlock width={160} height={12} style={{ marginBottom: 6 }} />
-              <SkeletonBlock width="80%" height={12} />
-            </div>
-          </div>
-        ))}
-      </Card>
-    </div>
-  );
-}
-
-
-// ─── SESSION TIMEOUT HOOK ────────────────────────────────
-const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
-const SESSION_WARNING = 25 * 60 * 1000; // 25 minutes — warn at 5 min remaining
-
-function useSessionTimeout(authed, onTimeout) {
-  const [showWarning, setShowWarning] = useState(false);
-  const lastActivity = useRef(Date.now());
-  const warningTimer = useRef(null);
-  const logoutTimer = useRef(null);
-
-  const resetTimers = useCallback(() => {
-    lastActivity.current = Date.now();
-    setShowWarning(false);
-    clearTimeout(warningTimer.current);
-    clearTimeout(logoutTimer.current);
-    if (authed) {
-      warningTimer.current = setTimeout(() => setShowWarning(true), SESSION_WARNING);
-      logoutTimer.current = setTimeout(() => onTimeout(), SESSION_TIMEOUT);
-    }
-  }, [authed, onTimeout]);
-
-  useEffect(() => {
-    if (!authed) { setShowWarning(false); return; }
-    const events = ["mousedown", "keydown", "scroll", "touchstart"];
-    const handler = () => resetTimers();
-    events.forEach(e => window.addEventListener(e, handler, { passive: true }));
-    resetTimers();
-    return () => {
-      events.forEach(e => window.removeEventListener(e, handler));
-      clearTimeout(warningTimer.current);
-      clearTimeout(logoutTimer.current);
-    };
-  }, [authed, resetTimers]);
-
-  return { showWarning, dismissWarning: () => setShowWarning(false) };
-}
-
-// ─── SESSION WARNING MODAL ──────────────────────────────
-function SessionWarningModal({ onDismiss, onLogout }) {
-  const th = useTheme();
-  return (
-    <Modal open={true} onClose={onDismiss} title="Session Expiring" maxWidth={400}>
-      <div style={{ textAlign: "center" }}>
-        <div style={{ fontSize: 32, marginBottom: 16 }}>&#x23F0;</div>
-        <p style={{ fontSize: 13, color: th.t2, lineHeight: 1.6, marginBottom: 24 }}>
-          Your session will expire in 5 minutes due to inactivity. Click below to stay signed in.
-        </p>
-        <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
-          <span onClick={onLogout} style={{ fontSize: 13, padding: "10px 20px", borderRadius: 4, border: `1px solid ${th.line}`, color: th.t3, cursor: "pointer" }}>Sign Out</span>
-          <span onClick={onDismiss} style={{ fontSize: 13, padding: "10px 24px", borderRadius: 4, background: red, color: colors.white, cursor: "pointer", fontWeight: 500 }}>Stay Signed In</span>
-        </div>
-      </div>
-    </Modal>
-  );
-}
 
 // ─── APP ─────────────────────────────────────────────────
 export default function App() {
