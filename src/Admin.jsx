@@ -14,6 +14,7 @@ import Modal from "./components/Modal.jsx";
 import StatCard from "./components/StatCard.jsx";
 import StatusBadge from "./components/StatusBadge.jsx";
 import SectionHeader from "./components/SectionHeader.jsx";
+import Tabs from "./components/Tabs.jsx";
 
 
 // ─── SORTABLE HEADER ───
@@ -71,17 +72,7 @@ function PeopleSection({ profileId, setProfileId, peopleTab, setPeopleTab, toast
   return (
     <>
       <SectionHeader title="People" size="lg" style={{ marginBottom: 8 }} />
-      <div style={{ display: "flex", gap: 4, marginBottom: 24, background: colors.lightBorder, borderRadius: 8, padding: 3, width: "fit-content" }}>
-        {subTabs.map(t => (
-          <span key={t.id} onClick={() => { setPeopleTab(t.id); setProfileId(null); }} style={{
-            fontSize: 13, padding: "8px 20px", cursor: "pointer",
-            color: peopleTab === t.id ? "#1A1816" : "#888", fontWeight: peopleTab === t.id ? 500 : 400,
-            background: peopleTab === t.id ? colors.white : "transparent",
-            borderRadius: 6, boxShadow: peopleTab === t.id ? "0 1px 3px rgba(0,0,0,.08)" : "none",
-            transition: "all .15s",
-          }}>{t.label}</span>
-        ))}
-      </div>
+      <Tabs tabs={subTabs} active={peopleTab} onChange={(id) => { setPeopleTab(id); setProfileId(null); }} style={{ marginBottom: 24 }} />
       {peopleTab === "investors" && (
         profileId
           ? <InvestorProfile investorId={profileId} onBack={() => setProfileId(null)} toast={toast} />
@@ -103,17 +94,7 @@ function DocumentsSection({ docsTab, setDocsTab, toast }) {
   return (
     <>
       <SectionHeader title="Documents" size="lg" style={{ marginBottom: 8 }} />
-      <div style={{ display: "flex", gap: 4, marginBottom: 24, background: colors.lightBorder, borderRadius: 8, padding: 3, width: "fit-content" }}>
-        {subTabs.map(t => (
-          <span key={t.id} onClick={() => setDocsTab(t.id)} style={{
-            fontSize: 13, padding: "8px 20px", cursor: "pointer",
-            color: docsTab === t.id ? "#1A1816" : "#888", fontWeight: docsTab === t.id ? 500 : 400,
-            background: docsTab === t.id ? colors.white : "transparent",
-            borderRadius: 6, boxShadow: docsTab === t.id ? "0 1px 3px rgba(0,0,0,.08)" : "none",
-            transition: "all .15s",
-          }}>{t.label}</span>
-        ))}
-      </div>
+      <Tabs tabs={subTabs} active={docsTab} onChange={setDocsTab} style={{ marginBottom: 24 }} />
       {docsTab === "documents" && <DocumentManager toast={toast} hideHeader />}
       {docsTab === "signatures" && <SignatureManager toast={toast} hideHeader />}
     </>
@@ -1039,18 +1020,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: "flex", gap: 4, marginBottom: 20, background: "#F5F3EF", borderRadius: 8, padding: 2, width: "fit-content" }}>
-        {tabs.map(t => (
-          <span key={t} onClick={() => setTab(t)} style={{
-            fontSize: 13, padding: "8px 16px", cursor: "pointer", textTransform: "capitalize",
-            color: tab === t ? colors.darkText : "#888", fontWeight: tab === t ? 500 : 400,
-            background: tab === t ? colors.white : "transparent",
-            borderRadius: 6,
-            boxShadow: tab === t ? "0 1px 3px rgba(0,0,0,.08)" : "none",
-            transition: "all .15s",
-          }}>{t}</span>
-        ))}
-      </div>
+      <Tabs tabs={tabs.map(t => ({ id: t, label: t.charAt(0).toUpperCase() + t.slice(1) }))} active={tab} onChange={setTab} />
 
       {/* Overview tab */}
       {tab === "overview" && (
@@ -3422,16 +3392,7 @@ function StatementManager({ toast }) {
               </div>
 
               {/* Tabs: Preview / Data */}
-              <div style={{ display: "flex", gap: 0, borderBottom: "1px solid #E8E5DE" }}>
-                {[{ key: "preview", label: "HTML Preview" }, { key: "data", label: "Statement Data" }].map(t => (
-                  <button key={t.key} onClick={() => setDetailTab(t.key)} style={{
-                    padding: "10px 20px", fontSize: 12, border: "none", cursor: "pointer", fontFamily: fonts.sans,
-                    background: detailTab === t.key ? "#F8F7F4" : colors.white, color: detailTab === t.key ? colors.red : "#666",
-                    borderBottom: detailTab === t.key ? `2px solid ${colors.red}` : "2px solid transparent",
-                    transition: "all .15s",
-                  }}>{t.label}</button>
-                ))}
-              </div>
+              <Tabs tabs={[{ id: "preview", label: "HTML Preview" }, { id: "data", label: "Statement Data" }]} active={detailTab} onChange={setDetailTab} />
 
               {/* Tab content */}
               {detailTab === "preview" && (
