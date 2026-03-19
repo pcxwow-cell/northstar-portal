@@ -77,19 +77,41 @@ function toFullProject(p) {
   };
 }
 
-// GET /api/v1/projects — list all projects (summary)
+// GET /api/v1/projects — list projects (investors see only their assigned projects)
 router.get("/", async (req, res, next) => {
   try {
+    if (req.user.role === "INVESTOR") {
+      const investorProjects = await prisma.investorProject.findMany({
+        where: { userId: req.user.id },
+        select: { projectId: true },
+      });
+      const projectIds = investorProjects.map(ip => ip.projectId);
+      const projects = await prisma.project.findMany({
+        where: { id: { in: projectIds } },
+        orderBy: { id: "asc" },
+      });
+      return res.json(projects.map(toProject));
+    }
     const projects = await prisma.project.findMany({ orderBy: { id: "asc" } });
     res.json(projects.map(toProject));
   } catch (err) { next(err); }
 });
 
-// GET /api/v1/projects/:id — full project with all nested data
+// GET /api/v1/projects/:id — full project with all nested data (investors can only see assigned projects)
 router.get("/:id", async (req, res, next) => {
   try {
+    const projectId = parseInt(req.params.id);
+
+    // IDOR protection: investors can only view their assigned projects
+    if (req.user.role === "INVESTOR") {
+      const assignment = await prisma.investorProject.findUnique({
+        where: { userId_projectId: { userId: req.user.id, projectId } },
+      });
+      if (!assignment) return res.status(403).json({ error: "Access denied" });
+    }
+
     const project = await prisma.project.findUnique({
-      where: { id: parseInt(req.params.id) },
+      where: { id: projectId },
       include: {
         capTableEntries: true,
         waterfallTiers: true,

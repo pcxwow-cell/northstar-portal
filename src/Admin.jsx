@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchDashboard, fetchAdminProjects, updateProject, postUpdate, fetchAdminInvestors, sendMessage, uploadDocument, bulkUploadK1, inviteInvestor, updateInvestor, approveInvestor, deactivateInvestor, resetInvestorPassword, assignInvestorProject, updateInvestorKPI, fetchThreads, fetchThread, createThread, replyToThread, fetchInvestorProfile, fetchGroups, createGroup, updateGroup, deleteGroup, fetchGroupDetail, addGroupMembers, removeGroupMember, fetchStaff, createStaff, updateStaff, fetchAdminDocuments, fetchAdminDocumentDetail, fetchAdminProjectDetail, updateWaterfall, fetchSignatureRequests, createSignatureRequest, cancelSignatureRequest, fetchProspects, updateProspectStatus, fetchProspectStats, fetchCashFlows, recordCashFlow, recalculateProject, fetchAuditLog, createProject, fetchEntities, createEntity, updateEntity, deleteEntity, runFinancialModel, updateCashFlow, deleteCashFlow, fetchProjectCashFlows, fetchUserFlags, updateUserFlags, fetchFeatureDefaults, fmt, fmtCurrency } from "./api.js";
+import { fetchDashboard, fetchAdminProjects, updateProject, postUpdate, fetchAdminInvestors, uploadDocument, bulkUploadK1, inviteInvestor, updateInvestor, approveInvestor, deactivateInvestor, resetInvestorPassword, assignInvestorProject, updateInvestorKPI, fetchThreads, fetchThread, createThread, replyToThread, fetchInvestorProfile, fetchGroups, createGroup, updateGroup, deleteGroup, fetchGroupDetail, addGroupMembers, removeGroupMember, fetchStaff, createStaff, updateStaff, deactivateStaff, reactivateStaff, resetStaffPassword, fetchAdminDocuments, fetchAdminDocumentDetail, fetchAdminProjectDetail, updateWaterfall, fetchSignatureRequests, createSignatureRequest, cancelSignatureRequest, fetchProspects, updateProspectStatus, fetchProspectStats, fetchCashFlows, recordCashFlow, recalculateProject, fetchAuditLog, createProject, deleteProject, deleteDocument, assignDocument, fetchEntities, createEntity, updateEntity, deleteEntity, runFinancialModel, updateCashFlow, deleteCashFlow, fetchProjectCashFlows, fetchUserFlags, updateUserFlags, fetchFeatureDefaults, fmt, fmtCurrency, fetchEmailSettings, updateEmailSettings, sendTestEmail, fetchEmailLog, fetchEmailStats, unlockInvestor, createCapTableEntry, updateCapTableEntry, deleteCapTableEntry, createWaterfallTier, updateWaterfallTier, deleteWaterfallTier, recordBulkDistribution } from "./api.js";
 
 const sans = "'DM Sans', -apple-system, sans-serif";
 const red = "#EA2028";
@@ -162,6 +162,7 @@ export default function AdminPanel({ user, onLogout }) {
     { id: "statements", label: "Statements" },
     { id: "inbox", label: "Inbox" },
     { id: "audit", label: "Audit Log" },
+    { id: "settings", label: "Settings" },
   ];
 
   // Sub-view navigation
@@ -185,6 +186,7 @@ export default function AdminPanel({ user, onLogout }) {
     statements: <StatementManager toast={showToast} />,
     inbox: <AdminInbox user={user} toast={showToast} />,
     audit: <AuditLogViewer />,
+    settings: <EmailSettingsManager toast={showToast} />,
   };
 
   return (
@@ -331,6 +333,10 @@ function ProjectManager({ toast, onViewProject }) {
       reload();
     } catch (err) { toast(err.message, "error"); }
   }
+  async function handleDeleteProject(id, name) {
+    if (!confirm(`Delete project "${name}"? This will permanently remove all related data (investors, documents, distributions, etc). This cannot be undone.`)) return;
+    try { await deleteProject(id); toast(`Project "${name}" deleted`); reload(); } catch (e) { toast(e.message, "error"); }
+  }
 
   return (
     <>
@@ -447,6 +453,7 @@ function ProjectManager({ toast, onViewProject }) {
                   <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                     <span style={{ fontSize: 10, padding: "3px 10px", borderRadius: 4, background: statusBg, color: statusColor, fontWeight: 500 }}>{p.status}</span>
                     <button onClick={(e) => { e.stopPropagation(); setEditing(editing === p.id ? null : p.id); }} style={{ ...btnOutline, padding: "4px 12px", fontSize: 11 }}>{editing === p.id ? "Close" : "Quick Edit"}</button>
+                    <button onClick={(e) => { e.stopPropagation(); handleDeleteProject(p.id, p.name); }} style={{ ...btnOutline, padding: "4px 12px", fontSize: 11, color: red, borderColor: red }}>Delete</button>
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 24, fontSize: 12, color: "#888", flexWrap: "wrap" }}>
@@ -634,6 +641,7 @@ function InvestorManager({ toast, onViewProfile, hideHeader }) {
                 <button onClick={() => onViewProfile?.(inv.id)} style={{ ...btnStyle, padding: "4px 10px", fontSize: 11 }}>View</button>
                 <button onClick={() => setEditing(editing === inv.id ? null : inv.id)} style={{ ...btnOutline, padding: "4px 10px", fontSize: 11 }}>Edit</button>
                 {inv.status === "PENDING" && <button onClick={() => handleApprove(inv.id)} style={{ ...btnStyle, padding: "4px 10px", fontSize: 11, background: green }}>Approve</button>}
+                {inv.status === "PENDING" && <button onClick={() => { if (confirm(`Reject investor "${inv.name}"? This will deactivate their account.`)) handleDeactivate(inv.id); }} style={{ ...btnOutline, padding: "4px 10px", fontSize: 11, color: red, borderColor: red }}>Reject</button>}
                 {inv.status === "ACTIVE" && <button onClick={() => handleDeactivate(inv.id)} style={{ ...btnOutline, padding: "4px 10px", fontSize: 11, color: red, borderColor: red }}>Deactivate</button>}
               </div>
             </div>
@@ -733,6 +741,29 @@ function ProjectDetail({ projectId, onBack, toast }) {
   const [editCfAmount, setEditCfAmount] = useState("");
   const [editCfType, setEditCfType] = useState("");
   const [editCfDesc, setEditCfDesc] = useState("");
+
+  // Cap table CRUD state (D.1)
+  const [showCapForm, setShowCapForm] = useState(false);
+  const [editingCapId, setEditingCapId] = useState(null);
+  const [capForm, setCapForm] = useState({ holderName: "", holderType: "LP", committed: "", called: "", ownershipPct: "", unfunded: "" });
+
+  // Waterfall tier editing state (D.2)
+  const [showTierForm, setShowTierForm] = useState(false);
+  const [editingTierId, setEditingTierId] = useState(null);
+  const [tierForm, setTierForm] = useState({ tierName: "", lpShare: "", gpShare: "", threshold: "" });
+
+  // Add investor from project detail (D.3)
+  const [showAddInvestor, setShowAddInvestor] = useState(false);
+  const [addInvList, setAddInvList] = useState([]);
+  const [addInvId, setAddInvId] = useState("");
+  const [addInvCommitted, setAddInvCommitted] = useState("");
+
+  // Bulk distribution (D.5)
+  const [showDistribution, setShowDistribution] = useState(false);
+  const [distAmount, setDistAmount] = useState("");
+  const [distQuarter, setDistQuarter] = useState("");
+  const [distDate, setDistDate] = useState("");
+  const [distPreview, setDistPreview] = useState(null);
 
   useEffect(() => { load(); }, [projectId]);
   async function load() { fetchAdminProjectDetail(projectId).then(setProject); }
@@ -991,27 +1022,163 @@ function ProjectDetail({ projectId, onBack, toast }) {
             </div>
           )) : <p style={{ color: "#BBB", fontSize: 13, fontStyle: "italic" }}>No investors assigned</p>}
 
-          {/* Cap table */}
+          {/* Add Investor from Project Detail (D.3) */}
+          <div style={{ marginTop: 16 }}>
+            {!showAddInvestor ? (
+              <button onClick={async () => { const invs = await fetchAdminInvestors(); setAddInvList(Array.isArray(invs) ? invs : invs.investors || []); setShowAddInvestor(true); }} style={{ ...btnOutline, fontSize: 12 }}>Add Investor</button>
+            ) : (
+              <div style={{ background: "#FAFAF8", borderRadius: 8, padding: "16px", border: "1px solid #E8E5DE" }}>
+                <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 12 }}>Add Investor to Project</div>
+                <div style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: "block", fontSize: 11, color: "#888", marginBottom: 4 }}>Investor</label>
+                    <select value={addInvId} onChange={e => setAddInvId(e.target.value)} style={inputStyle}>
+                      <option value="">Select investor...</option>
+                      {addInvList.filter(inv => !project.investors.some(pi => pi.userId === inv.id)).map(inv => <option key={inv.id} value={inv.id}>{inv.name} ({inv.email})</option>)}
+                    </select>
+                  </div>
+                  <div style={{ width: 140 }}>
+                    <label style={{ display: "block", fontSize: 11, color: "#888", marginBottom: 4 }}>Commitment ($)</label>
+                    <input type="number" value={addInvCommitted} onChange={e => setAddInvCommitted(e.target.value)} placeholder="0" style={inputStyle} />
+                  </div>
+                  <button onClick={() => setShowAddInvestor(false)} style={{ ...btnOutline, fontSize: 12 }}>Cancel</button>
+                  <button disabled={!addInvId} onClick={async () => {
+                    try {
+                      await assignInvestorProject(parseInt(addInvId), { projectId, committed: Number(addInvCommitted) || 0 });
+                      toast("Investor added to project");
+                      setShowAddInvestor(false); setAddInvId(""); setAddInvCommitted(""); load();
+                    } catch (e) { toast(e.message, "error"); }
+                  }} style={{ ...btnStyle, fontSize: 12, opacity: addInvId ? 1 : 0.5 }}>Add</button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* D.7: Project Financial Summary */}
+          {project.investors.length > 0 && (() => {
+            const totals = project.investors.reduce((acc, inv) => ({
+              committed: acc.committed + (inv.committed || 0),
+              called: acc.called + (inv.called || 0),
+              distributed: acc.distributed + (inv.distributed || 0),
+              unfunded: acc.unfunded + ((inv.committed || 0) - (inv.called || 0)),
+            }), { committed: 0, called: 0, distributed: 0, unfunded: 0 });
+            return (
+              <div style={{ marginTop: 20, background: "#FAFAF8", borderRadius: 8, padding: "16px 20px", border: "1px solid #E8E5DE" }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "#666", marginBottom: 10, textTransform: "uppercase", letterSpacing: ".06em" }}>Financial Summary</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12 }}>
+                  <div><div style={{ fontSize: 18, fontWeight: 300 }}>${fmt(totals.committed)}</div><div style={{ fontSize: 10, color: "#767168" }}>Total Committed</div></div>
+                  <div><div style={{ fontSize: 18, fontWeight: 300 }}>${fmt(totals.called)}</div><div style={{ fontSize: 10, color: "#767168" }}>Total Called</div></div>
+                  <div><div style={{ fontSize: 18, fontWeight: 300 }}>${fmt(totals.distributed)}</div><div style={{ fontSize: 10, color: "#767168" }}>Total Distributed</div></div>
+                  <div><div style={{ fontSize: 18, fontWeight: 300 }}>${fmt(totals.unfunded)}</div><div style={{ fontSize: 10, color: "#767168" }}>Total Unfunded</div></div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* D.5: Bulk Distribution Recording */}
+          <div style={{ marginTop: 16 }}>
+            {!showDistribution ? (
+              <button onClick={() => setShowDistribution(true)} style={{ ...btnOutline, fontSize: 12 }}>Record Distribution</button>
+            ) : (
+              <div style={{ background: "#FAFAF8", borderRadius: 8, padding: "16px", border: "1px solid #E8E5DE" }}>
+                <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 12 }}>Record Bulk Distribution</div>
+                <div style={{ display: "flex", gap: 12, alignItems: "flex-end", marginBottom: 12 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: "block", fontSize: 11, color: "#888", marginBottom: 4 }}>Total Amount ($)</label>
+                    <input type="number" value={distAmount} onChange={e => {
+                      setDistAmount(e.target.value);
+                      const amt = parseFloat(e.target.value) || 0;
+                      const totalOwnership = project.investors.reduce((s, inv) => s + (inv.ownershipPct || inv.ownership || 0), 0) || project.investors.length;
+                      setDistPreview(project.investors.map(inv => {
+                        const pct = (inv.ownershipPct || inv.ownership || (100 / project.investors.length));
+                        return { name: inv.name, pct, amount: (amt * pct / 100) };
+                      }));
+                    }} placeholder="e.g. 100000" style={inputStyle} />
+                  </div>
+                  <div style={{ width: 100 }}>
+                    <label style={{ display: "block", fontSize: 11, color: "#888", marginBottom: 4 }}>Quarter</label>
+                    <input value={distQuarter} onChange={e => setDistQuarter(e.target.value)} placeholder="Q1 2026" style={inputStyle} />
+                  </div>
+                  <div style={{ width: 140 }}>
+                    <label style={{ display: "block", fontSize: 11, color: "#888", marginBottom: 4 }}>Date</label>
+                    <input type="date" value={distDate} onChange={e => setDistDate(e.target.value)} style={inputStyle} />
+                  </div>
+                </div>
+                {distPreview && distPreview.length > 0 && (
+                  <div style={{ marginBottom: 12, padding: "8px 12px", background: "#fff", borderRadius: 4, border: "1px solid #E8E5DE" }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "#888", marginBottom: 6 }}>Pro-Rata Split Preview</div>
+                    {distPreview.map((d, i) => (
+                      <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "3px 0", borderBottom: i < distPreview.length - 1 ? "1px solid #F5F3F0" : "none" }}>
+                        <span>{d.name} ({d.pct.toFixed(1)}%)</span>
+                        <span style={{ fontWeight: 500 }}>${fmt(Math.round(d.amount))}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+                  <button onClick={() => { setShowDistribution(false); setDistPreview(null); setDistAmount(""); setDistQuarter(""); setDistDate(""); }} style={{ ...btnOutline, fontSize: 12 }}>Cancel</button>
+                  <button disabled={!distAmount} onClick={async () => {
+                    if (!confirm(`Record distribution of $${fmt(parseFloat(distAmount))} across ${project.investors.length} investors?`)) return;
+                    try {
+                      await recordBulkDistribution(projectId, { amount: parseFloat(distAmount), quarter: distQuarter, date: distDate || new Date().toISOString().split("T")[0] });
+                      toast("Distribution recorded");
+                      setShowDistribution(false); setDistPreview(null); setDistAmount(""); setDistQuarter(""); setDistDate(""); load();
+                    } catch (e) { toast(e.message, "error"); }
+                  }} style={{ ...btnStyle, fontSize: 12, opacity: distAmount ? 1 : 0.5 }}>Confirm Distribution</button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Cap table with CRUD (D.1) */}
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#666", marginTop: 24, marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span>Cap Table</span>
+            <button onClick={() => { setShowCapForm(!showCapForm); setEditingCapId(null); setCapForm({ holderName: "", holderType: "LP", committed: "", called: "", ownershipPct: "", unfunded: "" }); }} style={{ ...btnOutline, padding: "4px 10px", fontSize: 11 }}>{showCapForm ? "Cancel" : "Add Entry"}</button>
+          </div>
+          {showCapForm && (
+            <div style={{ background: "#FAFAF8", borderRadius: 6, padding: "12px", marginBottom: 12, border: "1px solid #E8E5DE" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 100px 100px 80px 80px", gap: 8, alignItems: "flex-end" }}>
+                <div><label style={{ fontSize: 10, color: "#AAA" }}>Holder Name</label><input value={capForm.holderName} onChange={e => setCapForm(f => ({ ...f, holderName: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} placeholder="Name" /></div>
+                <div><label style={{ fontSize: 10, color: "#AAA" }}>Type</label><select value={capForm.holderType} onChange={e => setCapForm(f => ({ ...f, holderType: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }}><option>LP</option><option>GP</option><option>Co-GP</option></select></div>
+                <div><label style={{ fontSize: 10, color: "#AAA" }}>Committed</label><input type="number" value={capForm.committed} onChange={e => setCapForm(f => ({ ...f, committed: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} placeholder="0" /></div>
+                <div><label style={{ fontSize: 10, color: "#AAA" }}>Called</label><input type="number" value={capForm.called} onChange={e => setCapForm(f => ({ ...f, called: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} placeholder="0" /></div>
+                <div><label style={{ fontSize: 10, color: "#AAA" }}>Ownership %</label><input type="number" step="0.01" value={capForm.ownershipPct} onChange={e => setCapForm(f => ({ ...f, ownershipPct: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} placeholder="0" /></div>
+                <div><label style={{ fontSize: 10, color: "#AAA" }}>Unfunded</label><input type="number" value={capForm.unfunded} onChange={e => setCapForm(f => ({ ...f, unfunded: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} placeholder="0" /></div>
+              </div>
+              <div style={{ marginTop: 8, display: "flex", justifyContent: "flex-end" }}>
+                <button onClick={async () => {
+                  const data = { holderName: capForm.holderName, holderType: capForm.holderType, committed: parseFloat(capForm.committed) || 0, called: parseFloat(capForm.called) || 0, ownershipPct: parseFloat(capForm.ownershipPct) || 0, unfunded: parseFloat(capForm.unfunded) || 0 };
+                  try {
+                    if (editingCapId) { await updateCapTableEntry(projectId, editingCapId, data); toast("Cap table entry updated"); }
+                    else { await createCapTableEntry(projectId, data); toast("Cap table entry added"); }
+                    setShowCapForm(false); setEditingCapId(null); load();
+                  } catch (e) { toast(e.message, "error"); }
+                }} style={{ ...btnStyle, padding: "6px 12px", fontSize: 11 }}>{editingCapId ? "Save" : "Add"}</button>
+              </div>
+            </div>
+          )}
           {project.capTable.length > 0 && (
-            <>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#666", marginTop: 24, marginBottom: 14 }}>Cap Table</div>
-              <div className="admin-table-scroll">
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 120px 100px 100px 80px 80px", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
-                <span>Holder</span><span>Class</span><span>Committed</span><span>Called</span><span>Unfunded</span><span>Ownership</span>
+            <div className="admin-table-scroll">
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 100px 100px 80px 80px 80px", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
+                <span>Holder</span><span>Class</span><span>Committed</span><span>Called</span><span>Unfunded</span><span>Ownership</span><span>Actions</span>
               </div>
               {project.capTable.map(e => (
-                <div key={e.id} style={{ display: "grid", gridTemplateColumns: "1fr 120px 100px 100px 80px 80px", padding: "10px 0", borderBottom: "1px solid #F5F3F0", fontSize: 13 }}>
+                <div key={e.id} style={{ display: "grid", gridTemplateColumns: "1fr 100px 100px 100px 80px 80px 80px", padding: "10px 0", borderBottom: "1px solid #F5F3F0", fontSize: 13, alignItems: "center" }}>
                   <span style={{ fontWeight: 500 }}>{e.holder}</span>
                   <span style={{ color: "#666" }}>{e.type}</span>
                   <span>${fmt(e.committed)}</span>
                   <span>${fmt(e.called)}</span>
                   <span>${fmt(e.unfunded)}</span>
                   <span>{e.ownership}%</span>
+                  <div style={{ display: "flex", gap: 4 }}>
+                    <button onClick={() => { setEditingCapId(e.id); setCapForm({ holderName: e.holder, holderType: e.type, committed: e.committed || "", called: e.called || "", ownershipPct: e.ownership || "", unfunded: e.unfunded || "" }); setShowCapForm(true); }} style={{ ...btnOutline, padding: "2px 6px", fontSize: 10 }}>Edit</button>
+                    <button onClick={async () => { if (!confirm("Delete this cap table entry?")) return; try { await deleteCapTableEntry(projectId, e.id); toast("Entry deleted"); load(); } catch (err) { toast(err.message, "error"); } }} style={{ ...btnOutline, padding: "2px 6px", fontSize: 10, color: red, borderColor: red }}>&times;</button>
+                  </div>
                 </div>
               ))}
-              </div>
-            </>
+            </div>
           )}
+          {project.capTable.length === 0 && !showCapForm && <p style={{ color: "#BBB", fontSize: 13, fontStyle: "italic" }}>No cap table entries</p>}
         </div>
       )}
 
@@ -1050,23 +1217,45 @@ function ProjectDetail({ projectId, onBack, toast }) {
               <input type="number" defaultValue={project.carry} onBlur={e => handleSaveWaterfall("carry", e.target.value)} style={{ ...inputStyle, width: 100, marginTop: 4 }} />
             </div>
           </div>
-          {project.waterfall.tiers.length > 0 && (
-            <>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#666", marginBottom: 12 }}>Distribution Tiers</div>
-              {project.waterfall.tiers.map((t) => (
-                <div key={t.id} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #F5F3F0", fontSize: 13 }}>
-                  <div>
-                    <span style={{ fontWeight: 500 }}>{t.name}</span>
-                    <span style={{ color: "#767168", marginLeft: 12 }}>LP: {t.lpShare} · GP: {t.gpShare}</span>
-                  </div>
-                  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                    <span style={{ color: "#767168", fontSize: 12 }}>{t.threshold}</span>
-                    <span style={{ padding: "2px 8px", borderRadius: 3, fontSize: 10, background: t.status === "complete" ? "#EFE" : t.status === "accruing" ? "#FFF8E1" : "#F0EDE8", color: t.status === "complete" ? green : t.status === "accruing" ? "#B8860B" : "#999" }}>{t.status}</span>
-                  </div>
-                </div>
-              ))}
-            </>
+          {/* Distribution Tiers with CRUD (D.2) */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "#666" }}>Distribution Tiers</div>
+            <button onClick={() => { setShowTierForm(!showTierForm); setEditingTierId(null); setTierForm({ tierName: "", lpShare: "", gpShare: "", threshold: "" }); }} style={{ ...btnOutline, padding: "4px 10px", fontSize: 11 }}>{showTierForm ? "Cancel" : "Add Tier"}</button>
+          </div>
+          {showTierForm && (
+            <div style={{ background: "#FAFAF8", borderRadius: 6, padding: "12px", marginBottom: 12, border: "1px solid #E8E5DE" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 100px 120px", gap: 8, alignItems: "flex-end" }}>
+                <div><label style={{ fontSize: 10, color: "#AAA" }}>Tier Name</label><input value={tierForm.tierName} onChange={e => setTierForm(f => ({ ...f, tierName: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} placeholder="e.g. Preferred Return" /></div>
+                <div><label style={{ fontSize: 10, color: "#AAA" }}>LP Share</label><input value={tierForm.lpShare} onChange={e => setTierForm(f => ({ ...f, lpShare: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} placeholder="e.g. 100%" /></div>
+                <div><label style={{ fontSize: 10, color: "#AAA" }}>GP Share</label><input value={tierForm.gpShare} onChange={e => setTierForm(f => ({ ...f, gpShare: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} placeholder="e.g. 0%" /></div>
+                <div><label style={{ fontSize: 10, color: "#AAA" }}>Threshold</label><input value={tierForm.threshold} onChange={e => setTierForm(f => ({ ...f, threshold: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} placeholder="e.g. 8% IRR" /></div>
+              </div>
+              <div style={{ marginTop: 8, display: "flex", justifyContent: "flex-end" }}>
+                <button onClick={async () => {
+                  const data = { tierName: tierForm.tierName, lpShare: tierForm.lpShare, gpShare: tierForm.gpShare, threshold: tierForm.threshold };
+                  try {
+                    if (editingTierId) { await updateWaterfallTier(projectId, editingTierId, data); toast("Tier updated"); }
+                    else { await createWaterfallTier(projectId, data); toast("Tier added"); }
+                    setShowTierForm(false); setEditingTierId(null); load();
+                  } catch (e) { toast(e.message, "error"); }
+                }} style={{ ...btnStyle, padding: "6px 12px", fontSize: 11 }}>{editingTierId ? "Save" : "Add"}</button>
+              </div>
+            </div>
           )}
+          {project.waterfall.tiers.length > 0 ? project.waterfall.tiers.map((t) => (
+            <div key={t.id} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #F5F3F0", fontSize: 13, alignItems: "center" }}>
+              <div>
+                <span style={{ fontWeight: 500 }}>{t.name}</span>
+                <span style={{ color: "#767168", marginLeft: 12 }}>LP: {t.lpShare} · GP: {t.gpShare}</span>
+              </div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <span style={{ color: "#767168", fontSize: 12 }}>{t.threshold}</span>
+                <span style={{ padding: "2px 8px", borderRadius: 3, fontSize: 10, background: t.status === "complete" ? "#EFE" : t.status === "accruing" ? "#FFF8E1" : "#F0EDE8", color: t.status === "complete" ? green : t.status === "accruing" ? "#B8860B" : "#999" }}>{t.status}</span>
+                <button onClick={() => { setEditingTierId(t.id); setTierForm({ tierName: t.name, lpShare: t.lpShare, gpShare: t.gpShare, threshold: t.threshold }); setShowTierForm(true); }} style={{ ...btnOutline, padding: "2px 6px", fontSize: 10 }}>Edit</button>
+                <button onClick={async () => { if (!confirm(`Delete tier "${t.name}"?`)) return; try { await deleteWaterfallTier(projectId, t.id); toast("Tier deleted"); load(); } catch (e) { toast(e.message, "error"); } }} style={{ ...btnOutline, padding: "2px 6px", fontSize: 10, color: red, borderColor: red }}>&times;</button>
+              </div>
+            </div>
+          )) : (!showTierForm && <p style={{ color: "#BBB", fontSize: 13, fontStyle: "italic" }}>No distribution tiers</p>)}
         </div>
       )}
 
@@ -1202,12 +1391,20 @@ function DocumentManager({ toast, hideHeader }) {
   const [bulkK1Year, setBulkK1Year] = useState(new Date().getFullYear().toString());
   const [bulkK1Results, setBulkK1Results] = useState(null);
   const [bulkUploading, setBulkUploading] = useState(false);
+  const [bulkK1Assigns, setBulkK1Assigns] = useState({});
+  const [bulkK1Investors, setBulkK1Investors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showSignModal, setShowSignModal] = useState(false);
   const [sigInvestors, setSigInvestors] = useState([]);
   const [sigSelectedIds, setSigSelectedIds] = useState([]);
   const [sigSubject, setSigSubject] = useState("");
   const [sigSending, setSigSending] = useState(false);
+
+  // Assign investors state
+  const [showAssignInvestors, setShowAssignInvestors] = useState(false);
+  const [assignInvestors, setAssignInvestorsList] = useState([]);
+  const [assignSelectedIds, setAssignSelectedIds] = useState([]);
+  const [assignSaving, setAssignSaving] = useState(false);
 
   // Upload state
   const [uploadName, setUploadName] = useState("");
@@ -1298,7 +1495,13 @@ function DocumentManager({ toast, hideHeader }) {
               <span style={{ marginLeft: 8, padding: "2px 8px", borderRadius: 3, fontSize: 10, background: docDetail.status === "published" ? "#EFE" : "#FFF8E1", color: docDetail.status === "published" ? green : "#B8860B" }}>{docDetail.status}</span>
             </div>
           </div>
-          <button onClick={openSignModal} style={{ ...btnStyle, fontSize: 12 }}>Request Signature</button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={openSignModal} style={{ ...btnStyle, fontSize: 12 }}>Request Signature</button>
+            <button onClick={async () => {
+              if (!confirm(`Delete "${docDetail.name}"? This cannot be undone.`)) return;
+              try { await deleteDocument(docDetail.id); toast("Document deleted"); setSelectedDoc(null); setDocDetail(null); loadDocs(); } catch (e) { toast(e.message, "error"); }
+            }} style={{ ...btnOutline, fontSize: 12, color: red, borderColor: red }}>Delete</button>
+          </div>
         </div>
 
         {/* Signature Request Modal */}
@@ -1354,6 +1557,80 @@ function DocumentManager({ toast, hideHeader }) {
             </div>
           )) : (
             <div style={{ padding: 20, color: "#767168", textAlign: "center", fontSize: 13 }}>No investor access records</div>
+          )}
+        </div>
+
+        {/* Signer Status Section (B.5 + B.7) */}
+        {docDetail.signatureRequests && docDetail.signatureRequests.length > 0 && (
+          <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", marginTop: 20 }}>
+            <div style={{ padding: "14px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 13, fontWeight: 600, color: "#666" }}>Signature Status</div>
+            {docDetail.signatureRequests.map(req => (
+              <div key={req.id}>
+                <div style={{ padding: "10px 20px", fontSize: 12, color: "#767168", background: "#FAFAF8", borderBottom: "1px solid #F0EDE8" }}>
+                  Request: {req.subject || "Signature Request"} — {req.status || "active"}
+                </div>
+                {(req.signers || []).map(signer => (
+                  <div key={signer.id || signer.userId} style={{ display: "grid", gridTemplateColumns: "1fr 100px 160px 120px", padding: "10px 20px", borderBottom: "1px solid #F0EDE8", fontSize: 13, alignItems: "center" }}>
+                    <span style={{ fontWeight: 500 }}>{signer.name || signer.investorName || "Unknown"}</span>
+                    <span><span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 3, background: signer.status === "signed" ? "#EFE" : signer.status === "declined" ? "#FEE" : "#FFF8E1", color: signer.status === "signed" ? green : signer.status === "declined" ? red : "#B8860B" }}>{signer.status || "pending"}</span></span>
+                    <span style={{ fontSize: 12, color: "#767168" }}>{signer.signedAt ? new Date(signer.signedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }) : "\u2014"}</span>
+                    {(signer.status === "pending" || !signer.status) && (
+                      <button onClick={async () => {
+                        try {
+                          const BASE = import.meta.env.VITE_API_URL || "";
+                          const token = localStorage.getItem("token");
+                          await fetch(`${BASE}/notifications/test`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ type: "signature_required", userId: signer.userId }) });
+                          toast("Reminder sent");
+                        } catch (e) { toast("Failed to send reminder", "error"); }
+                      }} style={{ ...btnOutline, padding: "3px 8px", fontSize: 10 }}>Send Reminder</button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Assign Investors */}
+        <div style={{ marginTop: 20 }}>
+          {!showAssignInvestors ? (
+            <button onClick={async () => {
+              const investors = await fetchAdminInvestors();
+              setAssignInvestorsList(Array.isArray(investors) ? investors : investors.investors || []);
+              setAssignSelectedIds(docDetail.accessList.filter(a => a.directAssignment).map(a => a.userId || a.id));
+              setShowAssignInvestors(true);
+            }} style={btnOutline}>Assign to Investors</button>
+          ) : (
+            <div style={{ background: "#fff", borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+              <h3 style={{ fontSize: 16, fontWeight: 400, marginBottom: 16 }}>Assign Investors</h3>
+              <div style={{ border: "1px solid #DDD", borderRadius: 4, maxHeight: 260, overflow: "auto", marginBottom: 16 }}>
+                {assignInvestors.map(inv => (
+                  <label key={inv.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderBottom: "1px solid #F0EDE8", cursor: "pointer", fontSize: 13 }}>
+                    <input type="checkbox" checked={assignSelectedIds.includes(inv.id)}
+                      onChange={e => setAssignSelectedIds(prev => e.target.checked ? [...prev, inv.id] : prev.filter(id => id !== inv.id))} />
+                    <span style={{ fontWeight: 500 }}>{inv.name}</span>
+                    <span style={{ color: "#767168" }}>{inv.email}</span>
+                  </label>
+                ))}
+                {assignInvestors.length === 0 && <div style={{ padding: 14, color: "#767168", fontSize: 12 }}>No investors found</div>}
+              </div>
+              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+                <button onClick={() => setShowAssignInvestors(false)} style={btnOutline}>Cancel</button>
+                <button disabled={assignSaving} onClick={async () => {
+                  setAssignSaving(true);
+                  try {
+                    await assignDocument(docDetail.id, assignSelectedIds);
+                    toast("Investor assignments updated");
+                    const detail = await fetchAdminDocumentDetail(docDetail.id);
+                    setDocDetail(detail);
+                    setShowAssignInvestors(false);
+                  } catch (e) { toast(e.message, "error"); }
+                  finally { setAssignSaving(false); }
+                }} style={{ ...btnStyle, opacity: assignSaving ? 0.5 : 1 }}>
+                  {assignSaving ? "Saving..." : "Save Assignments"}
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </>
@@ -1448,8 +1725,10 @@ function DocumentManager({ toast, hideHeader }) {
                 fd.append("taxYear", bulkK1Year);
                 const result = await bulkUploadK1(fd);
                 setBulkK1Results(result);
+                setBulkK1Assigns({});
+                if (result.unmatched > 0) { fetchAdminInvestors().then(inv => setBulkK1Investors(Array.isArray(inv) ? inv : inv.investors || [])); }
                 toast(`Uploaded ${result.total} K-1s: ${result.matched} matched, ${result.unmatched} unmatched`);
-                reload();
+                loadDocs();
               } catch (err) { toast(err.message, "error"); }
               setBulkUploading(false);
             }} style={btnStyle}>{bulkUploading ? "Uploading..." : "Upload All"}</button>
@@ -1458,11 +1737,27 @@ function DocumentManager({ toast, hideHeader }) {
             <div style={{ borderTop: "1px solid #F0EDE8", paddingTop: 16 }}>
               <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>Results: {bulkK1Results.matched} matched, {bulkK1Results.unmatched} unmatched</div>
               {bulkK1Results.results.map((r, i) => (
-                <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #F8F7F4", fontSize: 12 }}>
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #F8F7F4", fontSize: 12, gap: 8 }}>
                   <span>{r.filename}</span>
-                  <span style={{ color: r.status === "matched" ? green : red, fontWeight: 500 }}>
-                    {r.status === "matched" ? `Matched → ${r.matched.name}` : "Unmatched — assign manually"}
-                  </span>
+                  {r.status === "matched" ? (
+                    <span style={{ color: green, fontWeight: 500 }}>Matched &rarr; {r.matched.name}</span>
+                  ) : (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <select value={bulkK1Assigns[r.documentId || i] || ""} onChange={e => setBulkK1Assigns(prev => ({ ...prev, [r.documentId || i]: e.target.value }))} style={{ ...inputStyle, width: 180, padding: "4px 8px", fontSize: 11 }}>
+                        <option value="">Select investor...</option>
+                        {bulkK1Investors.map(inv => <option key={inv.id} value={inv.id}>{inv.name}</option>)}
+                      </select>
+                      <button disabled={!bulkK1Assigns[r.documentId || i]} onClick={async () => {
+                        const userId = parseInt(bulkK1Assigns[r.documentId || i]);
+                        if (!r.documentId) { toast("No document ID available", "error"); return; }
+                        try {
+                          await assignDocument(r.documentId, [userId]);
+                          toast("Document assigned");
+                          setBulkK1Results(prev => ({ ...prev, results: prev.results.map((x, j) => j === i ? { ...x, status: "matched", matched: { name: bulkK1Investors.find(inv => inv.id === userId)?.name || "Assigned" } } : x), matched: prev.matched + 1, unmatched: prev.unmatched - 1 }));
+                        } catch (e) { toast(e.message, "error"); }
+                      }} style={{ ...btnStyle, padding: "3px 8px", fontSize: 10, opacity: bulkK1Assigns[r.documentId || i] ? 1 : 0.5 }}>Assign</button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -1528,7 +1823,15 @@ function InvestorProfile({ investorId, onBack, toast }) {
   const [profile, setProfile] = useState(null);
   const [entities, setEntities] = useState([]);
   const [showEntityForm, setShowEntityForm] = useState(false);
+  const [editingEntity, setEditingEntity] = useState(null);
   const [entityForm, setEntityForm] = useState({ name: "", type: "Individual", taxId: "", address: "", state: "", isDefault: false });
+  const [showAssignProject, setShowAssignProject] = useState(false);
+  const [assignProjList, setAssignProjList] = useState([]);
+  const [assignProjId, setAssignProjId] = useState("");
+  const [assignProjCommitted, setAssignProjCommitted] = useState("");
+  const [assignProjCalled, setAssignProjCalled] = useState("");
+  const [assignProjCurrentValue, setAssignProjCurrentValue] = useState("");
+  const [assignProjSaving, setAssignProjSaving] = useState(false);
 
   useEffect(() => { fetchInvestorProfile(investorId).then(setProfile); loadEntities(); }, [investorId]);
   function loadEntities() { fetchEntities(investorId).then(setEntities).catch(() => setEntities([])); }
@@ -1536,8 +1839,14 @@ function InvestorProfile({ investorId, onBack, toast }) {
   async function handleCreateEntity(e) {
     e.preventDefault();
     try {
-      await createEntity(investorId, entityForm);
-      toast("Entity created");
+      if (editingEntity) {
+        await updateEntity(editingEntity.id, entityForm);
+        toast("Entity updated");
+        setEditingEntity(null);
+      } else {
+        await createEntity(investorId, entityForm);
+        toast("Entity created");
+      }
       setShowEntityForm(false);
       setEntityForm({ name: "", type: "Individual", taxId: "", address: "", state: "", isDefault: false });
       loadEntities();
@@ -1566,7 +1875,14 @@ function InvestorProfile({ investorId, onBack, toast }) {
             <div style={{ fontSize: 13, color: "#767168" }}>{profile.email} · {profile.role === "INVESTOR" ? "Limited Partner" : profile.role} · Joined {profile.joined}</div>
           </div>
         </div>
-        <span style={{ padding: "4px 12px", borderRadius: 4, fontSize: 12, fontWeight: 500, background: profile.status === "ACTIVE" ? "#EFE" : profile.status === "PENDING" ? "#FFF8E1" : "#FEE", color: profile.status === "ACTIVE" ? green : profile.status === "PENDING" ? "#B8860B" : red }}>{profile.status}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ padding: "4px 12px", borderRadius: 4, fontSize: 12, fontWeight: 500, background: profile.status === "ACTIVE" ? "#EFE" : profile.status === "PENDING" ? "#FFF8E1" : "#FEE", color: profile.status === "ACTIVE" ? green : profile.status === "PENDING" ? "#B8860B" : red }}>{profile.status}</span>
+          {(profile.status === "LOCKED" || profile.locked) && (
+            <button onClick={async () => {
+              try { await unlockInvestor(investorId); toast("Account unlocked"); const updated = await fetchInvestorProfile(investorId); setProfile(updated); } catch (e) { toast(e.message, "error"); }
+            }} style={{ ...btnStyle, padding: "4px 12px", fontSize: 11, background: "#D97706" }}>Unlock Account</button>
+          )}
+        </div>
       </div>
 
       {/* Groups */}
@@ -1603,32 +1919,40 @@ function InvestorProfile({ investorId, onBack, toast }) {
                 <input value={entityForm.taxId} onChange={e => setEntityForm(f => ({ ...f, taxId: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} placeholder="EIN/SSN" />
               </div>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 8, alignItems: "flex-end" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 8, alignItems: "flex-end" }}>
               <div>
-                <label style={{ fontSize: 10, color: "#767168" }}>State</label>
+                <label style={{ fontSize: 10, color: "#767168" }}>Address</label>
+                <input value={entityForm.address} onChange={e => setEntityForm(f => ({ ...f, address: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} placeholder="123 Main St" />
+              </div>
+              <div>
+                <label style={{ fontSize: 10, color: "#767168" }}>State/Province</label>
                 <input value={entityForm.state} onChange={e => setEntityForm(f => ({ ...f, state: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} placeholder="e.g. BC" />
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 6, paddingBottom: 4 }}>
                 <input type="checkbox" checked={entityForm.isDefault} onChange={e => setEntityForm(f => ({ ...f, isDefault: e.target.checked }))} />
                 <label style={{ fontSize: 11, color: "#666" }}>Default entity</label>
               </div>
-              <button type="submit" style={{ ...btnStyle, padding: "6px 12px", fontSize: 11 }}>Create</button>
+              <button type="submit" style={{ ...btnStyle, padding: "6px 12px", fontSize: 11 }}>{editingEntity ? "Save" : "Create"}</button>
             </div>
           </form>
         )}
         <div className="admin-table-scroll">
         {entities.length > 0 ? (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 120px 60px 70px 40px", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
-            <span>Entity Name</span><span>Type</span><span>Tax ID</span><span>State</span><span>Default</span><span></span>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 110px 60px 70px 40px 40px", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
+            <span>Entity Name</span><span>Type</span><span>Tax ID</span><span>State</span><span>Default</span><span></span><span></span>
           </div>
         ) : null}
         {entities.map(e => (
-          <div key={e.id} style={{ display: "grid", gridTemplateColumns: "1fr 100px 120px 60px 70px 40px", padding: "10px 0", borderBottom: "1px solid #F5F3F0", fontSize: 13, alignItems: "center" }}>
-            <span style={{ fontWeight: 500 }}>{e.name}</span>
+          <div key={e.id} style={{ display: "grid", gridTemplateColumns: "1fr 80px 110px 60px 70px 40px 40px", padding: "10px 0", borderBottom: "1px solid #F5F3F0", fontSize: 13, alignItems: "center" }}>
+            <div>
+              <span style={{ fontWeight: 500 }}>{e.name}</span>
+              {e.address && <div style={{ fontSize: 11, color: "#999" }}>{e.address}</div>}
+            </div>
             <span style={{ color: "#666" }}>{e.type}</span>
             <span style={{ color: "#767168", fontSize: 11 }}>{e.taxId || "\u2014"}</span>
             <span style={{ color: "#767168" }}>{e.state || "\u2014"}</span>
             <span>{e.isDefault ? <span style={{ fontSize: 10, padding: "2px 6px", background: "#EFE", color: green, borderRadius: 3 }}>Default</span> : ""}</span>
+            <span onClick={() => { setEditingEntity(e); setEntityForm({ name: e.name, type: e.type, taxId: e.taxId || "", address: e.address || "", state: e.state || "", isDefault: e.isDefault }); setShowEntityForm(true); }} style={{ fontSize: 11, color: red, cursor: "pointer" }}>Edit</span>
             <span onClick={() => handleDeleteEntity(e.id)} style={{ fontSize: 14, color: "#CCC", cursor: "pointer" }}>&times;</span>
           </div>
         ))}
@@ -1653,6 +1977,64 @@ function InvestorProfile({ investorId, onBack, toast }) {
             </div>
           </div>
         )) : <span style={{ fontSize: 12, color: "#BBB", fontStyle: "italic" }}>No project assignments</span>}
+
+        {/* Assign to Project */}
+        <div style={{ marginTop: 16 }}>
+          {!showAssignProject ? (
+            <button onClick={async () => {
+              const projects = await fetchAdminProjects();
+              setAssignProjList(Array.isArray(projects) ? projects : []);
+              setShowAssignProject(true);
+            }} style={{ ...btnOutline, fontSize: 12 }}>Assign to Project</button>
+          ) : (
+            <div style={{ background: "#FAFAF8", borderRadius: 8, padding: "16px", border: "1px solid #E8E5DE", marginTop: 8 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 12 }}>Assign to Project</div>
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Project</label>
+                <select value={assignProjId} onChange={e => setAssignProjId(e.target.value)} style={inputStyle}>
+                  <option value="">Select project...</option>
+                  {assignProjList.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+              <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Committed ($)</label>
+                  <input type="number" value={assignProjCommitted} onChange={e => setAssignProjCommitted(e.target.value)} placeholder="0" style={inputStyle} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Called ($)</label>
+                  <input type="number" value={assignProjCalled} onChange={e => setAssignProjCalled(e.target.value)} placeholder="0" style={inputStyle} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Current Value ($)</label>
+                  <input type="number" value={assignProjCurrentValue} onChange={e => setAssignProjCurrentValue(e.target.value)} placeholder="0" style={inputStyle} />
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+                <button onClick={() => setShowAssignProject(false)} style={{ ...btnOutline, fontSize: 12 }}>Cancel</button>
+                <button disabled={assignProjSaving || !assignProjId} onClick={async () => {
+                  setAssignProjSaving(true);
+                  try {
+                    await assignInvestorProject(investorId, {
+                      projectId: assignProjId,
+                      committed: Number(assignProjCommitted) || 0,
+                      called: Number(assignProjCalled) || 0,
+                      currentValue: Number(assignProjCurrentValue) || 0,
+                    });
+                    toast("Investor assigned to project");
+                    const updated = await fetchInvestorProfile(investorId);
+                    setProfile(updated);
+                    setShowAssignProject(false);
+                    setAssignProjId(""); setAssignProjCommitted(""); setAssignProjCalled(""); setAssignProjCurrentValue("");
+                  } catch (e) { toast(e.message, "error"); }
+                  finally { setAssignProjSaving(false); }
+                }} style={{ ...btnStyle, fontSize: 12, opacity: assignProjSaving ? 0.5 : 1 }}>
+                  {assignProjSaving ? "Saving..." : "Assign"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Cash Flows */}
@@ -2405,21 +2787,40 @@ function StaffManager({ toast, hideHeader }) {
   const [selectedStaff, setSelectedStaff] = useState(null);
   const [staffFlags, setStaffFlags] = useState(null);
   const [loadingFlags, setLoadingFlags] = useState(false);
+  const [credentialDialog, setCredentialDialog] = useState(null);
 
   useEffect(() => { loadStaff(); }, []);
-  function loadStaff() { fetchStaff().then(setStaff); }
+  function loadStaff() { fetchStaff().then(setStaff).catch(() => toast("Failed to load staff", "error")); }
 
   async function handleAdd(e) {
     e.preventDefault();
     try {
       const result = await createStaff({ name, email, role });
-      toast(`${result.name} added. Temp password: ${result.tempPassword}`);
-      setShowAdd(false); setName(""); setEmail(""); loadStaff();
+      setCredentialDialog({ name: result.name, email, tempPassword: result.tempPassword, action: "created" });
+      setShowAdd(false); setName(""); setEmail(""); setRole("ADMIN"); loadStaff();
     } catch (err) { toast(err.message, "error"); }
   }
 
   async function handleUpdate(id, data) {
+    if (data.role && !confirm(`Change this user's role to ${data.role}?`)) return;
     try { await updateStaff(id, data); toast("Updated"); loadStaff(); } catch (e) { toast(e.message, "error"); }
+  }
+
+  async function handleDeactivate(s) {
+    if (!confirm(`Deactivate ${s.name}? They will no longer be able to log in.`)) return;
+    try { await deactivateStaff(s.id); toast(`${s.name} deactivated`); loadStaff(); if (selectedStaff?.id === s.id) setSelectedStaff(null); } catch (e) { toast(e.message, "error"); }
+  }
+
+  async function handleReactivate(s) {
+    try { await reactivateStaff(s.id); toast(`${s.name} reactivated`); loadStaff(); } catch (e) { toast(e.message, "error"); }
+  }
+
+  async function handleResetPassword(s) {
+    if (!confirm(`Reset password for ${s.name}? A new temporary password will be emailed to them.`)) return;
+    try {
+      const result = await resetStaffPassword(s.id);
+      setCredentialDialog({ name: s.name, email: s.email, tempPassword: result.tempPassword, action: "reset" });
+    } catch (e) { toast(e.message, "error"); }
   }
 
   async function openPermissions(s) {
@@ -2498,11 +2899,17 @@ function StaffManager({ toast, hideHeader }) {
                   <div style={{ fontWeight: 500, fontSize: 14 }}>{s.name}</div>
                   <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>{s.email}</div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <select value={s.role} onChange={e => { e.stopPropagation(); handleUpdate(s.id, { role: e.target.value }); }} onClick={e => e.stopPropagation()} style={{ ...inputStyle, padding: "4px 8px", fontSize: 11, width: "auto" }}>
                     <option value="ADMIN">Admin</option>
                     <option value="GP">GP</option>
                   </select>
+                  <button onClick={e => { e.stopPropagation(); handleResetPassword(s); }} title="Reset password" style={{ ...btnOutline, padding: "3px 8px", fontSize: 10 }}>Reset PW</button>
+                  {s.status === "ACTIVE" ? (
+                    <button onClick={e => { e.stopPropagation(); handleDeactivate(s); }} title="Deactivate" style={{ ...btnOutline, padding: "3px 8px", fontSize: 10, color: red, borderColor: red }}>Deactivate</button>
+                  ) : (
+                    <button onClick={e => { e.stopPropagation(); handleReactivate(s); }} title="Reactivate" style={{ ...btnOutline, padding: "3px 8px", fontSize: 10, color: green, borderColor: green }}>Reactivate</button>
+                  )}
                   <span style={{ padding: "2px 8px", borderRadius: 3, fontSize: 10, background: s.status === "ACTIVE" ? "#EFE" : "#FEE", color: s.status === "ACTIVE" ? green : red }}>{s.status}</span>
                 </div>
               </div>
@@ -2557,6 +2964,30 @@ function StaffManager({ toast, hideHeader }) {
           </div>
         )}
       </div>
+
+      {/* Credential dialog */}
+      {credentialDialog && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={() => setCredentialDialog(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 12, padding: "28px 32px", maxWidth: 440, width: "90%", boxShadow: "0 8px 32px rgba(0,0,0,.15)" }}>
+            <h3 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 500 }}>
+              {credentialDialog.action === "created" ? "Staff Member Created" : "Password Reset"}
+            </h3>
+            <p style={{ fontSize: 13, color: "#888", margin: "0 0 16px" }}>
+              {credentialDialog.action === "created"
+                ? `${credentialDialog.name} has been added and a welcome email has been sent.`
+                : `Password has been reset for ${credentialDialog.name} and an email has been sent.`}
+            </p>
+            <div style={{ background: "#FAFAF8", border: "1px solid #ECEAE5", borderRadius: 8, padding: "16px 20px", marginBottom: 16, fontFamily: "monospace", fontSize: 13 }}>
+              <div style={{ marginBottom: 6 }}>Email: <strong>{credentialDialog.email}</strong></div>
+              <div>Password: <strong>{credentialDialog.tempPassword}</strong></div>
+            </div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button onClick={() => { navigator.clipboard.writeText(credentialDialog.tempPassword); toast("Password copied"); }} style={btnOutline}>Copy Password</button>
+              <button onClick={() => setCredentialDialog(null)} style={btnStyle}>Done</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -2566,27 +2997,82 @@ function StatementManager({ toast }) {
   const [statements, setStatements] = useState([]);
   const [filter, setFilter] = useState("all");
   const [generating, setGenerating] = useState(false);
-  const [preview, setPreview] = useState(null);
+  const [stmtProjects, setStmtProjects] = useState([]);
+  const [stmtSearch, setStmtSearch] = useState("");
+  const stmtSort = useSortable("createdAt", "desc");
 
-  useEffect(() => { loadStatements(); }, [filter]);
+  // Detail/preview panel
+  const [selectedId, setSelectedId] = useState(null);
+  const [detail, setDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailTab, setDetailTab] = useState("preview"); // preview | data
+
+  // Rejection modal
+  const [rejectingId, setRejectingId] = useState(null);
+  const [rejectReason, setRejectReason] = useState("");
+
+  // Generate form - period inputs
+  const [showGenerateForm, setShowGenerateForm] = useState(false);
+  const [genPeriod, setGenPeriod] = useState("");
+  const [genPeriodStart, setGenPeriodStart] = useState("");
+  const [genPeriodEnd, setGenPeriodEnd] = useState("");
+
+  // Capital call form state
+  const [showCapCallForm, setShowCapCallForm] = useState(false);
+  const [capCallProjectId, setCapCallProjectId] = useState("");
+  const [capCallAmount, setCapCallAmount] = useState("");
+  const [capCallDueDate, setCapCallDueDate] = useState("");
+  const [capCallWireInstructions, setCapCallWireInstructions] = useState("");
+  const [capCallGenerating, setCapCallGenerating] = useState(false);
+
+  // Quarterly report form state
+  const [showQtrReportForm, setShowQtrReportForm] = useState(false);
+  const [qtrReportProjectId, setQtrReportProjectId] = useState("");
+  const [qtrReportQuarter, setQtrReportQuarter] = useState("");
+  const [qtrReportSummary, setQtrReportSummary] = useState("");
+  const [qtrReportGenerating, setQtrReportGenerating] = useState(false);
+
+  const authHeader = { Authorization: `Bearer ${localStorage.getItem("northstar_token")}` };
+
+  useEffect(() => { loadStatements(); fetchAdminProjects().then(setStmtProjects); }, [filter]);
 
   async function loadStatements() {
     try {
       const qs = filter !== "all" ? `?status=${filter}` : "";
-      const data = await (await fetch(`/api/v1/statements${qs}`, { headers: { Authorization: `Bearer ${localStorage.getItem("northstar_token")}` } })).json();
+      const data = await (await fetch(`/api/v1/statements${qs}`, { headers: authHeader })).json();
       setStatements(Array.isArray(data) ? data : []);
     } catch { setStatements([]); }
   }
 
+  async function loadDetail(id) {
+    setSelectedId(id);
+    setDetailLoading(true);
+    setDetailTab("preview");
+    try {
+      const res = await fetch(`/api/v1/statements/${id}`, { headers: authHeader });
+      if (!res.ok) throw new Error("Failed to load statement");
+      setDetail(await res.json());
+    } catch (e) { toast(e.message, "error"); setDetail(null); }
+    finally { setDetailLoading(false); }
+  }
+
+  function closeDetail() { setSelectedId(null); setDetail(null); }
+
   async function handleGenerate() {
     setGenerating(true);
     try {
+      const body = {};
+      if (genPeriod) body.period = genPeriod;
+      if (genPeriodStart) body.periodStart = genPeriodStart;
+      if (genPeriodEnd) body.periodEnd = genPeriodEnd;
       const res = await fetch("/api/v1/statements/generate", {
-        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("northstar_token")}` },
-        body: JSON.stringify({}),
+        method: "POST", headers: { "Content-Type": "application/json", ...authHeader },
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       toast(`Generated ${data.count} draft statement(s)`);
+      setShowGenerateForm(false);
+      setGenPeriod(""); setGenPeriodStart(""); setGenPeriodEnd("");
       loadStatements();
     } catch (e) { toast(e.message, "error"); }
     finally { setGenerating(false); }
@@ -2594,25 +3080,34 @@ function StatementManager({ toast }) {
 
   async function handleApprove(id) {
     try {
-      await fetch(`/api/v1/statements/${id}/approve`, { method: "POST", headers: { Authorization: `Bearer ${localStorage.getItem("northstar_token")}` } });
+      await fetch(`/api/v1/statements/${id}/approve`, { method: "POST", headers: authHeader });
       toast("Statement approved");
       loadStatements();
+      if (selectedId === id) loadDetail(id);
     } catch (e) { toast(e.message, "error"); }
   }
 
   async function handleSend(id) {
     try {
-      await fetch(`/api/v1/statements/${id}/send`, { method: "POST", headers: { Authorization: `Bearer ${localStorage.getItem("northstar_token")}` } });
+      await fetch(`/api/v1/statements/${id}/send`, { method: "POST", headers: authHeader });
       toast("Statement sent");
       loadStatements();
+      if (selectedId === id) loadDetail(id);
     } catch (e) { toast(e.message, "error"); }
   }
 
-  async function handleReject(id) {
+  async function handleReject(id, reason) {
     try {
-      await fetch(`/api/v1/statements/${id}/reject`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("northstar_token")}` }, body: JSON.stringify({ reason: "Needs revision" }) });
+      await fetch(`/api/v1/statements/${id}/reject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeader },
+        body: JSON.stringify({ reason: reason || "Needs revision" }),
+      });
       toast("Statement reverted to draft");
+      setRejectingId(null);
+      setRejectReason("");
       loadStatements();
+      if (selectedId === id) loadDetail(id);
     } catch (e) { toast(e.message, "error"); }
   }
 
@@ -2621,7 +3116,7 @@ function StatementManager({ toast }) {
     if (ids.length === 0) return toast("No drafts to approve", "error");
     try {
       await fetch("/api/v1/statements/bulk-approve", {
-        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("northstar_token")}` },
+        method: "POST", headers: { "Content-Type": "application/json", ...authHeader },
         body: JSON.stringify({ ids }),
       });
       toast(`Approved ${ids.length} statement(s)`);
@@ -2634,7 +3129,7 @@ function StatementManager({ toast }) {
     if (ids.length === 0) return toast("No approved statements to send", "error");
     try {
       await fetch("/api/v1/statements/bulk-send", {
-        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("northstar_token")}` },
+        method: "POST", headers: { "Content-Type": "application/json", ...authHeader },
         body: JSON.stringify({ ids }),
       });
       toast(`Sent ${ids.length} statement(s)`);
@@ -2642,22 +3137,71 @@ function StatementManager({ toast }) {
     } catch (e) { toast(e.message, "error"); }
   }
 
-  const statusColors = { DRAFT: { bg: "#FFF8E1", text: "#B8860B" }, APPROVED: { bg: "#E8F5E9", text: green }, SENT: { bg: "#E3F2FD", text: "#1565C0" } };
+  const statusColors = { DRAFT: { bg: "#FFF8E1", text: "#B8860B" }, APPROVED: { bg: "#E8F5E9", text: green }, SENT: { bg: "#E3F2FD", text: "#1565C0" }, REJECTED: { bg: "#FFEBEE", text: red } };
   const drafts = statements.filter(s => s.status === "DRAFT").length;
   const approved = statements.filter(s => s.status === "APPROVED").length;
   const sent = statements.filter(s => s.status === "SENT").length;
+  const cardShadow = "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)";
+  const labelStyle = { display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 };
+
+  // Filter + search
+  const filteredStatements = statements.filter(s => {
+    if (!stmtSearch) return true;
+    const q = stmtSearch.toLowerCase();
+    return (s.investorName || "").toLowerCase().includes(q)
+      || (s.projectName || "").toLowerCase().includes(q)
+      || (s.period || "").toLowerCase().includes(q)
+      || (s.investorEmail || "").toLowerCase().includes(q);
+  });
+
+  // Format currency helper
+  const fc = (v) => v != null ? "$" + Number(v).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : "--";
 
   return (
     <>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <div>
-          <h1 style={{ fontSize: 28, fontWeight: 300 }}>Statements</h1>
-          <p style={{ fontSize: 13, color: "#767168", marginTop: 4 }}>Generate, review, and send capital account statements</p>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div>
+            <h1 style={{ fontSize: 28, fontWeight: 300 }}>Statements</h1>
+            <p style={{ fontSize: 13, color: "#767168", marginTop: 4 }}>Generate, review, and send capital account statements</p>
+          </div>
+          {drafts > 0 && (
+            <span style={{ background: "#FFF8E1", color: "#B8860B", fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 12, marginLeft: 8 }}>
+              {drafts} awaiting approval
+            </span>
+          )}
         </div>
-        <button onClick={handleGenerate} disabled={generating} style={btnStyle}>
+        <button onClick={() => setShowGenerateForm(!showGenerateForm)} disabled={generating} style={btnStyle}>
           {generating ? "Generating..." : "Generate All"}
         </button>
       </div>
+
+      {/* Generate form with period inputs */}
+      {showGenerateForm && (
+        <div style={{ background: "#fff", borderRadius: 12, padding: 24, boxShadow: cardShadow, marginBottom: 24 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 400, marginBottom: 20 }}>Generate Statements</h3>
+          <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+            <div style={{ flex: 1 }}>
+              <label style={labelStyle}>Period Label</label>
+              <input value={genPeriod} onChange={e => setGenPeriod(e.target.value)} placeholder="Q1 2026" style={inputStyle} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={labelStyle}>Period Start</label>
+              <input type="date" value={genPeriodStart} onChange={e => setGenPeriodStart(e.target.value)} style={inputStyle} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={labelStyle}>Period End</label>
+              <input type="date" value={genPeriodEnd} onChange={e => setGenPeriodEnd(e.target.value)} style={inputStyle} />
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+            <button onClick={() => setShowGenerateForm(false)} style={btnOutline}>Cancel</button>
+            <button onClick={handleGenerate} disabled={generating} style={{ ...btnStyle, opacity: generating ? 0.5 : 1 }}>
+              {generating ? "Generating..." : "Generate Draft Statements"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Workflow status cards */}
       <div className="admin-stat-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 24 }}>
@@ -2666,7 +3210,7 @@ function StatementManager({ toast }) {
           { label: "Approved", count: approved, color: green, action: approved > 0 ? "Send All" : null, onClick: handleBulkSend },
           { label: "Sent", count: sent, color: "#1565C0", action: null },
         ].map((c, i) => (
-          <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+          <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "20px 24px", boxShadow: cardShadow }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <div style={{ fontSize: 28, fontWeight: 300, color: c.color }}>{c.count}</div>
@@ -2678,44 +3222,394 @@ function StatementManager({ toast }) {
         ))}
       </div>
 
-      {/* Filter tabs */}
-      <div style={{ display: "flex", gap: 0, marginBottom: 16, background: "#fff", borderRadius: 8, overflow: "hidden", border: "1px solid #E8E5DE" }}>
-        {["all", "DRAFT", "APPROVED", "SENT"].map(f => (
-          <button key={f} onClick={() => setFilter(f)} style={{
-            padding: "8px 20px", fontSize: 12, border: "none", cursor: "pointer", fontFamily: sans, flex: 1,
-            background: filter === f ? red : "#fff", color: filter === f ? "#fff" : "#666",
-            transition: "background .15s, color .15s",
-          }}>{f === "all" ? "All" : f.charAt(0) + f.slice(1).toLowerCase()}</button>
-        ))}
+      {/* Filter tabs + search */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 16, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 0, background: "#fff", borderRadius: 8, overflow: "hidden", border: "1px solid #E8E5DE", flex: 1 }}>
+          {["all", "DRAFT", "APPROVED", "SENT"].map(f => (
+            <button key={f} onClick={() => setFilter(f)} style={{
+              padding: "8px 20px", fontSize: 12, border: "none", cursor: "pointer", fontFamily: sans, flex: 1,
+              background: filter === f ? red : "#fff", color: filter === f ? "#fff" : "#666",
+              transition: "background .15s, color .15s",
+            }}>{f === "all" ? "All" : f.charAt(0) + f.slice(1).toLowerCase()}</button>
+          ))}
+        </div>
+        <SearchBox value={stmtSearch} onChange={setStmtSearch} placeholder="Search statements..." />
       </div>
 
-      {/* Statement list */}
-      <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
-        {statements.length === 0 ? (
-          <AdminEmpty title="No statements" subtitle="Click 'Generate All' to create draft statements for all investors" />
-        ) : statements.map((s, i) => (
-          <div key={s.id} style={{ padding: "14px 20px", borderBottom: i < statements.length - 1 ? "1px solid #F0EDE8" : "none", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <div style={{ fontWeight: 500, fontSize: 14 }}>{s.investorName}</div>
-              <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>{s.projectName} · Created {new Date(s.createdAt).toLocaleDateString()}</div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{
-                padding: "3px 10px", borderRadius: 4, fontSize: 11, fontWeight: 500,
-                background: statusColors[s.status]?.bg || "#F5F5F5",
-                color: statusColors[s.status]?.text || "#666",
-              }}>{s.status}</span>
-              {s.status === "DRAFT" && <button onClick={() => handleApprove(s.id)} style={{ ...btnOutline, padding: "4px 12px", fontSize: 11, color: green, borderColor: green }}>Approve</button>}
-              {s.status === "APPROVED" && (
-                <>
-                  <button onClick={() => handleSend(s.id)} style={{ ...btnStyle, padding: "4px 12px", fontSize: 11 }}>Send</button>
-                  <button onClick={() => handleReject(s.id)} style={{ ...btnOutline, padding: "4px 12px", fontSize: 11, color: "#999" }}>Reject</button>
-                </>
-              )}
-              {s.status === "SENT" && s.sentAt && <span style={{ fontSize: 11, color: "#999" }}>Sent {new Date(s.sentAt).toLocaleDateString()}</span>}
+      {/* Rejection reason modal */}
+      {rejectingId && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}
+          onClick={() => { setRejectingId(null); setRejectReason(""); }}>
+          <div style={{ background: "#fff", borderRadius: 12, padding: 28, width: 420, maxWidth: "90vw", boxShadow: "0 8px 32px rgba(0,0,0,.15)" }}
+            onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: 16, fontWeight: 500, marginBottom: 16 }}>Reject Statement</h3>
+            <label style={labelStyle}>Reason for rejection</label>
+            <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} rows={3}
+              placeholder="Describe what needs to be revised..."
+              style={{ ...inputStyle, resize: "vertical", marginBottom: 16 }} />
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button onClick={() => { setRejectingId(null); setRejectReason(""); }} style={btnOutline}>Cancel</button>
+              <button onClick={() => handleReject(rejectingId, rejectReason)}
+                style={{ ...btnStyle, background: red }}>
+                Reject Statement
+              </button>
             </div>
           </div>
-        ))}
+        </div>
+      )}
+
+      {/* Statement detail panel */}
+      {selectedId && (
+        <div style={{ background: "#fff", borderRadius: 12, boxShadow: cardShadow, marginBottom: 24, overflow: "hidden" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px", borderBottom: "1px solid #E8E5DE" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <button onClick={closeDetail} style={{ ...btnOutline, padding: "4px 10px", fontSize: 11 }}>Back</button>
+              <span style={{ fontWeight: 500, fontSize: 15 }}>Statement Detail</span>
+              {detail && (
+                <span style={{
+                  padding: "3px 10px", borderRadius: 4, fontSize: 11, fontWeight: 500,
+                  background: statusColors[detail.status]?.bg || "#F5F5F5",
+                  color: statusColors[detail.status]?.text || "#666",
+                }}>{detail.status}</span>
+              )}
+            </div>
+            {detail && (
+              <div style={{ display: "flex", gap: 8 }}>
+                {detail.status === "DRAFT" && (
+                  <>
+                    <button onClick={() => handleApprove(detail.id)} style={{ ...btnOutline, padding: "6px 14px", fontSize: 11, color: green, borderColor: green }}>Approve</button>
+                    <button onClick={() => { setRejectingId(detail.id); }} style={{ ...btnOutline, padding: "6px 14px", fontSize: 11, color: "#999" }}>Reject</button>
+                  </>
+                )}
+                {detail.status === "APPROVED" && (
+                  <>
+                    <button onClick={() => handleSend(detail.id)} style={{ ...btnStyle, padding: "6px 14px", fontSize: 11 }}>Send</button>
+                    <button onClick={() => { setRejectingId(detail.id); }} style={{ ...btnOutline, padding: "6px 14px", fontSize: 11, color: "#999" }}>Reject</button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          {detailLoading ? (
+            <div style={{ padding: 40, textAlign: "center", color: "#767168" }}>Loading statement...</div>
+          ) : detail ? (
+            <>
+              {/* Detail header info */}
+              <div style={{ padding: "16px 24px", borderBottom: "1px solid #F0EDE8", display: "flex", gap: 32, flexWrap: "wrap" }}>
+                <div>
+                  <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: ".05em" }}>Investor</div>
+                  <div style={{ fontSize: 14, fontWeight: 500, marginTop: 2 }}>{detail.investorName}</div>
+                  <div style={{ fontSize: 12, color: "#767168" }}>{detail.investorEmail}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: ".05em" }}>Project</div>
+                  <div style={{ fontSize: 14, fontWeight: 500, marginTop: 2 }}>{detail.projectName}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: ".05em" }}>Period</div>
+                  <div style={{ fontSize: 14, fontWeight: 500, marginTop: 2 }}>{detail.period || "--"}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: ".05em" }}>Created</div>
+                  <div style={{ fontSize: 13, marginTop: 2 }}>{new Date(detail.createdAt).toLocaleDateString()} by {detail.createdByName || "System"}</div>
+                </div>
+                {detail.approvedByName && (
+                  <div>
+                    <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: ".05em" }}>Approved</div>
+                    <div style={{ fontSize: 13, marginTop: 2, color: green }}>{detail.approvedByName} on {new Date(detail.approvedAt).toLocaleDateString()}</div>
+                  </div>
+                )}
+                {detail.sentAt && (
+                  <div>
+                    <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: ".05em" }}>Sent</div>
+                    <div style={{ fontSize: 13, marginTop: 2, color: "#1565C0" }}>{new Date(detail.sentAt).toLocaleDateString()}</div>
+                  </div>
+                )}
+                {detail.rejectReason && (
+                  <div>
+                    <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: ".05em" }}>Rejection Reason</div>
+                    <div style={{ fontSize: 13, marginTop: 2, color: red }}>{detail.rejectReason}</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Tabs: Preview / Data */}
+              <div style={{ display: "flex", gap: 0, borderBottom: "1px solid #E8E5DE" }}>
+                {[{ key: "preview", label: "HTML Preview" }, { key: "data", label: "Statement Data" }].map(t => (
+                  <button key={t.key} onClick={() => setDetailTab(t.key)} style={{
+                    padding: "10px 20px", fontSize: 12, border: "none", cursor: "pointer", fontFamily: sans,
+                    background: detailTab === t.key ? "#F8F7F4" : "#fff", color: detailTab === t.key ? red : "#666",
+                    borderBottom: detailTab === t.key ? `2px solid ${red}` : "2px solid transparent",
+                    transition: "all .15s",
+                  }}>{t.label}</button>
+                ))}
+              </div>
+
+              {/* Tab content */}
+              {detailTab === "preview" && (
+                <div style={{ padding: 24 }}>
+                  {detail.html ? (
+                    <div style={{ border: "1px solid #E8E5DE", borderRadius: 8, overflow: "hidden", background: "#fff" }}>
+                      <div dangerouslySetInnerHTML={{ __html: detail.html }}
+                        style={{ padding: 24, maxHeight: 600, overflowY: "auto", fontSize: 13, lineHeight: 1.6 }} />
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: "center", padding: 40, color: "#767168", fontSize: 13 }}>No HTML preview available for this statement.</div>
+                  )}
+                </div>
+              )}
+
+              {detailTab === "data" && (
+                <div style={{ padding: 24 }}>
+                  {detail.data ? (() => {
+                    const d = typeof detail.data === "string" ? JSON.parse(detail.data) : detail.data;
+                    return (
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                        {/* Investor Info */}
+                        {d.investor && (
+                          <div style={{ background: "#FAFAF8", borderRadius: 8, padding: 16, border: "1px solid #F0EDE8" }}>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 10 }}>Investor Info</div>
+                            {Object.entries(d.investor).map(([k, v]) => (
+                              <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, borderBottom: "1px solid #F0EDE8" }}>
+                                <span style={{ color: "#767168" }}>{k}</span>
+                                <span style={{ fontWeight: 500 }}>{String(v)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {/* Project Info */}
+                        {d.project && (
+                          <div style={{ background: "#FAFAF8", borderRadius: 8, padding: 16, border: "1px solid #F0EDE8" }}>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 10 }}>Project Info</div>
+                            {Object.entries(d.project).map(([k, v]) => (
+                              <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, borderBottom: "1px solid #F0EDE8" }}>
+                                <span style={{ color: "#767168" }}>{k}</span>
+                                <span style={{ fontWeight: 500 }}>{typeof v === "number" ? fc(v) : String(v)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {/* Account Summary */}
+                        {d.accountSummary && (
+                          <div style={{ background: "#FAFAF8", borderRadius: 8, padding: 16, border: "1px solid #F0EDE8" }}>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 10 }}>Account Summary</div>
+                            {Object.entries(d.accountSummary).map(([k, v]) => (
+                              <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, borderBottom: "1px solid #F0EDE8" }}>
+                                <span style={{ color: "#767168" }}>{k}</span>
+                                <span style={{ fontWeight: 500 }}>{typeof v === "number" ? fc(v) : String(v)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {/* Transaction History */}
+                        {d.transactions && Array.isArray(d.transactions) && d.transactions.length > 0 && (
+                          <div style={{ background: "#FAFAF8", borderRadius: 8, padding: 16, border: "1px solid #F0EDE8" }}>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 10 }}>Transaction History</div>
+                            {d.transactions.map((tx, ti) => (
+                              <div key={ti} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, borderBottom: "1px solid #F0EDE8" }}>
+                                <span style={{ color: "#767168" }}>{tx.date || tx.type || `#${ti + 1}`}</span>
+                                <span style={{ fontWeight: 500 }}>{tx.description || tx.type || ""} {tx.amount != null ? fc(tx.amount) : ""}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {/* Fallback: show raw keys not covered above */}
+                        {Object.entries(d).filter(([k]) => !["investor", "project", "accountSummary", "transactions"].includes(k)).map(([k, v]) => (
+                          <div key={k} style={{ background: "#FAFAF8", borderRadius: 8, padding: 16, border: "1px solid #F0EDE8" }}>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 10 }}>{k}</div>
+                            <pre style={{ fontSize: 12, whiteSpace: "pre-wrap", wordBreak: "break-word", margin: 0, color: "#444" }}>{typeof v === "object" ? JSON.stringify(v, null, 2) : String(v)}</pre>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })() : (
+                    <div style={{ textAlign: "center", padding: 40, color: "#767168", fontSize: 13 }}>No parsed data available for this statement.</div>
+                  )}
+                </div>
+              )}
+            </>
+          ) : (
+            <div style={{ padding: 40, textAlign: "center", color: "#767168" }}>Failed to load statement detail.</div>
+          )}
+        </div>
+      )}
+
+      {/* Statement list table */}
+      <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: cardShadow }}>
+        {filteredStatements.length === 0 ? (
+          <AdminEmpty title="No statements" subtitle={stmtSearch ? "No statements match your search" : "Click 'Generate All' to create draft statements for all investors"} />
+        ) : (
+          <>
+            {/* Table header */}
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1fr 1fr 1fr 100px 160px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", alignItems: "center" }}>
+              <SortableHeader columns={[
+                { key: "investorName", label: "Investor" },
+                { key: "projectName", label: "Project" },
+                { key: "period", label: "Period" },
+                { key: "committed", label: "Committed" },
+                { key: "nav", label: "NAV" },
+                { key: "status", label: "Status" },
+              ]} sortBy={stmtSort.sortBy} sortDir={stmtSort.sortDir} onSort={stmtSort.onSort} />
+              <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#767168" }}>Date</span>
+              <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#767168" }}>Actions</span>
+            </div>
+            {/* Table rows */}
+            {stmtSort.sortData(filteredStatements).map((s, i) => (
+              <div key={s.id} onClick={() => loadDetail(s.id)} style={{
+                display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1fr 1fr 1fr 100px 160px",
+                padding: "12px 20px", borderBottom: i < filteredStatements.length - 1 ? "1px solid #F0EDE8" : "none",
+                alignItems: "center", cursor: "pointer", fontSize: 13,
+                background: selectedId === s.id ? "#FBF9F6" : "#fff",
+                transition: "background .1s",
+              }}
+                onMouseEnter={e => { if (selectedId !== s.id) e.currentTarget.style.background = "#FAFAF8"; }}
+                onMouseLeave={e => { if (selectedId !== s.id) e.currentTarget.style.background = "#fff"; }}>
+                <div>
+                  <div style={{ fontWeight: 500, fontSize: 13 }}>{s.investorName || "Unknown"}</div>
+                  <div style={{ fontSize: 11, color: "#999", marginTop: 1 }}>{s.investorEmail || ""}</div>
+                </div>
+                <span style={{ color: "#555" }}>{s.projectName || "--"}</span>
+                <span style={{ color: "#555", fontSize: 12 }}>{s.period || "--"}</span>
+                <span style={{ fontSize: 12, color: "#555" }}>{s.committed != null ? fc(s.committed) : "--"}</span>
+                <span style={{ fontSize: 12, color: "#555" }}>{s.nav != null ? fc(s.nav) : "--"}</span>
+                <div>
+                  <span style={{
+                    padding: "3px 10px", borderRadius: 4, fontSize: 11, fontWeight: 500,
+                    background: statusColors[s.status]?.bg || "#F5F5F5",
+                    color: statusColors[s.status]?.text || "#666",
+                  }}>{s.status}</span>
+                  {s.status === "APPROVED" && s.approvedByName && (
+                    <div style={{ fontSize: 10, color: green, marginTop: 2 }}>by {s.approvedByName}</div>
+                  )}
+                </div>
+                <span style={{ fontSize: 12, color: "#888" }}>{new Date(s.createdAt).toLocaleDateString()}</span>
+                <div style={{ display: "flex", gap: 6 }} onClick={e => e.stopPropagation()}>
+                  {s.status === "DRAFT" && (
+                    <button onClick={() => handleApprove(s.id)} style={{ ...btnOutline, padding: "4px 10px", fontSize: 10, color: green, borderColor: green }}>Approve</button>
+                  )}
+                  {s.status === "APPROVED" && (
+                    <>
+                      <button onClick={() => handleSend(s.id)} style={{ ...btnStyle, padding: "4px 10px", fontSize: 10 }}>Send</button>
+                      <button onClick={() => { setRejectingId(s.id); }} style={{ ...btnOutline, padding: "4px 10px", fontSize: 10, color: "#999" }}>Reject</button>
+                    </>
+                  )}
+                  {s.status === "SENT" && s.sentAt && <span style={{ fontSize: 10, color: "#999" }}>Sent {new Date(s.sentAt).toLocaleDateString()}</span>}
+                </div>
+              </div>
+            ))}
+          </>
+        )}
+      </div>
+
+      {/* Generate Capital Call */}
+      <div style={{ marginTop: 32 }}>
+        {!showCapCallForm ? (
+          <button onClick={() => setShowCapCallForm(true)} style={btnOutline}>Generate Capital Call</button>
+        ) : (
+          <div style={{ background: "#fff", borderRadius: 12, padding: "24px", boxShadow: cardShadow }}>
+            <h3 style={{ fontSize: 16, fontWeight: 400, marginBottom: 20 }}>Generate Capital Call</h3>
+            <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>Project</label>
+                <select value={capCallProjectId} onChange={e => setCapCallProjectId(e.target.value)} style={inputStyle} required>
+                  <option value="">Select project...</option>
+                  {stmtProjects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>Call Amount ($)</label>
+                <input type="number" value={capCallAmount} onChange={e => setCapCallAmount(e.target.value)} placeholder="500000" style={inputStyle} />
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>Due Date</label>
+                <input type="date" value={capCallDueDate} onChange={e => setCapCallDueDate(e.target.value)} style={inputStyle} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>Wire Instructions</label>
+                <input value={capCallWireInstructions} onChange={e => setCapCallWireInstructions(e.target.value)} placeholder="Bank name, routing, account..." style={inputStyle} />
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button onClick={() => setShowCapCallForm(false)} style={btnOutline}>Cancel</button>
+              <button disabled={capCallGenerating || !capCallProjectId || !capCallAmount} onClick={async () => {
+                setCapCallGenerating(true);
+                try {
+                  const res = await fetch("/api/v1/statements/generate-capital-call", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", ...authHeader },
+                    body: JSON.stringify({ projectId: capCallProjectId, callAmount: Number(capCallAmount), dueDate: capCallDueDate, wireInstructions: capCallWireInstructions }),
+                  });
+                  if (!res.ok) throw new Error("Failed to generate capital call");
+                  const blob = await res.blob();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a"); a.href = url; a.download = "capital-call.pdf"; a.click();
+                  URL.revokeObjectURL(url);
+                  toast("Capital call generated and downloaded");
+                  setShowCapCallForm(false);
+                  setCapCallProjectId(""); setCapCallAmount(""); setCapCallDueDate(""); setCapCallWireInstructions("");
+                } catch (e) { toast(e.message, "error"); }
+                finally { setCapCallGenerating(false); }
+              }} style={{ ...btnStyle, opacity: capCallGenerating ? 0.5 : 1 }}>
+                {capCallGenerating ? "Generating..." : "Generate PDF"}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Generate Quarterly Report */}
+      <div style={{ marginTop: 16 }}>
+        {!showQtrReportForm ? (
+          <button onClick={() => setShowQtrReportForm(true)} style={btnOutline}>Generate Quarterly Report</button>
+        ) : (
+          <div style={{ background: "#fff", borderRadius: 12, padding: "24px", boxShadow: cardShadow }}>
+            <h3 style={{ fontSize: 16, fontWeight: 400, marginBottom: 20 }}>Generate Quarterly Report</h3>
+            <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>Project</label>
+                <select value={qtrReportProjectId} onChange={e => setQtrReportProjectId(e.target.value)} style={inputStyle} required>
+                  <option value="">Select project...</option>
+                  {stmtProjects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>Quarter</label>
+                <input value={qtrReportQuarter} onChange={e => setQtrReportQuarter(e.target.value)} placeholder="Q1 2026" style={inputStyle} />
+              </div>
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={labelStyle}>Summary</label>
+              <textarea value={qtrReportSummary} onChange={e => setQtrReportSummary(e.target.value)} rows={4} placeholder="Quarterly performance summary..." style={{ ...inputStyle, resize: "vertical" }} />
+            </div>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button onClick={() => setShowQtrReportForm(false)} style={btnOutline}>Cancel</button>
+              <button disabled={qtrReportGenerating || !qtrReportProjectId || !qtrReportQuarter} onClick={async () => {
+                setQtrReportGenerating(true);
+                try {
+                  const res = await fetch("/api/v1/statements/generate-quarterly-report", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", ...authHeader },
+                    body: JSON.stringify({ projectId: qtrReportProjectId, quarter: qtrReportQuarter, summary: qtrReportSummary }),
+                  });
+                  if (!res.ok) throw new Error("Failed to generate quarterly report");
+                  const blob = await res.blob();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a"); a.href = url; a.download = `quarterly-report-${qtrReportQuarter.replace(/\s/g, "-")}.pdf`; a.click();
+                  URL.revokeObjectURL(url);
+                  toast("Quarterly report generated and downloaded");
+                  setShowQtrReportForm(false);
+                  setQtrReportProjectId(""); setQtrReportQuarter(""); setQtrReportSummary("");
+                } catch (e) { toast(e.message, "error"); }
+                finally { setQtrReportGenerating(false); }
+              }} style={{ ...btnStyle, opacity: qtrReportGenerating ? 0.5 : 1 }}>
+                {qtrReportGenerating ? "Generating..." : "Generate PDF"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
@@ -2782,7 +3676,7 @@ function SignatureManager({ toast, hideHeader }) {
                 <div style={{ fontWeight: 500 }}>{sig.document?.name || sig.subject}</div>
                 <div style={{ fontSize: 11, color: "#767168", marginTop: 2 }}>{sig.subject}</div>
               </div>
-              <span style={{ color: "#666" }}>{sig.createdBy?.name}</span>
+              <span style={{ color: "#666" }}>{sig.createdByName}</span>
               <div>
                 {sig.signers?.map(s => (
                   <div key={s.id} style={{ fontSize: 12, marginBottom: 2 }}>
@@ -2958,6 +3852,17 @@ function ProspectManager({ toast }) {
                             <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
                           ))}
                         </select>
+                        {p.status !== "converted" && (
+                          <button onClick={async () => {
+                            if (!confirm(`Convert "${p.name}" to an investor? This will send them an invitation.`)) return;
+                            try {
+                              await inviteInvestor({ name: p.name, email: p.email });
+                              await updateProspectStatus(p.id, "converted");
+                              toast(`${p.name} converted to investor`);
+                              load();
+                            } catch (e) { toast(e.message, "error"); }
+                          }} style={{ ...btnStyle, padding: "4px 12px", fontSize: 11, background: "#7C3AED" }}>Convert to Investor</button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -3082,13 +3987,34 @@ function AdminInbox({ user, toast }) {
                     <span style={{ fontSize: 13, fontWeight: 500 }}>{m.sender.name}</span>
                     <span style={{ fontSize: 11, color: "#767168" }}>{isInvestor ? "Investor" : "Staff"}</span>
                   </div>
-                  <span style={{ fontSize: 11, color: "#BBB" }}>{new Date(m.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
+                  <span style={{ fontSize: 11, color: "#BBB" }}>{new Date(m.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}</span>
                 </div>
                 <div style={{ fontSize: 13, color: "#444", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{m.body}</div>
+                {/* Read receipts (C.2) */}
+                {m.readReceipts && m.readReceipts.length > 0 && (
+                  <div style={{ marginTop: 8, paddingTop: 6, borderTop: "1px solid #F0EDE8" }}>
+                    {m.readReceipts.map((rr, ri) => (
+                      <div key={ri} style={{ fontSize: 10, color: "#AAA", marginBottom: 2 }}>
+                        Read by {rr.name || "Unknown"} — {new Date(rr.readAt || rr.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
+        {/* Thread-level read receipts (C.2) */}
+        {threadDetail.readReceipts && threadDetail.readReceipts.length > 0 && (
+          <div style={{ background: "#fff", borderRadius: 8, padding: "10px 16px", marginBottom: 12, boxShadow: "0 1px 4px rgba(0,0,0,.03)" }}>
+            <div style={{ fontSize: 10, fontWeight: 600, color: "#AAA", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 4 }}>Read Receipts</div>
+            {threadDetail.readReceipts.map((rr, ri) => (
+              <div key={ri} style={{ fontSize: 11, color: "#888", marginBottom: 2 }}>
+                Read by {rr.name || "Unknown"} — {new Date(rr.readAt || rr.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}
+              </div>
+            ))}
+          </div>
+        )}
         <div style={{ background: "#fff", borderRadius: 10, padding: "16px 20px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
           <textarea value={reply} onChange={e => setReply(e.target.value)} placeholder="Write a reply..." rows={3}
             style={{ ...inputStyle, border: "none", padding: 0, resize: "vertical" }} />
@@ -3363,6 +4289,299 @@ function AuditLogViewer() {
           </table>
         </div>
       )}
+    </>
+  );
+}
+
+// ─── EMAIL SETTINGS MANAGER ───
+function EmailSettingsManager({ toast }) {
+  const [settings, setSettings] = useState(null);
+  const [emailLog, setEmailLog] = useState([]);
+  const [stats, setStats] = useState({ sent: 0, failed: 0, skipped: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [logFilter, setLogFilter] = useState({ type: "", status: "" });
+
+  const cardStyle = { background: "#fff", borderRadius: 12, padding: 24, marginBottom: 20, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" };
+  const sectionTitle = { fontSize: 16, fontWeight: 600, marginBottom: 16, color: darkText };
+  const fieldLabel = { fontSize: 12, fontWeight: 500, color: "#767168", marginBottom: 4, display: "block" };
+  const fieldGroup = { marginBottom: 14 };
+
+  async function loadAll() {
+    setLoading(true);
+    setError(null);
+    try {
+      const [s, l, st] = await Promise.all([
+        fetchEmailSettings(),
+        fetchEmailLog({ type: logFilter.type, status: logFilter.status, limit: 50 }),
+        fetchEmailStats(),
+      ]);
+      setSettings(s);
+      setEmailLog(l.logs || l || []);
+      setStats(st || { sent: 0, failed: 0, skipped: 0 });
+    } catch (e) {
+      setError(e.message || "Failed to load email settings");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { loadAll(); }, []);
+
+  async function loadLog() {
+    try {
+      const l = await fetchEmailLog({ type: logFilter.type, status: logFilter.status, limit: 50 });
+      setEmailLog(l.logs || l || []);
+    } catch (_) {}
+  }
+
+  useEffect(() => { if (!loading) loadLog(); }, [logFilter.type, logFilter.status]);
+
+  async function handleSave(partial) {
+    setSaving(true);
+    try {
+      const updated = await updateEmailSettings({ ...settings, ...partial });
+      setSettings(updated);
+      toast("Settings saved");
+    } catch (e) {
+      toast(e.message || "Failed to save", "error");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleToggle(key, val) {
+    const patch = { [key]: val };
+    setSettings(prev => ({ ...prev, ...patch }));
+    await handleSave(patch);
+  }
+
+  async function handleTestEmail() {
+    setTesting(true);
+    try {
+      await sendTestEmail();
+      toast("Test email sent");
+    } catch (e) {
+      toast(e.message || "Test email failed", "error");
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  function onFieldChange(key, val) {
+    setSettings(prev => ({ ...prev, [key]: val }));
+  }
+
+  if (loading) return <AdminSpinner />;
+  if (error) return <AdminError message={error} onRetry={loadAll} />;
+  if (!settings) return <AdminEmpty title="No email settings found" />;
+
+  const toggleItems = [
+    { key: "enableDocuments", label: "Document notifications" },
+    { key: "enableSignatures", label: "Signature request notifications" },
+    { key: "enableDistributions", label: "Distribution notifications" },
+    { key: "enableMessages", label: "Message notifications" },
+    { key: "enableCapitalCalls", label: "Capital call notifications" },
+    { key: "enableWelcome", label: "Welcome emails" },
+    { key: "enablePasswordReset", label: "Password reset emails" },
+  ];
+
+  const brandingFields = [
+    { key: "fromName", label: "From Name", placeholder: "Northstar Capital" },
+    { key: "fromAddress", label: "From Email", placeholder: "noreply@example.com" },
+    { key: "replyToAddress", label: "Reply-To Address", placeholder: "support@example.com" },
+    { key: "companyName", label: "Company Name", placeholder: "Northstar Capital Group" },
+    { key: "companyAddress", label: "Company Address", placeholder: "123 Main St, Suite 100" },
+    { key: "portalUrl", label: "Portal URL", placeholder: "https://portal.example.com" },
+    { key: "brandColor", label: "Brand Color", placeholder: "#EA2028" },
+  ];
+
+  const subjectFields = [
+    { key: "subjectWelcome", label: "Welcome Email", placeholder: "Welcome to {{companyName}}" },
+    { key: "subjectDocument", label: "New Document", placeholder: "New document available" },
+    { key: "subjectSignature", label: "Signature Request", placeholder: "Document requires your signature" },
+    { key: "subjectDistribution", label: "Distribution Notice", placeholder: "Distribution notice from {{companyName}}" },
+    { key: "subjectMessage", label: "New Message", placeholder: "You have a new message" },
+    { key: "subjectCapitalCall", label: "Capital Call", placeholder: "Capital call notice" },
+    { key: "subjectPasswordReset", label: "Password Reset", placeholder: "Reset your password" },
+  ];
+
+  const statusColors = { sent: green, failed: red, skipped: "#B08C00" };
+
+  return (
+    <>
+      <h1 style={{ fontSize: 28, fontWeight: 300, marginBottom: 24 }}>Email Settings</h1>
+
+      {/* Section A: Email Provider Status */}
+      <div style={cardStyle}>
+        <div style={sectionTitle}>Email Provider</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+          <div style={{ fontSize: 13 }}>
+            <span style={{ color: "#767168" }}>Provider: </span>
+            <span style={{ fontWeight: 500 }}>{settings._provider || "Not configured"}</span>
+          </div>
+          <div style={{ fontSize: 13 }}>
+            <span style={{ color: "#767168" }}>API Key: </span>
+            <span style={{
+              fontSize: 11, padding: "2px 8px", borderRadius: 3,
+              background: settings._providerConfigured ? `${green}15` : `${red}08`,
+              color: settings._providerConfigured ? green : red,
+            }}>
+              {settings._providerConfigured ? "Configured" : "Not configured"}
+            </span>
+          </div>
+          <button onClick={handleTestEmail} disabled={testing} style={{ ...btnOutline, fontSize: 12, marginLeft: "auto" }}>
+            {testing ? "Sending..." : "Send Test Email"}
+          </button>
+        </div>
+      </div>
+
+      {/* Section B: Global Notification Toggles */}
+      <div style={cardStyle}>
+        <div style={sectionTitle}>Notification Toggles</div>
+        <p style={{ fontSize: 12, color: "#767168", marginBottom: 16 }}>Enable or disable specific email notification types globally.</p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 14 }}>
+          {toggleItems.map(t => (
+            <Toggle key={t.key} checked={!!settings[t.key]} onChange={(v) => handleToggle(t.key, v)} label={t.label} />
+          ))}
+        </div>
+      </div>
+
+      {/* Section C: Branding & Sender Configuration */}
+      <div style={cardStyle}>
+        <div style={sectionTitle}>Branding & Sender</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
+          {brandingFields.map(f => (
+            <div key={f.key} style={fieldGroup}>
+              <label style={fieldLabel}>{f.label}</label>
+              <input
+                style={inputStyle}
+                value={settings[f.key] || ""}
+                placeholder={f.placeholder}
+                onChange={(e) => onFieldChange(f.key, e.target.value)}
+              />
+            </div>
+          ))}
+        </div>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+          <button onClick={() => handleSave({})} disabled={saving} style={btnStyle}>
+            {saving ? "Saving..." : "Save Branding"}
+          </button>
+        </div>
+      </div>
+
+      {/* Section D: Subject Line Overrides */}
+      <div style={cardStyle}>
+        <div style={sectionTitle}>Subject Line Overrides</div>
+        <p style={{ fontSize: 12, color: "#767168", marginBottom: 16 }}>Customize subject lines for each email type. Leave blank to use defaults.</p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 14 }}>
+          {subjectFields.map(f => (
+            <div key={f.key} style={fieldGroup}>
+              <label style={fieldLabel}>{f.label}</label>
+              <input
+                style={inputStyle}
+                value={settings[f.key] || ""}
+                placeholder={f.placeholder}
+                onChange={(e) => onFieldChange(f.key, e.target.value)}
+              />
+            </div>
+          ))}
+        </div>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+          <button onClick={() => handleSave({})} disabled={saving} style={btnStyle}>
+            {saving ? "Saving..." : "Save Subjects"}
+          </button>
+        </div>
+      </div>
+
+      {/* Section E: Delivery Log */}
+      <div style={cardStyle}>
+        <div style={sectionTitle}>Delivery Log</div>
+
+        {/* Stats bar */}
+        <div style={{ display: "flex", gap: 16, marginBottom: 16, flexWrap: "wrap" }}>
+          {[
+            { label: "Sent", value: stats.sent, color: green },
+            { label: "Failed", value: stats.failed, color: red },
+            { label: "Skipped", value: stats.skipped, color: "#B08C00" },
+          ].map(s => (
+            <div key={s.label} style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: s.color, display: "inline-block" }} />
+              <span style={{ color: "#767168" }}>{s.label}:</span>
+              <span style={{ fontWeight: 600 }}>{s.value}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Filters */}
+        <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+          <select
+            value={logFilter.type}
+            onChange={(e) => setLogFilter(p => ({ ...p, type: e.target.value }))}
+            style={{ ...inputStyle, width: "auto", minWidth: 160 }}
+          >
+            <option value="">All Types</option>
+            {["document", "signature", "distribution", "message", "capital_call", "welcome", "password_reset"].map(t => (
+              <option key={t} value={t}>{t.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</option>
+            ))}
+          </select>
+          <select
+            value={logFilter.status}
+            onChange={(e) => setLogFilter(p => ({ ...p, status: e.target.value }))}
+            style={{ ...inputStyle, width: "auto", minWidth: 140 }}
+          >
+            <option value="">All Statuses</option>
+            {["sent", "failed", "skipped"].map(s => (
+              <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Log table */}
+        {emailLog.length === 0 ? (
+          <AdminEmpty title="No delivery logs" subtitle="Emails will appear here once sent." />
+        ) : (
+          <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid #E8E5DE" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+              <thead>
+                <tr style={{ background: "#FAFAF8", borderBottom: "1px solid #E8E5DE" }}>
+                  {["Date", "Recipient", "Type", "Subject", "Status"].map(h => (
+                    <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontWeight: 500, fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#767168" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {emailLog.map((entry, i) => (
+                  <tr key={entry.id || i} style={{ borderBottom: i < emailLog.length - 1 ? "1px solid #E8E5DE" : "none" }}>
+                    <td style={{ padding: "10px 14px", color: "#767168", whiteSpace: "nowrap" }}>
+                      {entry.createdAt ? new Date(entry.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "\u2014"}
+                    </td>
+                    <td style={{ padding: "10px 14px", fontWeight: 500 }}>{entry.recipient || "\u2014"}</td>
+                    <td style={{ padding: "10px 14px" }}>
+                      <span style={{
+                        fontSize: 10, padding: "2px 8px", borderRadius: 3,
+                        background: "#F5F4F0", color: "#666",
+                        textTransform: "uppercase", letterSpacing: ".04em",
+                      }}>{(entry.type || "").replace(/_/g, " ")}</span>
+                    </td>
+                    <td style={{ padding: "10px 14px", color: "#767168", maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.subject || "\u2014"}</td>
+                    <td style={{ padding: "10px 14px" }}>
+                      <span style={{
+                        fontSize: 10, padding: "2px 8px", borderRadius: 3,
+                        background: `${statusColors[entry.status] || "#999"}15`,
+                        color: statusColors[entry.status] || "#999",
+                        textTransform: "uppercase", letterSpacing: ".04em", fontWeight: 600,
+                      }}>{entry.status || "\u2014"}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </>
   );
 }

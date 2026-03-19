@@ -30,8 +30,25 @@ router.post("/login", validate(loginSchema), async (req, res, next) => {
       } catch (e) { console.error("Login history error:", e.message); }
     };
 
-    if (!user || user.status !== "ACTIVE") {
-      if (user) await recordLogin(user.id, false);
+    if (!user) {
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    // Check account status before password verification
+    if (user.status === "PENDING") {
+      await recordLogin(user.id, false);
+      return res.status(403).json({ error: "Your account is pending admin approval. Please contact your administrator." });
+    }
+    if (user.status === "INACTIVE") {
+      await recordLogin(user.id, false);
+      return res.status(403).json({ error: "Your account has been deactivated. Please contact your administrator." });
+    }
+    if (user.status === "LOCKED") {
+      await recordLogin(user.id, false);
+      return res.status(403).json({ error: "Your account is locked. Please contact your administrator to unlock it." });
+    }
+    if (user.status !== "ACTIVE") {
+      await recordLogin(user.id, false);
       return res.status(401).json({ error: "Invalid email or password" });
     }
 
@@ -190,7 +207,7 @@ router.post("/forgot-password", validate(forgotPasswordSchema), async (req, res,
         const { passwordReset } = require("../services/email/templates");
         const emailService = require("../services/email");
         const template = passwordReset(user.name, resetUrl);
-        await emailService.send({ to: user.email, ...template });
+        await emailService.sendEmail({ to: user.email, ...template });
       } catch (e) {
         // Email service may not be configured — that's OK in demo mode
         console.log("[DEMO] Email service not available, reset token logged to console");

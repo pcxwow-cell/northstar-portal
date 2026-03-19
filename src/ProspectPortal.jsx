@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { NorthstarIcon, NorthstarWordmark, sans, serif, red, darkText, cream, green } from "./App.jsx";
 import { submitProspectInterest, fetchProjects, isDemoMode, fmtCurrency } from "./api.js";
-import { projects as demoProjectsData } from "./data.js";
 
 // ─── PROJECT IMAGES ─────────────────────────────────────
 const projectImages = {
@@ -18,8 +17,8 @@ const projectImagesByName = {
   "Panorama Building 6": projectImages[4],
 };
 
-// ─── PROSPECT PROJECT DATA (enriched for public display) ───
-const prospectProjects = [
+// ─── PROSPECT PROJECT DATA (fallback for demo/offline) ───
+const fallbackProspectProjects = [
   {
     id: 1, name: "Porthaven", location: "Downtown Port Coquitlam",
     type: "Mixed-Use Residential & Retail", status: "Under Construction",
@@ -360,6 +359,39 @@ export default function ProspectPortal({ onNavigateLogin }) {
   const [statusFilter, setStatusFilter] = useState("All");
   const [interestModal, setInterestModal] = useState({ open: false, projectId: null, projectName: null });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [prospectProjects, setProspectProjects] = useState(fallbackProspectProjects);
+
+  // Fetch projects from API on mount; fall back to hardcoded data on failure (demo/Vercel)
+  useEffect(() => {
+    let cancelled = false;
+    fetchProjects()
+      .then(apiProjects => {
+        if (cancelled || !apiProjects || !Array.isArray(apiProjects) || apiProjects.length === 0) return;
+        // Enrich API data with prospect-specific display fields from fallback where available
+        const enriched = apiProjects.map(ap => {
+          const fallback = fallbackProspectProjects.find(fp => fp.id === ap.id);
+          return {
+            ...ap,
+            completionPct: ap.completionPct ?? ap.completion ?? fallback?.completionPct ?? 0,
+            minInvestment: ap.minInvestment ?? fallback?.minInvestment ?? 75000,
+            projectedIRR: ap.projectedIRR ?? fallback?.projectedIRR ?? "N/A",
+            projectedMOIC: ap.projectedMOIC ?? fallback?.projectedMOIC ?? "N/A",
+            holdPeriod: ap.holdPeriod ?? fallback?.holdPeriod ?? "N/A",
+            propertyType: ap.propertyType ?? fallback?.propertyType ?? ap.type ?? "N/A",
+            description: ap.description ?? fallback?.description ?? "",
+            prefReturn: ap.prefReturn ?? fallback?.prefReturn ?? "8% preferred",
+            gpCatchup: ap.gpCatchup ?? fallback?.gpCatchup ?? "100% GP catch-up",
+            carrySplit: ap.carrySplit ?? fallback?.carrySplit ?? "80/20 LP/GP above preferred return",
+            documents: ap.documents ?? fallback?.documents ?? [],
+          };
+        });
+        if (!cancelled) setProspectProjects(enriched);
+      })
+      .catch(() => {
+        // API unreachable (demo mode / Vercel) — keep fallback data
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   function openProject(project) {
     setSelectedProject(project);

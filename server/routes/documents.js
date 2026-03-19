@@ -264,12 +264,54 @@ router.post("/bulk-k1", requireRole("ADMIN", "GP"), upload.array("files", 50), a
       audit.log(req, "document_upload", `document:${doc.id}`, { name: doc.name, category: "Tax", bulk: true, matched: !!matched });
     }
 
+    // Notify matched investors about their K-1 documents
+    const matchedResults = results.filter(r => r.status === "matched" && r.matched);
+    if (matchedResults.length > 0) {
+      let projectName = "Tax Documents";
+      if (projectId) {
+        try {
+          const project = await prisma.project.findUnique({ where: { id: parseInt(projectId) }, select: { name: true } });
+          if (project) projectName = project.name;
+        } catch (e) { /* use default */ }
+      }
+      for (const r of matchedResults) {
+        try {
+          await notifyMany([r.matched.id], "document_uploaded", {
+            docName: r.filename,
+            projectName,
+          });
+        } catch (e) { console.warn("K-1 notification failed:", e.message); }
+      }
+    }
+
     res.status(201).json({
       total: results.length,
       matched: results.filter(r => r.status === "matched").length,
       unmatched: results.filter(r => r.status === "unmatched").length,
       results,
     });
+  } catch (err) { next(err); }
+});
+
+// DELETE /api/v1/documents/:id — delete a document (ADMIN/GP)
+router.delete("/:id", requireRole("ADMIN", "GP"), async (req, res, next) => {
+  try {
+    const docId = parseInt(req.params.id);
+    const doc = await prisma.document.findUnique({ where: { id: docId } });
+    if (!doc) return res.status(404).json({ error: "Document not found" });
+
+    // Delete assignments first
+    await prisma.documentAssignment.deleteMany({ where: { documentId: docId } });
+    // Delete the document record
+    await prisma.document.delete({ where: { id: docId } });
+
+    // Delete file from storage if it exists
+    if (doc.storageKey) {
+      try { await storage.delete(doc.storageKey); } catch (e) { console.warn("File delete warning:", e.message); }
+    }
+
+    audit.log(req, "document_delete", `document:${docId}`, { name: doc.name });
+    res.json({ ok: true, name: doc.name });
   } catch (err) { next(err); }
 });
 

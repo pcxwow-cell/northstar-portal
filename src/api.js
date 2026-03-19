@@ -111,6 +111,7 @@ export async function login(email, password) {
 }
 
 export async function getMe() {
+  if (!_demoMode && !getToken()) return null;
   if (_demoMode) {
     const role = localStorage.getItem("northstar_demo_role");
     if (role === "INVESTOR") return { id: 1, name: "James Chen", initials: "JC", email: "j.chen@pacificventures.ca", role: "Limited Partner", joined: "March 2023", projectIds: [1, 2] };
@@ -188,6 +189,7 @@ export async function verifyMFA(userId, token, mfaToken) {
 
 export async function disableMFA(password) {
   if (_demoMode) return { success: true };
+  // NOTE: Using DELETE with body — some proxies may strip this. Consider changing to POST.
   return apiFetch("/auth/mfa/disable", { method: "DELETE", body: JSON.stringify({ password }) });
 }
 
@@ -217,7 +219,7 @@ export async function fetchLoginHistory() {
 
 // ─── Data fetching (with demo fallback) ───
 export async function fetchProjects() {
-  if (_demoMode) return demoProjects.map(p => ({ id: p.id, name: p.name, location: p.location, type: p.type, status: p.status, sqft: p.sqft, units: p.units, completion: p.completion, totalRaise: p.totalRaise, description: p.description }));
+  if (_demoMode) return demoProjects.map(p => ({ id: p.id, name: p.name, location: p.location, type: p.type, status: p.status, sqft: p.sqft, units: p.units, completion: p.completion, totalRaise: p.totalRaise, description: p.description, investorCommitted: p.investorCommitted, investorCalled: p.investorCalled, currentValue: p.currentValue, irr: p.irr, moic: p.moic }));
   return apiFetch("/projects");
 }
 
@@ -253,6 +255,12 @@ export async function fetchMessages() {
 
 // ─── Document download ───
 export async function downloadDocument(docId) {
+  if (_demoMode) {
+    // In demo mode, try to open the file path directly for seeded docs
+    const doc = demoAllDocuments?.find(d => d.id === docId);
+    if (doc?.file) window.open(doc.file, "_blank");
+    return;
+  }
   const token = getToken();
   const res = await fetch(`${API_BASE}/documents/${docId}/download`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -356,6 +364,10 @@ export async function deactivateInvestor(id) {
   return apiFetch(`/admin/investors/${id}/deactivate`, { method: "POST" });
 }
 
+export async function unlockInvestor(id) {
+  return apiFetch(`/admin/investors/${id}/unlock`, { method: "POST" });
+}
+
 export async function resetInvestorPassword(id) {
   return apiFetch(`/admin/investors/${id}/reset-password`, { method: "POST" });
 }
@@ -417,6 +429,18 @@ export async function updateStaff(id, data) {
   return apiFetch(`/admin/staff/${id}`, { method: "PUT", body: JSON.stringify(data) });
 }
 
+export async function deactivateStaff(id) {
+  return apiFetch(`/admin/staff/${id}/deactivate`, { method: "POST" });
+}
+
+export async function reactivateStaff(id) {
+  return apiFetch(`/admin/staff/${id}/reactivate`, { method: "POST" });
+}
+
+export async function resetStaffPassword(id) {
+  return apiFetch(`/admin/staff/${id}/reset-password`, { method: "POST" });
+}
+
 // Admin documents
 export async function fetchAdminProjectDetail(id) {
   if (_demoMode) { const p = demoProjects.find(x => x.id === id); if (!p) return null; return { ...p, completion: p.completion, prefReturn: p.waterfall.prefReturn, catchUp: p.waterfall.catchUp, carry: p.waterfall.carry, investors: p.id <= 2 ? [{ userId: 1, name: "James Chen", email: "j.chen@pacificventures.ca", committed: p.investorCommitted, called: p.investorCalled, currentValue: p.currentValue, irr: p.irr, moic: p.moic }] : [], documents: p.documents.map(d => ({ ...d, viewedBy: 0 })), updates: p.updates.map((u, i) => ({ id: i + 1, ...u })) }; }
@@ -438,11 +462,8 @@ export async function fetchAdminDocumentDetail(id) {
   return apiFetch(`/admin/documents/${id}`);
 }
 
-export async function sendMessage(data) {
-  return apiFetch("/admin/messages", { method: "POST", body: JSON.stringify(data) });
-}
-
 export async function uploadDocument(formData) {
+  if (_demoMode) return { id: Date.now(), name: "demo-upload.pdf", status: "published" };
   const token = getToken();
   const res = await fetch(`${API_BASE}/documents/upload`, {
     method: "POST",
@@ -474,8 +495,23 @@ export async function bulkUploadK1(formData) {
   return res.json();
 }
 
+export async function deleteDocument(id) {
+  return apiFetch(`/documents/${id}`, { method: "DELETE" });
+}
+
+export async function assignDocument(docId, userIds) {
+  return apiFetch(`/admin/documents/${docId}/assign`, { method: "POST", body: JSON.stringify({ userIds }) });
+}
+
+export async function deleteProject(id) {
+  return apiFetch(`/admin/projects/${id}`, { method: "DELETE" });
+}
+
 // ─── Signatures ───
-const _demoSignatures = [];
+const _demoSignatures = [
+  { id: 1, documentId: 5, documentName: "Subscription Agreement", status: "pending", message: "Please review and sign", createdAt: new Date().toISOString(),
+    signers: [{ id: 1, name: "James Chen", email: "j.chen@pacificventures.ca", status: "pending", signUrl: null, userId: 1 }] },
+];
 
 export async function fetchSignatureRequests() {
   if (_demoMode) return _demoSignatures;
@@ -493,7 +529,7 @@ export async function createSignatureRequest(data) {
       id: Date.now(), requestId: "demo_" + Date.now(), status: "pending",
       subject: data.subject || "Signature requested", document: { id: data.documentId, name: "Document" },
       createdBy: { id: 2, name: "Northstar Admin" }, createdAt: new Date().toISOString(),
-      signers: (data.signerIds || []).map((id, i) => ({ id: Date.now() + i, name: `Signer ${i + 1}`, email: "", status: "pending", userId: id })),
+      signers: (data.signerIds || []).map((id, i) => ({ id: Date.now() + i, name: `Signer ${i + 1}`, email: "", status: "pending", signUrl: null, userId: id })),
     };
     _demoSignatures.unshift(req);
     return req;
@@ -543,6 +579,52 @@ export async function fetchNotificationPreferences() {
 export async function updateNotificationPreferences(data) {
   if (_demoMode) return { ...data };
   return apiFetch("/notifications/preferences", { method: "PUT", body: JSON.stringify(data) });
+}
+
+// ─── Email Settings (Admin) ───
+
+export async function fetchEmailSettings() {
+  if (_demoMode) return {
+    id: 1,
+    enableDocuments: true, enableSignatures: true, enableDistributions: true,
+    enableMessages: true, enableCapitalCalls: true, enableWelcome: true, enablePasswordReset: true,
+    fromName: null, fromAddress: null, replyToAddress: null,
+    brandColor: null, companyName: null, companyAddress: null, logoUrl: null, portalUrl: null,
+    subjectWelcome: null, subjectDocument: null, subjectSignature: null,
+    subjectDistribution: null, subjectMessage: null, subjectCapitalCall: null, subjectPasswordReset: null,
+    footerText: null,
+    _provider: "demo", _providerConfigured: false, _envFromAddress: null, _envFromName: null,
+  };
+  return apiFetch("/settings/email");
+}
+
+export async function updateEmailSettings(data) {
+  if (_demoMode) return { ...data, id: 1 };
+  return apiFetch("/settings/email", { method: "PUT", body: JSON.stringify(data) });
+}
+
+export async function sendTestEmail() {
+  if (_demoMode) return { success: true, sentTo: "demo@example.com" };
+  return apiFetch("/settings/email/test", { method: "POST" });
+}
+
+export async function fetchEmailLog(params = {}) {
+  if (_demoMode) return { logs: [
+    { id: 1, userName: "James Chen", userEmail: "j.chen@pacificventures.ca", type: "document_uploaded", subject: "New Document: Q4 Report", status: "sent", createdAt: new Date().toISOString() },
+    { id: 2, userName: "James Chen", userEmail: "j.chen@pacificventures.ca", type: "signature_required", subject: "Signature Required: Subscription Agreement", status: "sent", createdAt: new Date(Date.now() - 86400000).toISOString() },
+  ], total: 2 };
+  const qs = new URLSearchParams(params).toString();
+  return apiFetch(`/settings/email/log${qs ? "?" + qs : ""}`);
+}
+
+export async function fetchEmailStats() {
+  if (_demoMode) return { total: 12, sent: 10, failed: 1, skipped: 1, byType: { document_uploaded: 4, signature_required: 3, new_message: 3, distribution_paid: 1, capital_call: 1 } };
+  return apiFetch("/settings/email/stats");
+}
+
+export async function createDistribution(data) {
+  if (_demoMode) return { id: Date.now(), ...data, project: "Demo Project", investorsNotified: 1 };
+  return apiFetch("/distributions", { method: "POST", body: JSON.stringify(data) });
 }
 
 // ─── Prospects (public + admin) ───
@@ -796,6 +878,42 @@ export const fmtCurrency = (n) => {
   if (n >= 1000) return `$${(n / 1000).toFixed(0)}K`;
   return `$${n}`;
 };
+
+// ─── Cap Table CRUD ───
+export async function createCapTableEntry(projectId, data) {
+  return apiFetch(`/admin/projects/${projectId}/cap-table`, { method: "POST", body: JSON.stringify(data) });
+}
+export async function updateCapTableEntry(projectId, entryId, data) {
+  return apiFetch(`/admin/projects/${projectId}/cap-table/${entryId}`, { method: "PUT", body: JSON.stringify(data) });
+}
+export async function deleteCapTableEntry(projectId, entryId) {
+  return apiFetch(`/admin/projects/${projectId}/cap-table/${entryId}`, { method: "DELETE" });
+}
+
+// ─── Waterfall Tier CRUD ───
+export async function createWaterfallTier(projectId, data) {
+  return apiFetch(`/admin/projects/${projectId}/waterfall-tiers`, { method: "POST", body: JSON.stringify(data) });
+}
+export async function updateWaterfallTier(projectId, tierId, data) {
+  return apiFetch(`/admin/projects/${projectId}/waterfall-tiers/${tierId}`, { method: "PUT", body: JSON.stringify(data) });
+}
+export async function deleteWaterfallTier(projectId, tierId) {
+  return apiFetch(`/admin/projects/${projectId}/waterfall-tiers/${tierId}`, { method: "DELETE" });
+}
+
+// ─── Bulk Operations ───
+export async function recordBulkDistribution(projectId, data) {
+  return apiFetch("/finance/bulk-distribution", { method: "POST", body: JSON.stringify({ projectId, ...data }) });
+}
+export async function recordBulkCapitalCall(projectId, data) {
+  return apiFetch("/finance/bulk-capital-call", { method: "POST", body: JSON.stringify({ projectId, ...data }) });
+}
+
+// ─── Mark notification read ───
+export async function markNotificationRead(id) {
+  if (_demoMode) return { ok: true };
+  return apiFetch(`/notifications/${id}/read`, { method: "POST" });
+}
 
 // ─── Feature Flags ───
 

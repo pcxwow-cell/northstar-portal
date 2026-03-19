@@ -26,17 +26,30 @@ router.post("/", validate(prospectSchema), async (req, res) => {
       include: { interestedProject: { select: { id: true, name: true } } },
     });
 
-    // Send admin notification (log it — in production, integrate email service)
+    // Send admin notification via email and log it
     try {
+      const emailService = require("../services/email");
       const admins = await prisma.user.findMany({ where: { role: "ADMIN", status: "ACTIVE" } });
       for (const admin of admins) {
+        let emailStatus = "sent";
+        try {
+          await emailService.sendEmail({
+            to: admin.email,
+            subject: `New Prospect: ${name}`,
+            html: `<p>New prospect submission from ${name} (${email}).</p>`,
+            text: `New prospect: ${name} (${email})`,
+          });
+        } catch (emailErr) {
+          console.error("Failed to send prospect email to", admin.email, emailErr.message);
+          emailStatus = "failed";
+        }
         await prisma.notificationLog.create({
           data: {
             userId: admin.id,
             type: "new_prospect",
             subject: `New Prospect: ${name} (${investmentRange || "range not specified"})`,
             channel: "email",
-            status: "sent",
+            status: emailStatus,
             metadata: JSON.stringify({
               prospectName: name,
               prospectEmail: email,

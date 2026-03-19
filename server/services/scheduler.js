@@ -47,7 +47,7 @@ async function runMonthlyStatements() {
  * at ./statementGenerator with a generateAllStatements(period) export.
  */
 async function generateAndDeliverStatements(period) {
-  const { generateAllStatements } = require("./statementGenerator");
+  const { generateAllStatements, generateStatementHTML } = require("./statementGenerator");
 
   console.log(`[scheduler] Generating ${period} statements...`);
   const statements = await generateAllStatements(period);
@@ -55,15 +55,25 @@ async function generateAndDeliverStatements(period) {
 
   if (statements.length === 0) return { generated: 0, emailed: 0 };
 
-  const emails = statements.map((stmt) => ({
-    to: stmt.investorEmail,
-    subject: `Your ${period} investment statement is ready`,
-    html: stmt.html,
-    text: stmt.text || `Your ${period} statement is available in the investor portal.`,
-  }));
-
-  const results = await email.sendBulk(emails);
-  const sent = results.filter((r) => r.status === "sent").length;
+  let sent = 0;
+  for (const stmt of statements) {
+    try {
+      const investorEmail = stmt.statement?.header?.investorEmail;
+      if (!investorEmail) {
+        console.warn(`[scheduler] Skipping statement with no investor email`);
+        continue;
+      }
+      await email.sendEmail({
+        to: investorEmail,
+        subject: `Your ${period} investment statement is ready`,
+        html: generateStatementHTML ? generateStatementHTML(stmt.statement) : `<p>Your ${period} statement is available in the investor portal.</p>`,
+        text: `Your ${period} statement is available in the investor portal.`,
+      });
+      sent++;
+    } catch (err) {
+      console.error(`[scheduler] Failed to email statement:`, err.message);
+    }
+  }
   console.log(`[scheduler] Emailed ${sent}/${statements.length} statements`);
 
   return { generated: statements.length, emailed: sent };

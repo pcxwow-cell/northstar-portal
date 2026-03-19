@@ -85,6 +85,10 @@ const prospectLimiter = rateLimit({ windowMs: 60000, max: 5 }); // 5 submissions
 app.use("/api/v1/auth", authLimiter, require("./routes/auth"));
 app.use("/api/v1/prospects", prospectLimiter, require("./routes/prospects"));
 
+// ─── E-sign webhook (no auth — verified by provider signature) ───
+const signaturesRouter = require("./routes/signatures");
+app.post("/api/v1/signatures/webhook", signaturesRouter.webhookHandler || ((req, res) => res.status(200).json({ ok: true })));
+
 // Protected routes (require valid JWT)
 app.use("/api/v1/projects", authenticate, require("./routes/projects"));
 app.use("/api/v1/investors", authenticate, require("./routes/investors"));
@@ -92,16 +96,17 @@ app.use("/api/v1/documents", authenticate, require("./routes/documents"));
 app.use("/api/v1/distributions", authenticate, require("./routes/distributions"));
 app.use("/api/v1/messages", authenticate, require("./routes/messages"));
 app.use("/api/v1/threads", authenticate, require("./routes/threads"));
-app.use("/api/v1/signatures", authenticate, require("./routes/signatures"));
+app.use("/api/v1/signatures", authenticate, signaturesRouter);
 app.use("/api/v1/notifications", authenticate, require("./routes/notifications"));
 app.use("/api/v1/admin", authenticate, require("./routes/admin"));
+app.use("/api/v1/settings", authenticate, require("./routes/settings"));
 app.use("/api/v1/finance", authenticate, require("./routes/finance"));
 app.use("/api/v1/features", authenticate, require("./routes/features"));
 app.use("/api/v1/statements", authenticate, require("./routes/statements"));
 app.use("/api/v1", authenticate, require("./routes/entities"));
 
-// Serve uploaded files (local storage only — S3 uses signed URLs)
-app.use("/uploads", express.static(path.resolve(__dirname, "../uploads")));
+// Serve uploaded files through auth-protected route only
+app.use("/uploads", authenticate, express.static(path.resolve(__dirname, "../uploads")));
 
 // ─── Production: serve built frontend ───
 if (process.env.NODE_ENV === "production") {

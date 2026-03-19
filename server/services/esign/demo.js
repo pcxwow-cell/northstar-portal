@@ -19,7 +19,7 @@ async function createSignatureRequest({ documentId, signers, subject, message })
     name: s.name,
     email: s.email,
     status: "pending",
-    signUrl: `/api/v1/signatures/${requestId}_signer_${i}/sign`, // demo URL
+    signUrl: null, // Actual Prisma signer IDs will be used by the frontend
   }));
 
   const record = {

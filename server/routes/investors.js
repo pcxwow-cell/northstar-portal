@@ -42,6 +42,7 @@ router.get("/:id/projects", async (req, res, next) => {
     const investorProjects = await prisma.investorProject.findMany({
       where: { userId: targetId },
       include: {
+        entity: true,
         project: {
           include: {
             capTableEntries: true,

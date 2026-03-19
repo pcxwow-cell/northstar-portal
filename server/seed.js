@@ -220,6 +220,17 @@ async function main() {
   }
   console.log("  Documents: " + documentsData.length);
 
+  // Assign all documents to the investor
+  const allDocs = await prisma.document.findMany();
+  for (const doc of allDocs) {
+    try {
+      await prisma.documentAssignment.create({
+        data: { documentId: doc.id, userId: investor.id },
+      });
+    } catch (e) { /* skip if already exists */ }
+  }
+  console.log("  DocumentAssignments: " + allDocs.length);
+
   // ─── Project Updates (with metric snapshots) ───
   const updatesData = [
     // Porthaven
@@ -275,6 +286,17 @@ async function main() {
     await prisma.message.create({ data: m });
   }
   console.log("  Messages: " + messagesData.length);
+
+  // Add recipients for messages
+  const allMessages = await prisma.message.findMany();
+  for (const msg of allMessages) {
+    try {
+      await prisma.messageRecipient.create({
+        data: { messageId: msg.id, userId: investor.id },
+      });
+    } catch (e) { /* skip duplicates */ }
+  }
+  console.log("  MessageRecipients: " + allMessages.length);
 
   // ─── Message Threads (new threaded messaging) ───
   await prisma.threadRecipient.deleteMany();

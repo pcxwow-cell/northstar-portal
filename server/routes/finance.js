@@ -8,6 +8,7 @@ const { validate, recordCashFlowSchema, calculateIrrSchema, calculateWaterfallSc
 
 // ─── POST /calculate-irr ────────────────────────────────
 // Body: { cashFlows: [{date, amount}] }
+// Intentionally open — pure stateless calculator, no data access
 router.post("/calculate-irr", validate(calculateIrrSchema), (req, res) => {
   try {
     const { cashFlows } = req.body;
@@ -20,6 +21,7 @@ router.post("/calculate-irr", validate(calculateIrrSchema), (req, res) => {
 
 // ─── POST /calculate-waterfall ──────────────────────────
 // Body: { totalDistributable, structure: { prefReturnPct, gpCatchupPct, carryPct, lpCapital, holdPeriodYears } }
+// Intentionally open — pure stateless calculator, no data access
 router.post("/calculate-waterfall", validate(calculateWaterfallSchema), (req, res) => {
   try {
     const { totalDistributable, structure } = req.body;
@@ -90,6 +92,20 @@ router.post("/record-cashflow", requireRole("ADMIN", "GP"), validate(recordCashF
     });
 
     audit.log(req, "cash_flow_record", `project:${projectId}`, { userId, amount, type });
+
+    // Notify investor based on cash flow type
+    try {
+      const { notify } = require("../services/notifications");
+      const project = await prisma.project.findUnique({ where: { id: parseInt(projectId) } });
+      if (type === "distribution" && cashFlow.amount > 0) {
+        notify(parseInt(userId), "distribution_paid", { amount: cashFlow.amount, projectName: project?.name || "Project", quarter: "" });
+      }
+      if (type === "capital_call") {
+        notify(parseInt(userId), "capital_call", { amount: Math.abs(cashFlow.amount), projectName: project?.name || "Project", dueDate: "See portal" });
+      }
+    } catch (notifyErr) {
+      console.warn("Cash flow notification error:", notifyErr.message);
+    }
 
     res.json(cashFlow);
   } catch (err) {
@@ -253,8 +269,8 @@ router.post("/recalculate/:projectId", requireRole("ADMIN", "GP"), async (req, r
   }
 });
 
-// ─── POST /model-scenario — Full financial scenario modeling ───
-router.post("/model-scenario", async (req, res) => {
+// ─── POST /model-scenario — Full financial scenario modeling (ADMIN/GP) ───
+router.post("/model-scenario", requireRole("ADMIN", "GP"), async (req, res) => {
   try {
     const { projectId, scenario } = req.body;
     if (!scenario) return res.status(400).json({ error: "scenario is required" });
@@ -373,6 +389,141 @@ router.post("/model-scenario", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// ─── POST /bulk-distribution (ADMIN/GP) ──────────────────
+router.post("/bulk-distribution", requireRole("ADMIN", "GP"), async (req, res, next) => {
+  try {
+    const { projectId, amount, quarter, date, type } = req.body;
+    if (!projectId || !amount) return res.status(400).json({ error: "projectId and amount required" });
+
+    // Get all investors and their ownership
+    const investors = await prisma.investorProject.findMany({
+      where: { projectId: parseInt(projectId) },
+      include: { user: { select: { id: true, name: true } } },
+    });
+    if (!investors.length) return res.status(400).json({ error: "No investors in project" });
+
+    // Get cap table for ownership percentages
+    const capTable = await prisma.capTableEntry.findMany({
+      where: { projectId: parseInt(projectId) },
+    });
+
+    const totalOwnership = capTable.reduce((s, e) => s + (e.ownershipPct || 0), 0) || 100;
+    const results = [];
+
+    for (const ip of investors) {
+      // Find matching cap table entry for ownership %
+      const entry = capTable.find(e => e.holderName === ip.user.name);
+      const ownership = entry ? (entry.ownershipPct / totalOwnership) : (1 / investors.length);
+      const share = parseFloat(amount) * ownership;
+
+      // Create CashFlow record
+      const cf = await prisma.cashFlow.create({
+        data: {
+          projectId: parseInt(projectId),
+          userId: ip.userId,
+          date: date ? new Date(date) : new Date(),
+          amount: share,
+          type: type || "distribution",
+          description: `${quarter || "Q" + Math.ceil((new Date().getMonth()+1)/3)} distribution — $${share.toLocaleString()}`,
+        },
+      });
+
+      // Update investor's currentValue
+      await prisma.investorProject.update({
+        where: { userId_projectId: { userId: ip.userId, projectId: parseInt(projectId) } },
+        data: { currentValue: { decrement: share } },
+      });
+
+      results.push({ userId: ip.userId, name: ip.user.name, amount: share });
+    }
+
+    // Also create Distribution record
+    const project = await prisma.project.findUnique({ where: { id: parseInt(projectId) } });
+    await prisma.distribution.create({
+      data: {
+        projectId: parseInt(projectId),
+        quarter: quarter || `Q${Math.ceil((new Date().getMonth()+1)/3)} ${new Date().getFullYear()}`,
+        date: date || new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+        amount: parseFloat(amount),
+        type: type || "distribution",
+      },
+    });
+
+    // Notify investors
+    const { notifyMany } = require("../services/notifications");
+    await notifyMany(results.map(r => r.userId), "distribution_paid", {
+      amount: parseFloat(amount),
+      projectName: project?.name || "Project",
+      quarter: quarter || "",
+    }).catch(e => console.warn("Distribution notification error:", e.message));
+
+    audit.log(req, "bulk_distribution", `project:${projectId}`, { amount, investors: results.length });
+    res.status(201).json({ total: parseFloat(amount), splits: results });
+  } catch (err) { next(err); }
+});
+
+// ─── POST /bulk-capital-call (ADMIN/GP) ──────────────────
+router.post("/bulk-capital-call", requireRole("ADMIN", "GP"), async (req, res, next) => {
+  try {
+    const { projectId, amount, quarter, date, dueDate } = req.body;
+    if (!projectId || !amount) return res.status(400).json({ error: "projectId and amount required" });
+
+    // Get all investors and their ownership
+    const investors = await prisma.investorProject.findMany({
+      where: { projectId: parseInt(projectId) },
+      include: { user: { select: { id: true, name: true } } },
+    });
+    if (!investors.length) return res.status(400).json({ error: "No investors in project" });
+
+    // Get cap table for ownership percentages
+    const capTable = await prisma.capTableEntry.findMany({
+      where: { projectId: parseInt(projectId) },
+    });
+
+    const totalOwnership = capTable.reduce((s, e) => s + (e.ownershipPct || 0), 0) || 100;
+    const results = [];
+
+    for (const ip of investors) {
+      // Find matching cap table entry for ownership %
+      const entry = capTable.find(e => e.holderName === ip.user.name);
+      const ownership = entry ? (entry.ownershipPct / totalOwnership) : (1 / investors.length);
+      const share = parseFloat(amount) * ownership;
+
+      // Create CashFlow record with negative amount (capital call)
+      await prisma.cashFlow.create({
+        data: {
+          projectId: parseInt(projectId),
+          userId: ip.userId,
+          date: date ? new Date(date) : new Date(),
+          amount: -share,
+          type: "capital_call",
+          description: `${quarter || "Q" + Math.ceil((new Date().getMonth()+1)/3)} capital call — $${share.toLocaleString()}`,
+        },
+      });
+
+      // Update investor's called field
+      await prisma.investorProject.update({
+        where: { userId_projectId: { userId: ip.userId, projectId: parseInt(projectId) } },
+        data: { called: { increment: share } },
+      });
+
+      results.push({ userId: ip.userId, name: ip.user.name, amount: share });
+    }
+
+    // Notify investors
+    const project = await prisma.project.findUnique({ where: { id: parseInt(projectId) } });
+    const { notifyMany } = require("../services/notifications");
+    await notifyMany(results.map(r => r.userId), "capital_call", {
+      amount: parseFloat(amount),
+      projectName: project?.name || "Project",
+      dueDate: dueDate || "See portal",
+    }).catch(e => console.warn("Capital call notification error:", e.message));
+
+    audit.log(req, "bulk_capital_call", `project:${projectId}`, { amount, investors: results.length });
+    res.status(201).json({ total: parseFloat(amount), splits: results });
+  } catch (err) { next(err); }
 });
 
 module.exports = router;

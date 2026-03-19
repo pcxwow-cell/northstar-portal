@@ -83,8 +83,13 @@ async function createSignatureRequest({ documentId, signers, subject, message, d
           signHereTabs: [{
             anchorString: "/sn/",
             anchorUnits: "pixels",
+            anchorYOffset: "-10",
             anchorXOffset: "0",
-            anchorYOffset: "0",
+          }, {
+            // Fallback: position-based tab if anchor not found
+            xPosition: "100",
+            yPosition: "700",
+            pageNumber: "1",
           }],
         },
       })),
@@ -134,6 +139,9 @@ async function createSignatureRequest({ documentId, signers, subject, message, d
   };
 }
 
+// TODO: Implement embedded signing for in-portal signature experience
+// Requires: envelopesApi.createRecipientView(ACCOUNT_ID, envelopeId, { returnUrl, authenticationMethod, email, userName, clientUserId })
+
 async function getRequestStatus(requestId) {
   const token = await getToken();
   const apiClient = getApiClient(token);
@@ -170,7 +178,7 @@ async function cancelRequest(requestId) {
   const apiClient = getApiClient(token);
   const envelopesApi = new docusign.EnvelopesApi(apiClient);
 
-  await envelopesApi.update(ACCOUNT_ID, requestId, {
+  await envelopesApi.updateEnvelope(ACCOUNT_ID, requestId, {
     envelope: { status: "voided", voidedReason: "Cancelled by admin" },
   });
 }

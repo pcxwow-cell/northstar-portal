@@ -275,32 +275,89 @@ router.post("/:id/cancel", requireRole("ADMIN", "GP"), async (req, res, next) =>
 });
 
 // POST /api/v1/signatures/webhook — webhook endpoint for provider callbacks
-router.post("/webhook", async (req, res, next) => {
+// NOTE: This route is also mounted directly in index.js WITHOUT auth for external providers
+async function webhookHandler(req, res) {
   try {
     const result = await esign.handleWebhook(req.body);
 
     if (result.requestId) {
-      // Find the signature request by provider requestId
       const sigReq = await prisma.signatureRequest.findUnique({
         where: { requestId: result.requestId },
+        include: { signers: true, document: { select: { id: true, name: true } }, createdBy: { select: { id: true, name: true } } },
       });
-      if (sigReq && result.event === "signed") {
-        // Update status via provider sync
+      if (!sigReq) return res.status(200).json({ ok: true, message: "Unknown request" });
+
+      if (result.event === "signed") {
+        // Update individual signer if identified
+        if (result.signerEmail) {
+          await prisma.signatureSigner.updateMany({
+            where: { requestId: sigReq.id, email: result.signerEmail, status: "pending" },
+            data: { status: "signed", signedAt: new Date() },
+          });
+        }
+
+        // Check if all signers are done
         const providerStatus = await esign.getRequestStatus(result.requestId);
         if (providerStatus.status === "signed") {
+          await prisma.signatureSigner.updateMany({
+            where: { requestId: sigReq.id, status: "pending" },
+            data: { status: "signed", signedAt: new Date() },
+          });
           await prisma.signatureRequest.update({
             where: { id: sigReq.id },
             data: { status: "signed", completedAt: new Date() },
           });
+          await prisma.document.update({
+            where: { id: sigReq.documentId },
+            data: { status: "published" },
+          });
+          // Notify admin
+          if (sigReq.createdBy) {
+            await notify(sigReq.createdBy.id, "signature_completed", {
+              investorName: "All signers",
+              docName: sigReq.document.name,
+            });
+          }
         }
+      } else if (result.event === "declined") {
+        if (result.signerEmail) {
+          await prisma.signatureSigner.updateMany({
+            where: { requestId: sigReq.id, email: result.signerEmail },
+            data: { status: "declined" },
+          });
+        }
+        await prisma.signatureRequest.update({
+          where: { id: sigReq.id },
+          data: { status: "declined" },
+        });
+        await prisma.document.update({
+          where: { id: sigReq.documentId },
+          data: { status: "published" },
+        });
+      } else if (result.event === "cancelled" || result.event === "expired") {
+        await prisma.signatureSigner.updateMany({
+          where: { requestId: sigReq.id, status: "pending" },
+          data: { status: result.event === "expired" ? "expired" : "cancelled" },
+        });
+        await prisma.signatureRequest.update({
+          where: { id: sigReq.id },
+          data: { status: result.event === "expired" ? "expired" : "cancelled" },
+        });
+        await prisma.document.update({
+          where: { id: sigReq.documentId },
+          data: { status: "published" },
+        });
       }
     }
 
-    res.json({ ok: true });
+    res.status(200).json({ ok: true });
   } catch (err) {
     console.error("Webhook error:", err.message);
     res.status(200).json({ ok: false, error: err.message }); // Always 200 for webhooks
   }
-});
+}
+
+router.post("/webhook", webhookHandler);
+router.webhookHandler = webhookHandler;
 
 module.exports = router;

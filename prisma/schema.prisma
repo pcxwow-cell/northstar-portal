@@ -13,6 +13,7 @@ model User {
   passwordHash String    @default("") @map("password_hash")
   name         String
   initials     String?
+  permissions  String?  // JSON: { can_view_cap_table, can_view_waterfall, can_view_documents, can_download, can_message }
   role         String    @default("INVESTOR") // INVESTOR | ADMIN | GP
   joined       String?   // "March 2023" display string
   status       String    @default("ACTIVE")
@@ -35,6 +36,11 @@ model User {
   auditLogs            AuditLog[]
   entities             InvestorEntity[]
   loginHistory         LoginHistory[]
+  statementsAsUser      Statement[]    @relation("statementUser")
+  statementsAsCreator   Statement[]    @relation("statementCreator")
+  statementsAsApprover  Statement[]    @relation("statementApprover")
+  statementsAsRejector  Statement[]    @relation("statementRejector")
+  featureFlagOverrides  FeatureFlagOverride[]
   failedLoginAttempts  Int       @default(0) @map("failed_login_attempts")
   lockedUntil          DateTime? @map("locked_until")
   resetToken           String?   @map("reset_token")
@@ -78,6 +84,7 @@ model Project {
   targetedThreads    MessageThread[] @relation("threadTarget")
   prospects          Prospect[]
   cashFlows          CashFlow[]
+  statements         Statement[]    @relation("statementProject")
 
   @@map("projects")
 }
@@ -99,6 +106,8 @@ model InvestorProject {
   entity  InvestorEntity?   @relation(fields: [entityId], references: [id])
 
   @@unique([userId, projectId])
+  @@index([userId])
+  @@index([projectId])
   @@map("investor_projects")
 }
 
@@ -146,6 +155,7 @@ model Distribution {
 
   project Project @relation(fields: [projectId], references: [id])
 
+  @@index([projectId])
   @@map("distributions")
 }
 
@@ -165,6 +175,7 @@ model Document {
   assignments DocumentAssignment[]
   signatureRequests    SignatureRequest[]
 
+  @@index([projectId])
   @@map("documents")
 }
 
@@ -177,6 +188,7 @@ model ProjectUpdate {
   unitsSold     Int?     @map("units_sold_snapshot")
   revenue       Float?   @map("revenue_snapshot")
   status        String?  @map("status_snapshot")
+  photoUrl      String?  @map("photo_url")
   createdAt     DateTime @default(now()) @map("created_at")
 
   project Project @relation(fields: [projectId], references: [id])
@@ -215,6 +227,7 @@ model Message {
   targetProject  Project?          @relation("messageTarget", fields: [targetProjectId], references: [id])
   recipients     MessageRecipient[]
 
+  @@index([senderId])
   @@map("messages")
 }
 
@@ -289,6 +302,8 @@ model DocumentAssignment {
   user     User     @relation(fields: [userId], references: [id])
 
   @@unique([documentId, userId])
+  @@index([userId])
+  @@index([documentId])
   @@map("document_assignments")
 }
 
@@ -394,6 +409,7 @@ model NotificationLog {
 
   user User @relation(fields: [userId], references: [id])
 
+  @@index([userId])
   @@map("notification_logs")
 }
 
@@ -446,6 +462,8 @@ model AuditLog {
 
   user User? @relation(fields: [userId], references: [id])
 
+  @@index([userId])
+  @@index([action])
   @@map("audit_logs")
 }
 
@@ -464,6 +482,8 @@ model CashFlow {
   project Project @relation(fields: [projectId], references: [id])
   user    User    @relation(fields: [userId], references: [id])
 
+  @@index([userId])
+  @@index([projectId])
   @@map("cash_flows")
 }
 
@@ -479,5 +499,91 @@ model LoginHistory {
 
   user User @relation(fields: [userId], references: [id])
 
+  @@index([userId])
   @@map("login_history")
+}
+
+// ─── STATEMENTS (capital account statements with approval workflow) ──
+
+model Statement {
+  id            Int       @id @default(autoincrement())
+  userId        Int       @map("user_id")
+  projectId     Int       @map("project_id")
+  status        String    @default("DRAFT") // DRAFT | APPROVED | SENT | REJECTED
+  data          String?   @db.Text // JSON blob with full statement data
+  html          String?   @db.Text // Rendered HTML
+  period        String?   // e.g. "Q1 2026"
+  createdBy     Int?      @map("created_by")
+  approvedBy    Int?      @map("approved_by")
+  approvedAt    DateTime? @map("approved_at")
+  rejectedBy    Int?      @map("rejected_by")
+  rejectedAt    DateTime? @map("rejected_at")
+  rejectReason  String?   @map("reject_reason")
+  sentAt        DateTime? @map("sent_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  user          User      @relation("statementUser", fields: [userId], references: [id])
+  project       Project   @relation("statementProject", fields: [projectId], references: [id])
+  creator       User?     @relation("statementCreator", fields: [createdBy], references: [id])
+  approver      User?     @relation("statementApprover", fields: [approvedBy], references: [id])
+  rejector      User?     @relation("statementRejector", fields: [rejectedBy], references: [id])
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([status])
+  @@map("statements")
+}
+
+// ─── FEATURE FLAG OVERRIDES (persisted per-user) ────────
+
+model FeatureFlagOverride {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  flagKey   String   @map("flag_key")
+  value     Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, flagKey])
+  @@index([userId])
+  @@map("feature_flag_overrides")
+}
+
+// ─── EMAIL SETTINGS (singleton — one row) ────────────────
+
+model EmailSettings {
+  id                    Int      @id @default(autoincrement())
+  // Global toggles (admin can disable email types system-wide)
+  enableDocuments       Boolean  @default(true) @map("enable_documents")
+  enableSignatures      Boolean  @default(true) @map("enable_signatures")
+  enableDistributions   Boolean  @default(true) @map("enable_distributions")
+  enableMessages        Boolean  @default(true) @map("enable_messages")
+  enableCapitalCalls    Boolean  @default(true) @map("enable_capital_calls")
+  enableWelcome         Boolean  @default(true) @map("enable_welcome")
+  enablePasswordReset   Boolean  @default(true) @map("enable_password_reset")
+  // Branding overrides
+  fromName              String?  @map("from_name")
+  fromAddress           String?  @map("from_address")
+  replyToAddress        String?  @map("reply_to_address")
+  brandColor            String?  @map("brand_color")
+  companyName           String?  @map("company_name")
+  companyAddress        String?  @map("company_address")
+  logoUrl               String?  @map("logo_url")
+  portalUrl             String?  @map("portal_url")
+  // Custom subject line overrides (null = use defaults)
+  subjectWelcome        String?  @map("subject_welcome")
+  subjectDocument       String?  @map("subject_document")
+  subjectSignature      String?  @map("subject_signature")
+  subjectDistribution   String?  @map("subject_distribution")
+  subjectMessage        String?  @map("subject_message")
+  subjectCapitalCall    String?  @map("subject_capital_call")
+  subjectPasswordReset  String?  @map("subject_password_reset")
+  // Footer
+  footerText            String?  @map("footer_text")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@map("email_settings")
 }

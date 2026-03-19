@@ -156,6 +156,34 @@ router.put("/projects/:id", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// DELETE /admin/projects/:id — delete a project and all related data
+router.delete("/projects/:id", async (req, res, next) => {
+  try {
+    const projectId = parseInt(req.params.id);
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      include: { _count: { select: { investorProjects: true } } },
+    });
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    // Cascade delete related records
+    await prisma.$transaction([
+      prisma.performanceHistory.deleteMany({ where: { projectId } }),
+      prisma.projectUpdate.deleteMany({ where: { projectId } }),
+      prisma.distribution.deleteMany({ where: { projectId } }),
+      prisma.waterfallTier.deleteMany({ where: { projectId } }),
+      prisma.capTableEntry.deleteMany({ where: { projectId } }),
+      prisma.documentAssignment.deleteMany({ where: { document: { projectId } } }),
+      prisma.document.deleteMany({ where: { projectId } }),
+      prisma.investorProject.deleteMany({ where: { projectId } }),
+      prisma.project.delete({ where: { id: projectId } }),
+    ]);
+
+    audit.log(req, "project_delete", `project:${projectId}`, { name: project.name });
+    res.json({ ok: true, name: project.name });
+  } catch (err) { next(err); }
+});
+
 // ─── WATERFALL CONFIG ───
 router.put("/projects/:id/waterfall", async (req, res, next) => {
   try {
@@ -276,39 +304,6 @@ router.get("/investors", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// ─── TARGETED MESSAGES ───
-router.post("/messages", async (req, res, next) => {
-  try {
-    const { fromName, role, subject, preview, targetType, targetProjectId, recipientIds } = req.body;
-    if (!subject || !preview) return res.status(400).json({ error: "Subject and message are required" });
-    const date = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-
-    const messageData = {
-      sender: { connect: { id: req.user.id } },
-      fromName: fromName || req.user.name,
-      role: role || "Northstar Admin",
-      date, subject, preview, unread: true,
-      targetType: targetType || "ALL",
-    };
-
-    // Project targeting
-    if (targetType === "PROJECT" && targetProjectId) {
-      messageData.targetProject = { connect: { id: parseInt(targetProjectId) } };
-    }
-
-    const message = await prisma.message.create({ data: messageData });
-
-    // Individual targeting — create recipient records
-    if (targetType === "INDIVIDUAL" && recipientIds && recipientIds.length > 0) {
-      await prisma.messageRecipient.createMany({
-        data: recipientIds.map(uid => ({ messageId: message.id, userId: parseInt(uid) })),
-      });
-    }
-
-    res.status(201).json({ id: message.id, from: message.fromName, subject: message.subject, date: message.date, targetType: message.targetType });
-  } catch (err) { next(err); }
-});
-
 // ─── DOCUMENT ASSIGNMENT ───
 router.post("/documents/:id/assign", async (req, res, next) => {
   try {
@@ -316,11 +311,27 @@ router.post("/documents/:id/assign", async (req, res, next) => {
     if (!userIds || !userIds.length) return res.status(400).json({ error: "At least one user ID required" });
     const docId = parseInt(req.params.id);
 
-    // Clear existing assignments and set new ones
-    await prisma.documentAssignment.deleteMany({ where: { documentId: docId } });
-    await prisma.documentAssignment.createMany({
-      data: userIds.map(uid => ({ documentId: docId, userId: parseInt(uid) })),
-    });
+    // Upsert logic: preserve existing assignments (viewedAt/downloadedAt tracking)
+    const newUserIds = userIds.map(uid => parseInt(uid));
+    const existing = await prisma.documentAssignment.findMany({ where: { documentId: docId } });
+    const existingUserIds = existing.map(a => a.userId);
+
+    // Create only NEW assignments (userIds not already assigned)
+    const toCreate = newUserIds.filter(uid => !existingUserIds.includes(uid));
+    // Delete only REMOVED assignments (userIds no longer in the list)
+    const toDelete = existingUserIds.filter(uid => !newUserIds.includes(uid));
+
+    if (toCreate.length > 0) {
+      await prisma.documentAssignment.createMany({
+        data: toCreate.map(uid => ({ documentId: docId, userId: uid })),
+      });
+    }
+    if (toDelete.length > 0) {
+      await prisma.documentAssignment.deleteMany({
+        where: { documentId: docId, userId: { in: toDelete } },
+      });
+    }
+    audit.log(req, "document_assign", `document:${docId}`, { assignedTo: userIds.length });
     res.json({ documentId: docId, assignedTo: userIds.length });
   } catch (err) { next(err); }
 });
@@ -354,31 +365,22 @@ router.post("/investors/invite", validate(inviteInvestorSchema), async (req, res
     audit.log(req, "investor_invite", `user:${user.id}`, { name, email });
 
     // Send welcome email with temporary password
+    let emailSent = false;
     try {
       const emailService = require("../services/email");
-      await emailService.sendEmail({
-        to: email,
-        subject: "Welcome to Northstar Investor Portal",
-        html: `<div style="font-family:sans-serif;max-width:500px;margin:0 auto;">
-          <h2 style="color:#231F20;">Welcome to Northstar, ${name}</h2>
-          <p>You've been invited to the Northstar Investor Portal. Here are your login credentials:</p>
-          <div style="background:#FAFAF8;border:1px solid #ECEAE5;border-radius:8px;padding:16px 20px;margin:16px 0;font-family:monospace;">
-            <div>Email: <strong>${email}</strong></div>
-            <div>Password: <strong>${tempPassword}</strong></div>
-          </div>
-          <p>Please change your password after your first login.</p>
-          <p><a href="https://northstar-portal-roan.vercel.app" style="display:inline-block;padding:10px 24px;background:#EA2028;color:#fff;text-decoration:none;border-radius:4px;">Login to Portal</a></p>
-          <p style="color:#999;font-size:12px;margin-top:24px;">Northstar Pacific Development Group</p>
-        </div>`,
-        text: `Welcome to Northstar, ${name}. Your login: Email: ${email}, Password: ${tempPassword}. Login at https://northstar-portal-roan.vercel.app`,
-      });
+      const { welcomeInvite } = require("../services/email/templates");
+      const portalUrl = process.env.PORTAL_URL || "https://northstar-portal-roan.vercel.app";
+      const template = welcomeInvite(name, email, tempPassword, "INVESTOR", portalUrl);
+      await emailService.sendEmail({ to: email, ...template });
+      emailSent = true;
     } catch (emailErr) {
       console.warn("Welcome email failed:", emailErr.message);
     }
 
     res.status(201).json({
       id: user.id, name: user.name, email: user.email, status: user.status,
-      tempPassword,
+      tempPassword, emailSent,
+      ...(!emailSent && { warning: "Welcome email could not be sent" }),
     });
   } catch (err) { next(err); }
 });
@@ -450,20 +452,10 @@ router.post("/investors/:id/reset-password", async (req, res, next) => {
     // Send password reset email
     try {
       const emailService = require("../services/email");
-      await emailService.sendEmail({
-        to: user.email,
-        subject: "Northstar Portal — Password Reset",
-        html: `<div style="font-family:sans-serif;max-width:500px;margin:0 auto;">
-          <h2 style="color:#231F20;">Password Reset</h2>
-          <p>Hi ${user.name}, your password has been reset by an administrator.</p>
-          <div style="background:#FAFAF8;border:1px solid #ECEAE5;border-radius:8px;padding:16px 20px;margin:16px 0;font-family:monospace;">
-            <div>New Password: <strong>${tempPassword}</strong></div>
-          </div>
-          <p>Please change your password after logging in.</p>
-          <p><a href="https://northstar-portal-roan.vercel.app" style="display:inline-block;padding:10px 24px;background:#EA2028;color:#fff;text-decoration:none;border-radius:4px;">Login to Portal</a></p>
-        </div>`,
-        text: `Hi ${user.name}, your password has been reset. New password: ${tempPassword}`,
-      });
+      const { adminPasswordReset } = require("../services/email/templates");
+      const portalUrl = process.env.PORTAL_URL || "https://northstar-portal-roan.vercel.app";
+      const template = adminPasswordReset(user.name, tempPassword, portalUrl);
+      await emailService.sendEmail({ to: user.email, ...template });
     } catch (emailErr) {
       console.warn("Password reset email failed:", emailErr.message);
     }
@@ -476,7 +468,7 @@ router.post("/investors/:id/reset-password", async (req, res, next) => {
 // POST /admin/investors/:id/assign-project — assign investor to a project
 router.post("/investors/:id/assign-project", async (req, res, next) => {
   try {
-    const { projectId, committed, called, currentValue, irr, moic } = req.body;
+    const { projectId, committed, called, currentValue, irr, moic, entityId } = req.body;
     if (!projectId) return res.status(400).json({ error: "projectId is required" });
     const ip = await prisma.investorProject.create({
       data: {
@@ -487,6 +479,7 @@ router.post("/investors/:id/assign-project", async (req, res, next) => {
         currentValue: currentValue || 0,
         irr: irr || null,
         moic: moic || null,
+        ...(entityId && { entity: { connect: { id: parseInt(entityId) } } }),
       },
     });
     res.status(201).json(ip);
@@ -594,6 +587,7 @@ router.get("/investors/:id/profile", async (req, res, next) => {
       include: {
         investorProjects: { include: { project: { select: { id: true, name: true, status: true } } } },
         documentAssignments: { include: { document: { select: { id: true, name: true, category: true, date: true, status: true } } } },
+        entities: true,
         groupMemberships: { include: { group: { select: { id: true, name: true, color: true } } } },
         threadRecipients: {
           include: { thread: { select: { id: true, subject: true, updatedAt: true, targetType: true } } },
@@ -628,6 +622,7 @@ router.get("/investors/:id/profile", async (req, res, next) => {
         projectDocs,
         generalDocs,
       },
+      entities: user.entities || [],
       recentThreads: user.threadRecipients.map(tr => ({
         id: tr.thread.id, subject: tr.thread.subject, updatedAt: tr.thread.updatedAt, targetType: tr.thread.targetType, unread: tr.unread,
       })),
@@ -754,18 +749,131 @@ router.post("/staff", async (req, res, next) => {
     const user = await prisma.user.create({
       data: { email, name, initials: name.split(" ").map(n => n[0]).join("").toUpperCase(), passwordHash, role, status: "ACTIVE", joined },
     });
+
+    audit.log(req, "staff_create", `user:${user.id}`, { name, email, role });
+
+    // Send welcome email with temporary password
+    try {
+      const emailService = require("../services/email");
+      const { welcomeInvite } = require("../services/email/templates");
+      const portalUrl = process.env.PORTAL_URL || "https://northstar-portal-roan.vercel.app";
+      const template = welcomeInvite(name, email, tempPassword, role, portalUrl);
+      await emailService.sendEmail({ to: email, ...template });
+    } catch (emailErr) {
+      console.warn("Staff welcome email failed:", emailErr.message);
+    }
+
     res.status(201).json({ id: user.id, name: user.name, email: user.email, role: user.role, tempPassword });
   } catch (err) { next(err); }
 });
 
 router.put("/staff/:id", async (req, res, next) => {
   try {
+    const targetId = parseInt(req.params.id);
     const { name, email, role, status } = req.body;
+
+    // Validate role if provided
+    if (role !== undefined && !["ADMIN", "GP"].includes(role)) {
+      return res.status(400).json({ error: "Role must be ADMIN or GP" });
+    }
+
+    // Prevent self-role-change and self-deactivation
+    if (targetId === req.user.id && (role !== undefined || status !== undefined)) {
+      return res.status(403).json({ error: "Cannot change your own role or status" });
+    }
+
+    // Prevent GP from assigning ADMIN role
+    if (req.user.role === "GP" && role === "ADMIN") {
+      return res.status(403).json({ error: "Only admins can assign admin role" });
+    }
+
+    // Last-admin protection
+    if (role !== undefined && role !== "ADMIN") {
+      const adminCount = await prisma.user.count({ where: { role: "ADMIN", status: "ACTIVE" } });
+      const currentUser = await prisma.user.findUnique({ where: { id: targetId } });
+      if (currentUser?.role === "ADMIN" && adminCount <= 1) {
+        return res.status(400).json({ error: "Cannot demote the last admin" });
+      }
+    }
+    if (status === "INACTIVE") {
+      const currentUser = await prisma.user.findUnique({ where: { id: targetId } });
+      if (currentUser?.role === "ADMIN") {
+        const adminCount = await prisma.user.count({ where: { role: "ADMIN", status: "ACTIVE" } });
+        if (adminCount <= 1) {
+          return res.status(400).json({ error: "Cannot deactivate the last admin" });
+        }
+      }
+    }
+
     const user = await prisma.user.update({
-      where: { id: parseInt(req.params.id) },
+      where: { id: targetId },
       data: { ...(name !== undefined && { name }), ...(email !== undefined && { email }), ...(role !== undefined && { role }), ...(status !== undefined && { status }) },
     });
+    audit.log(req, "staff_update", `user:${user.id}`, { name: user.name, role: user.role, status: user.status });
     res.json({ id: user.id, name: user.name, email: user.email, role: user.role, status: user.status });
+  } catch (err) { next(err); }
+});
+
+// POST /admin/staff/:id/deactivate — deactivate a staff member
+router.post("/staff/:id/deactivate", async (req, res, next) => {
+  try {
+    const targetId = parseInt(req.params.id);
+    if (targetId === req.user.id) {
+      return res.status(403).json({ error: "Cannot deactivate your own account" });
+    }
+    const currentUser = await prisma.user.findUnique({ where: { id: targetId } });
+    if (!currentUser) return res.status(404).json({ error: "User not found" });
+    if (currentUser.role === "ADMIN") {
+      const adminCount = await prisma.user.count({ where: { role: "ADMIN", status: "ACTIVE" } });
+      if (adminCount <= 1) return res.status(400).json({ error: "Cannot deactivate the last admin" });
+    }
+    const user = await prisma.user.update({
+      where: { id: targetId },
+      data: { status: "INACTIVE" },
+    });
+    audit.log(req, "staff_deactivate", `user:${user.id}`, { name: user.name, deactivatedBy: req.user.email });
+    res.json({ id: user.id, name: user.name, status: user.status });
+  } catch (err) { next(err); }
+});
+
+// POST /admin/staff/:id/reactivate — reactivate a staff member
+router.post("/staff/:id/reactivate", async (req, res, next) => {
+  try {
+    const user = await prisma.user.update({
+      where: { id: parseInt(req.params.id) },
+      data: { status: "ACTIVE" },
+    });
+    audit.log(req, "staff_reactivate", `user:${user.id}`, { name: user.name, reactivatedBy: req.user.email });
+    res.json({ id: user.id, name: user.name, status: user.status });
+  } catch (err) { next(err); }
+});
+
+// POST /admin/staff/:id/reset-password — generate new temporary password for staff
+router.post("/staff/:id/reset-password", async (req, res, next) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: parseInt(req.params.id) } });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const tempPassword = crypto.randomBytes(6).toString("hex");
+    const passwordHash = await bcrypt.hash(tempPassword, 10);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash },
+    });
+
+    // Send password reset email
+    try {
+      const emailService = require("../services/email");
+      const { adminPasswordReset } = require("../services/email/templates");
+      const portalUrl = process.env.PORTAL_URL || "https://northstar-portal-roan.vercel.app";
+      const template = adminPasswordReset(user.name, tempPassword, portalUrl);
+      await emailService.sendEmail({ to: user.email, ...template });
+    } catch (emailErr) {
+      console.warn("Staff password reset email failed:", emailErr.message);
+    }
+
+    audit.log(req, "staff_password_reset", `user:${user.id}`, { name: user.name, resetBy: req.user.email });
+    res.json({ tempPassword });
   } catch (err) { next(err); }
 });
 
@@ -795,6 +903,106 @@ router.get("/audit-log", async (req, res, next) => {
       userAgent: l.userAgent,
       createdAt: l.createdAt,
     })));
+  } catch (err) { next(err); }
+});
+
+// ─── CAP TABLE CRUD ───
+router.post("/projects/:id/cap-table", async (req, res, next) => {
+  try {
+    const { holderName, holderType, committed, called, ownershipPct, unfunded } = req.body;
+    if (!holderName) return res.status(400).json({ error: "Holder name required" });
+    const entry = await prisma.capTableEntry.create({
+      data: {
+        project: { connect: { id: parseInt(req.params.id) } },
+        holderName, holderType: holderType || "LP",
+        committed: parseFloat(committed) || 0, called: parseFloat(called) || 0,
+        ownershipPct: parseFloat(ownershipPct) || 0, unfunded: parseFloat(unfunded) || 0,
+      },
+    });
+    audit.log(req, "cap_table_add", `project:${req.params.id}`, { holderName });
+    res.status(201).json(entry);
+  } catch (err) { next(err); }
+});
+
+router.put("/projects/:id/cap-table/:entryId", async (req, res, next) => {
+  try {
+    const { holderName, holderType, committed, called, ownershipPct, unfunded } = req.body;
+    const data = {};
+    if (holderName !== undefined) data.holderName = holderName;
+    if (holderType !== undefined) data.holderType = holderType;
+    if (committed !== undefined) data.committed = parseFloat(committed);
+    if (called !== undefined) data.called = parseFloat(called);
+    if (ownershipPct !== undefined) data.ownershipPct = parseFloat(ownershipPct);
+    if (unfunded !== undefined) data.unfunded = parseFloat(unfunded);
+    const entry = await prisma.capTableEntry.update({
+      where: { id: parseInt(req.params.entryId) },
+      data,
+    });
+    audit.log(req, "cap_table_update", `project:${req.params.id}`, { entryId: req.params.entryId });
+    res.json(entry);
+  } catch (err) { next(err); }
+});
+
+router.delete("/projects/:id/cap-table/:entryId", async (req, res, next) => {
+  try {
+    await prisma.capTableEntry.delete({ where: { id: parseInt(req.params.entryId) } });
+    audit.log(req, "cap_table_delete", `project:${req.params.id}`, { entryId: req.params.entryId });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+// ─── WATERFALL TIER CRUD ───
+router.post("/projects/:id/waterfall-tiers", async (req, res, next) => {
+  try {
+    const { tierName, lpShare, gpShare, threshold, status } = req.body;
+    if (!tierName) return res.status(400).json({ error: "Tier name required" });
+    const projectId = parseInt(req.params.id);
+
+    // Calculate next tierOrder from existing max
+    const maxTier = await prisma.waterfallTier.findFirst({
+      where: { projectId },
+      orderBy: { tierOrder: "desc" },
+      select: { tierOrder: true },
+    });
+    const tierOrder = (maxTier?.tierOrder || 0) + 1;
+
+    const tier = await prisma.waterfallTier.create({
+      data: {
+        project: { connect: { id: projectId } },
+        tierOrder, tierName,
+        lpShare: lpShare || "0%", gpShare: gpShare || "0%",
+        threshold: threshold || "", status: status || "pending",
+      },
+    });
+    audit.log(req, "waterfall_tier_add", `project:${projectId}`, { tierName });
+    res.status(201).json(tier);
+  } catch (err) { next(err); }
+});
+
+router.put("/projects/:id/waterfall-tiers/:tierId", async (req, res, next) => {
+  try {
+    const { tierName, tierOrder, lpShare, gpShare, threshold, status } = req.body;
+    const data = {};
+    if (tierName !== undefined) data.tierName = tierName;
+    if (tierOrder !== undefined) data.tierOrder = parseInt(tierOrder);
+    if (lpShare !== undefined) data.lpShare = lpShare;
+    if (gpShare !== undefined) data.gpShare = gpShare;
+    if (threshold !== undefined) data.threshold = threshold;
+    if (status !== undefined) data.status = status;
+    const tier = await prisma.waterfallTier.update({
+      where: { id: parseInt(req.params.tierId) },
+      data,
+    });
+    audit.log(req, "waterfall_tier_update", `project:${req.params.id}`, { tierId: req.params.tierId });
+    res.json(tier);
+  } catch (err) { next(err); }
+});
+
+router.delete("/projects/:id/waterfall-tiers/:tierId", async (req, res, next) => {
+  try {
+    await prisma.waterfallTier.delete({ where: { id: parseInt(req.params.tierId) } });
+    audit.log(req, "waterfall_tier_delete", `project:${req.params.id}`, { tierId: req.params.tierId });
+    res.json({ ok: true });
   } catch (err) { next(err); }
 });
 

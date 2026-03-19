@@ -23,6 +23,33 @@ const TYPE_TO_PREF = {
  */
 async function notify(userId, type, data) {
   try {
+    // 0. Check global email settings (admin toggles)
+    const globalSettings = await prisma.emailSettings.findFirst();
+    if (globalSettings) {
+      const GLOBAL_TOGGLE_MAP = {
+        document_uploaded: "enableDocuments",
+        signature_required: "enableSignatures",
+        signature_completed: "enableSignatures",
+        distribution_paid: "enableDistributions",
+        new_message: "enableMessages",
+        capital_call: "enableCapitalCalls",
+      };
+      const globalField = GLOBAL_TOGGLE_MAP[type];
+      if (globalField && globalSettings[globalField] === false) {
+        await prisma.notificationLog.create({
+          data: {
+            userId,
+            type,
+            subject: data.subject || type,
+            channel: "email",
+            status: "skipped",
+            metadata: JSON.stringify({ ...data, reason: "globally_disabled" }),
+          },
+        });
+        return { status: "skipped", reason: "globally_disabled" };
+      }
+    }
+
     // 1. Check NotificationPreference
     const prefs = await prisma.notificationPreference.findUnique({
       where: { userId },
@@ -74,6 +101,22 @@ async function notify(userId, type, data) {
         break;
       default:
         emailContent = { subject: data.subject || type, html: `<p>${data.message || ""}</p>`, text: data.message || "" };
+    }
+
+    // Apply custom subject line from global settings if configured
+    if (globalSettings) {
+      const SUBJECT_MAP = {
+        document_uploaded: "subjectDocument",
+        signature_required: "subjectSignature",
+        signature_completed: "subjectSignature",
+        distribution_paid: "subjectDistribution",
+        new_message: "subjectMessage",
+        capital_call: "subjectCapitalCall",
+      };
+      const subjectField = SUBJECT_MAP[type];
+      if (subjectField && globalSettings[subjectField]) {
+        emailContent.subject = globalSettings[subjectField];
+      }
     }
 
     // 4. Send via email service

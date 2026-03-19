@@ -181,6 +181,16 @@ router.post("/", validate(createThreadSchema), async (req, res, next) => {
     // Creator is also a recipient but read
     await prisma.threadRecipient.create({ data: { threadId: thread.id, userId, unread: false } }).catch(() => {});
 
+    // Notify recipients about new thread
+    if (uniqueRecipients.length > 0) {
+      notifyMany(uniqueRecipients, "new_message", {
+        senderName: req.user.name,
+        messageSubject: subject,
+        messageBody: body,
+        threadId: thread.id,
+      }).catch(err => console.error("New thread notification error:", err));
+    }
+
     res.status(201).json(formatThread(thread, userId));
   } catch (err) { next(err); }
 });

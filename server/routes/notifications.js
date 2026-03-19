@@ -103,4 +103,18 @@ router.post("/test", requireRole("ADMIN", "GP"), async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// POST /api/v1/notifications/:id/read — mark a notification as read
+router.post("/:id/read", async (req, res, next) => {
+  try {
+    // Only allow marking own notifications as read
+    const log = await prisma.notificationLog.findUnique({ where: { id: parseInt(req.params.id) } });
+    if (!log || log.userId !== req.user.id) return res.status(404).json({ error: "Not found" });
+    await prisma.notificationLog.update({
+      where: { id: log.id },
+      data: { status: "read" },
+    });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;

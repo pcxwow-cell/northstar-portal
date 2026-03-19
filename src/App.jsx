@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef, createContext, useContext, useMemo, lazy, Suspense } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-import { login as apiLogin, logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, downloadDocument, fetchThreads, fetchThread, createThread, replyToThread, updateProfile, fetchSignatureRequests, signDocument, fetchNotificationPreferences, updateNotificationPreferences, fetchCapitalAccount, fetchCashFlows, calculateWaterfallApi, fetchEntities, createEntity, updateEntity, deleteEntity, runFinancialModel, changePassword, forgotPassword, resetPassword, fetchLoginHistory, setupMFA, verifyMFASetup, verifyMFA, disableMFA, getMFAStatus, regenerateBackupCodes, setToken, fmt, fmtCurrency, fetchMyFlags } from "./api.js";
+import { login as apiLogin, logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, downloadDocument, fetchThreads, fetchThread, createThread, replyToThread, updateProfile, fetchSignatureRequests, signDocument, fetchNotificationPreferences, updateNotificationPreferences, fetchCapitalAccount, fetchCashFlows, calculateWaterfallApi, fetchEntities, createEntity, updateEntity, deleteEntity, runFinancialModel, changePassword, forgotPassword, resetPassword, fetchLoginHistory, setupMFA, verifyMFASetup, verifyMFA, disableMFA, getMFAStatus, regenerateBackupCodes, setToken, fmt, fmtCurrency, fetchMyFlags, fetchNotifications } from "./api.js";
 
 // Lazy load heavy components — they get their own chunks
 const AdminPanel = lazy(() => import("./Admin.jsx"));
@@ -465,7 +465,7 @@ function AnimatedNumber({ value, prefix = "", suffix = "", duration = 800 }) {
 }
 
 // ─── PAGE: OVERVIEW ──────────────────────────────────────
-function Overview({ onNavigate, investor, projects, myProjects, allDistributions, msgs }) {
+function Overview({ onNavigate, investor, projects, myProjects, allDistributions, msgs, onOpenThread }) {
   const { bg, surface, line, t1, t2, t3, hover } = useTheme();
   return (
     <>
@@ -484,17 +484,30 @@ function Overview({ onNavigate, investor, projects, myProjects, allDistributions
 
       {/* Portfolio summary cards */}
       {(() => {
+        if (myProjects.length === 0) {
+          return (
+            <div style={{ padding: 40, textAlign: "center", background: surface, borderRadius: 12, marginBottom: 48, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+              <div style={{ fontSize: 32, marginBottom: 12 }}>📊</div>
+              <div style={{ fontSize: 15, color: t1, fontWeight: 500, marginBottom: 8 }}>Welcome to your investor portal</div>
+              <div style={{ fontSize: 13, color: t3, lineHeight: 1.6, maxWidth: 400, margin: "0 auto" }}>Your portfolio is being set up. You'll see your investments here once assigned by your administrator.</div>
+            </div>
+          );
+        }
         const totalContributed = myProjects.reduce((s, p) => s + (p.investorCommitted || 0), 0);
         const totalValue = myProjects.reduce((s, p) => s + (p.currentValue || 0), 0);
         const totalDistributed = allDistributions.reduce((s, d) => s + d.amount, 0);
         const gainLoss = totalValue + totalDistributed - totalContributed;
+        const validIRR = myProjects.filter(p => p.irr != null);
+        const weightedIRR = validIRR.length > 0
+          ? (validIRR.reduce((s, p) => s + (p.irr || 0) * (p.investorCommitted || 0), 0) / (validIRR.reduce((s, p) => s + (p.investorCommitted || 0), 0) || 1)).toFixed(1) + "%"
+          : "—";
         return (
           <div className="stat-grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 48 }}>
             {[
               { label: "Total Contributed", value: `$${fmt(totalContributed)}`, rawValue: totalContributed, prefix: "$", sub: `across ${myProjects.length} projects`, accent: red },
               { label: "Current Value", value: `$${fmt(totalValue)}`, rawValue: totalValue, prefix: "$", sub: gainLoss >= 0 ? `+$${fmt(gainLoss)} gain` : `-$${fmt(Math.abs(gainLoss))} loss`, subColor: gainLoss >= 0 ? green : red, accent: green },
               { label: "Total Distributed", value: `$${fmt(totalDistributed)}`, rawValue: totalDistributed, prefix: "$", sub: `${allDistributions.length} payments`, accent: "#D4A574" },
-              { label: "Weighted IRR", value: `${(myProjects.reduce((s, p) => s + (p.irr || 0) * (p.investorCommitted || 0), 0) / (totalContributed || 1)).toFixed(1)}%`, sub: "blended across projects", accent: "#5B8DEF" },
+              { label: "Weighted IRR", value: weightedIRR, sub: "blended across projects", accent: "#5B8DEF" },
             ].map((s, i) => (
               <div key={i} role="region" aria-label={`${s.label}: ${s.value}`} style={{ background: surface, padding: "20px 24px", borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", borderLeft: `3px solid ${s.accent}`, transition: "transform .15s, box-shadow .15s, border-color .2s", cursor: "default", border: "1px solid transparent", borderLeftWidth: 3, borderLeftColor: s.accent }}
                 onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,.08)"; e.currentTarget.style.borderColor = `${s.accent}33`; e.currentTarget.style.borderLeftColor = s.accent; }}
@@ -504,6 +517,32 @@ function Overview({ onNavigate, investor, projects, myProjects, allDistributions
                 <div style={{ fontSize: 11, color: s.subColor || t3, marginTop: 4 }}>{s.sub}</div>
               </div>
             ))}
+          </div>
+        );
+      })()}
+
+      {/* Cross-project capital summary */}
+      {myProjects.length > 1 && (() => {
+        const totalCommitted = myProjects.reduce((s, p) => s + (p.investorCommitted || 0), 0);
+        const totalCalled = myProjects.reduce((s, p) => s + (p.investorCalled || p.investorCommitted || 0), 0);
+        const totalCurrentValue = myProjects.reduce((s, p) => s + (p.currentValue || 0), 0);
+        const totalDists = allDistributions.reduce((s, d) => s + d.amount, 0);
+        return (
+          <div style={{ borderRadius: 12, padding: "24px", background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", marginBottom: 48 }}>
+            <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: t3, fontWeight: 600, marginBottom: 16 }}>Capital Summary Across All Projects</div>
+            <div className="stat-grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16 }}>
+              {[
+                { label: "Total Committed", value: `$${fmt(totalCommitted)}`, color: t1 },
+                { label: "Total Called", value: `$${fmt(totalCalled)}`, color: t1 },
+                { label: "Total Current Value", value: `$${fmt(totalCurrentValue)}`, color: green },
+                { label: "Total Distributions", value: `$${fmt(totalDists)}`, color: "#D4A574" },
+              ].map((item, i) => (
+                <div key={i}>
+                  <div style={{ fontSize: 9, color: t3, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>{item.label}</div>
+                  <div style={{ fontSize: 20, fontWeight: 400, color: item.color }}>{item.value}</div>
+                </div>
+              ))}
+            </div>
           </div>
         );
       })()}
@@ -521,7 +560,7 @@ function Overview({ onNavigate, investor, projects, myProjects, allDistributions
           <div key={p.id} style={{ background: surface, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", cursor: "pointer", transition: "transform .15s, box-shadow .15s, border-color .2s", border: "1px solid transparent" }}
             onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = "0 8px 32px rgba(0,0,0,.1)"; e.currentTarget.style.borderColor = `${red}22`; }}
             onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)"; e.currentTarget.style.borderColor = "transparent"; }}
-            onClick={() => onNavigate("portfolio")}>
+            onClick={() => onNavigate("portfolio", { projectId: p.id })}>
             {/* Hero image */}
             {img && (
               <div style={{ height: 140, backgroundImage: `url(${img})`, backgroundSize: "cover", backgroundPosition: "center", position: "relative" }}>
@@ -559,11 +598,13 @@ function Overview({ onNavigate, investor, projects, myProjects, allDistributions
           </div>
           );
         })}
+        {myProjects.length === 0 && <div style={{ padding: 24, textAlign: "center", color: t3, fontSize: 13 }}>No projects yet.</div>}
       </div>
 
       {/* Performance charts side by side */}
       <SectionHeader title="Value Tracking" right="Trailing 12 months" />
       <div className="chart-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 48 }}>
+        {myProjects.length === 0 && <div style={{ padding: 24, textAlign: "center", color: t3, fontSize: 13 }}>No performance data yet.</div>}
         {myProjects.map(p => (
           <div key={p.id} style={{ borderRadius: 12, padding: "24px", background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
             <div style={{ fontSize: 13, fontFamily: serif, fontWeight: 500, marginBottom: 4 }}>{p.name}</div>
@@ -615,7 +656,7 @@ function Overview({ onNavigate, investor, projects, myProjects, allDistributions
       ) : (
       <div style={{ borderRadius: 12, overflow: "hidden", background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", padding: "8px 0" }}>
         {msgs.slice(0, 3).map((m, i) => (
-          <div key={m.id} style={{ display: "flex", gap: 12, padding: "14px 20px", borderBottom: i < 2 ? `1px solid ${line}` : "none", cursor: "pointer", transition: "background .12s", alignItems: "flex-start" }}
+          <div key={m.id} onClick={() => { onNavigate("messages", { threadId: m.threadId || m.id }); }} style={{ display: "flex", gap: 12, padding: "14px 20px", borderBottom: i < 2 ? `1px solid ${line}` : "none", cursor: "pointer", transition: "background .12s", alignItems: "flex-start" }}
             onMouseEnter={e => e.currentTarget.style.background = hover}
             onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
             <div style={{ width: 36, height: 36, borderRadius: "50%", background: hover, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 600, color: t3, flexShrink: 0 }}>
@@ -635,11 +676,18 @@ function Overview({ onNavigate, investor, projects, myProjects, allDistributions
 }
 
 // ─── PAGE: PORTFOLIO ─────────────────────────────────────
-function Portfolio({ myProjects, investor }) {
+function Portfolio({ myProjects, investor, initialProjectId }) {
   const { bg, surface, line, t1, t2, t3, hover } = useTheme();
-  const [selected, setSelected] = useState(null);
+  const [selected, setSelected] = useState(() => {
+    if (initialProjectId != null) {
+      const idx = myProjects.findIndex(p => p.id === initialProjectId);
+      return idx >= 0 ? idx : null;
+    }
+    return null;
+  });
   const [capitalAccount, setCapitalAccount] = useState(null);
   const [cashFlows, setCashFlows] = useState([]);
+  const [detailTab, setDetailTab] = useState("overview");
   const project = selected !== null ? myProjects[selected] : null;
 
   useEffect(() => {
@@ -678,6 +726,23 @@ function Portfolio({ myProjects, investor }) {
             </div>
           ))}
         </div>
+        {/* Detail tabs */}
+        <div style={{ display: "flex", gap: 0, marginBottom: 32, borderBottom: `1px solid ${line}` }}>
+          {[
+            { id: "overview", label: "Overview" },
+            { id: "documents", label: "Documents" },
+            { id: "updates", label: "Updates" },
+            { id: "distributions", label: "Distributions" },
+          ].map(tab => (
+            <span key={tab.id} onClick={() => setDetailTab(tab.id)} style={{
+              fontSize: 13, padding: "10px 20px", cursor: "pointer", fontWeight: detailTab === tab.id ? 600 : 400,
+              color: detailTab === tab.id ? red : t3, borderBottom: detailTab === tab.id ? `2px solid ${red}` : "2px solid transparent",
+              transition: "all .15s", marginBottom: -1,
+            }}>{tab.label}</span>
+          ))}
+        </div>
+
+        {detailTab === "overview" && (<>
         {/* Capital Account Statement */}
         <SectionHeader title="Capital Account" />
         <div style={{ borderRadius: 12, overflow: "hidden", marginBottom: 40, background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
@@ -732,82 +797,102 @@ function Portfolio({ myProjects, investor }) {
           </>
         )}
 
-        <div className="chart-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48, marginBottom: 40 }}>
-          <div>
-            <SectionHeader title="About" />
-            <p style={{ fontSize: 13, color: t2, lineHeight: 1.7, marginBottom: 20 }}>{project.description}</p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-              {[
-                { label: "Size", value: `${project.sqft} sf` },
-                { label: "Units", value: project.units ? `${project.unitsSold || 0} sold / ${project.units} total` : "N/A" },
-                { label: "Completion", value: `${project.completion}%` },
-                { label: "Total Raise", value: fmtCurrency(project.totalRaise) },
-                ...(project.estimatedCompletion ? [{ label: "Est. Completion", value: new Date(project.estimatedCompletion).toLocaleDateString("en-US", { month: "short", year: "numeric" }) }] : []),
-                ...(project.revenue ? [{ label: "Revenue", value: fmtCurrency(project.revenue) }] : []),
-              ].map((d, i) => (
-                <div key={i} style={{ padding: "12px 0", borderBottom: `1px solid ${line}` }}>
-                  <div style={{ fontSize: 10, color: t3, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>{d.label}</div>
-                  <div style={{ fontSize: 13 }}>{d.value}</div>
-                </div>
-              ))}
+        <SectionHeader title="About" />
+        <p style={{ fontSize: 13, color: t2, lineHeight: 1.7, marginBottom: 20 }}>{project.description}</p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 40 }}>
+          {[
+            { label: "Size", value: `${project.sqft} sf` },
+            { label: "Units", value: project.units ? `${project.unitsSold || 0} sold / ${project.units} total` : "N/A" },
+            { label: "Completion", value: `${project.completion}%` },
+            { label: "Total Raise", value: fmtCurrency(project.totalRaise) },
+            ...(project.estimatedCompletion ? [{ label: "Est. Completion", value: new Date(project.estimatedCompletion).toLocaleDateString("en-US", { month: "short", year: "numeric" }) }] : []),
+            ...(project.revenue ? [{ label: "Revenue", value: fmtCurrency(project.revenue) }] : []),
+          ].map((d, i) => (
+            <div key={i} style={{ padding: "12px 0", borderBottom: `1px solid ${line}` }}>
+              <div style={{ fontSize: 10, color: t3, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 4 }}>{d.label}</div>
+              <div style={{ fontSize: 13 }}>{d.value}</div>
             </div>
-          </div>
-          <div>
-            <SectionHeader title="Construction Updates" />
-            {project.updates.map((u, i) => {
-              const prev = i < project.updates.length - 1 ? project.updates[i + 1] : null;
-              const deltas = [];
-              if (u.completionPct != null && prev?.completionPct != null && u.completionPct !== prev.completionPct) {
-                const d = u.completionPct - prev.completionPct;
-                deltas.push({ label: "Completion", value: `${d > 0 ? "+" : ""}${d}%`, positive: d > 0 });
-              }
-              if (u.unitsSold != null && prev?.unitsSold != null && u.unitsSold !== prev.unitsSold) {
-                const d = u.unitsSold - prev.unitsSold;
-                deltas.push({ label: "Units Sold", value: `${d > 0 ? "+" : ""}${d}`, positive: d > 0 });
-              }
-              if (u.revenue != null && prev?.revenue != null && u.revenue !== prev.revenue) {
-                const d = u.revenue - prev.revenue;
-                deltas.push({ label: "Revenue", value: `${d > 0 ? "+" : ""}${fmtCurrency(d)}`, positive: d > 0 });
-              }
-              return (
-                <div key={u.id || i} style={{ padding: "16px 0", borderBottom: i < project.updates.length - 1 ? `1px solid ${line}` : "none" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                    <div style={{ fontSize: 11, color: t3 }}>{u.date}</div>
-                    {u.completionPct != null && <span style={{ fontSize: 10, color: t3, padding: "2px 6px", border: `1px solid ${line}`, borderRadius: 3 }}>{u.completionPct}% complete</span>}
-                  </div>
-                  <div style={{ fontSize: 13, color: t2, lineHeight: 1.6 }}>{u.text}</div>
-                  {deltas.length > 0 && (
-                    <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
-                      {deltas.map((d, j) => (
-                        <span key={j} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 3, background: d.positive ? `${green}15` : `${red}10`, color: d.positive ? green : red }}>
-                          {d.positive ? "\u2191" : "\u2193"} {d.label}: {d.value}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          ))}
         </div>
+        </>)}
 
-        {/* Project Documents */}
-        {project.documents && project.documents.length > 0 && (
-          <>
-            <SectionHeader title="Documents" />
-            <div style={{ borderRadius: 12, overflow: "hidden", marginBottom: 40, background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
-              {project.documents.map((d, i) => (
-                <div key={d.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: i < project.documents.length - 1 ? `1px solid ${line}` : "none" }}>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 400, color: t1 }}>{d.name}</div>
-                    <div style={{ fontSize: 11, color: t3, marginTop: 2 }}>{d.category} · {d.date} · {d.size}</div>
-                  </div>
-                  <span onClick={() => downloadDocument(d.id).catch(() => {})} style={{ fontSize: 12, color: red, cursor: "pointer" }}>Download</span>
+        {detailTab === "documents" && (<>
+        <SectionHeader title="Documents" />
+        {project.documents && project.documents.length > 0 ? (
+          <div style={{ borderRadius: 12, overflow: "hidden", marginBottom: 40, background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+            {project.documents.map((d, i) => (
+              <div key={d.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: i < project.documents.length - 1 ? `1px solid ${line}` : "none" }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 400, color: t1 }}>{d.name}</div>
+                  <div style={{ fontSize: 11, color: t3, marginTop: 2 }}>{d.category} · {d.date} · {d.size}</div>
                 </div>
-              ))}
-            </div>
-          </>
+                <span onClick={() => downloadDocument(d.id).catch(err => alert(err.message || "Download failed"))} style={{ fontSize: 12, color: red, cursor: "pointer" }}>Download</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ padding: 24, textAlign: "center", color: t3, fontSize: 13 }}>No documents yet.</div>
         )}
+        </>)}
+
+        {detailTab === "updates" && (<>
+        <SectionHeader title="Construction Updates" />
+        {project.updates && project.updates.length > 0 ? project.updates.map((u, i) => {
+          const prev = i < project.updates.length - 1 ? project.updates[i + 1] : null;
+          const deltas = [];
+          if (u.completionPct != null && prev?.completionPct != null && u.completionPct !== prev.completionPct) {
+            const d = u.completionPct - prev.completionPct;
+            deltas.push({ label: "Completion", value: `${d > 0 ? "+" : ""}${d}%`, positive: d > 0 });
+          }
+          if (u.unitsSold != null && prev?.unitsSold != null && u.unitsSold !== prev.unitsSold) {
+            const d = u.unitsSold - prev.unitsSold;
+            deltas.push({ label: "Units Sold", value: `${d > 0 ? "+" : ""}${d}`, positive: d > 0 });
+          }
+          if (u.revenue != null && prev?.revenue != null && u.revenue !== prev.revenue) {
+            const d = u.revenue - prev.revenue;
+            deltas.push({ label: "Revenue", value: `${d > 0 ? "+" : ""}${fmtCurrency(d)}`, positive: d > 0 });
+          }
+          return (
+            <div key={u.id || i} style={{ padding: "16px 0", borderBottom: i < project.updates.length - 1 ? `1px solid ${line}` : "none" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <div style={{ fontSize: 11, color: t3 }}>{u.date}</div>
+                {u.completionPct != null && <span style={{ fontSize: 10, color: t3, padding: "2px 6px", border: `1px solid ${line}`, borderRadius: 3 }}>{u.completionPct}% complete</span>}
+              </div>
+              <div style={{ fontSize: 13, color: t2, lineHeight: 1.6 }}>{u.text}</div>
+              {deltas.length > 0 && (
+                <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                  {deltas.map((d, j) => (
+                    <span key={j} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 3, background: d.positive ? `${green}15` : `${red}10`, color: d.positive ? green : red }}>
+                      {d.positive ? "\u2191" : "\u2193"} {d.label}: {d.value}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        }) : (
+          <div style={{ padding: 24, textAlign: "center", color: t3, fontSize: 13 }}>No updates yet.</div>
+        )}
+        </>)}
+
+        {detailTab === "distributions" && (<>
+        <SectionHeader title="Distributions" />
+        {cashFlows.filter(cf => cf.type === "distribution" || cf.amount > 0).length > 0 ? (
+          <div style={{ borderRadius: 12, overflow: "hidden", marginBottom: 40, background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+            {cashFlows.filter(cf => cf.type === "distribution" || cf.amount > 0).map((cf, i, arr) => (
+              <div key={cf.id || i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: i < arr.length - 1 ? `1px solid ${line}` : "none" }}>
+                <div>
+                  <div style={{ fontSize: 13, color: t1 }}>{cf.description || cf.type}</div>
+                  <div style={{ fontSize: 11, color: t3, marginTop: 2 }}>{new Date(cf.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>
+                </div>
+                <span style={{ fontSize: 13, fontWeight: 500, color: green }}>+${fmt(Math.abs(cf.amount))}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ padding: 24, textAlign: "center", color: t3, fontSize: 13 }}>No distributions yet.</div>
+        )}
+        </>)}
       </>
     );
   }
@@ -841,13 +926,20 @@ function Portfolio({ myProjects, investor }) {
 }
 
 // ─── PAGE: CAP TABLE ─────────────────────────────────────
-function CapTablePage({ myProjects, investor }) {
+function CapTablePage({ myProjects, investor, toast }) {
   const { bg, surface, line, t1, t2, t3 } = useTheme();
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [waterfallInput, setWaterfallInput] = useState("");
   const [waterfallResult, setWaterfallResult] = useState(null);
   const [waterfallLoading, setWaterfallLoading] = useState(false);
   const project = myProjects[selectedIdx];
+
+  if (!myProjects.length) return (
+    <div style={{ padding: 40, textAlign: "center", color: t3 }}>
+      <h1 style={{ fontFamily: serif, fontSize: 36, fontWeight: 300 }}>Cap Table</h1>
+      <p style={{ fontSize: 14, marginTop: 16 }}>No projects assigned to your account.</p>
+    </div>
+  );
 
   return (
     <>
@@ -904,7 +996,7 @@ function CapTablePage({ myProjects, investor }) {
           { key: "ownership", label: "Ownership", width: 140, render: r => (
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={{ width: 60, height: 3, background: line, borderRadius: 1, overflow: "hidden" }}>
-                <div style={{ width: `${(r.ownership / 35) * 100}%`, height: "100%", background: red, opacity: .6, borderRadius: 1 }} />
+                <div style={{ width: `${Math.min(r.ownership, 100)}%`, height: "100%", background: red, opacity: .6, borderRadius: 1 }} />
               </div>
               <span style={{ color: t2, fontSize: 12 }}>{r.ownership}%</span>
             </div>
@@ -958,7 +1050,8 @@ function CapTablePage({ myProjects, investor }) {
             </div>
             <button
               onClick={async () => {
-                const amount = parseFloat(waterfallInput) || project.totalRaise;
+                const amount = parseFloat(waterfallInput);
+                if (!amount || isNaN(amount)) { toast.add("Enter a valid amount", "error"); return; }
                 setWaterfallLoading(true);
                 try {
                   const lpCap = project.capTable.reduce((s, r) => r.type !== "GP Interest" ? s + r.called : s, 0);
@@ -1092,10 +1185,23 @@ function DocumentsPage({ toast, allDocuments, myProjects, investor }) {
     }
   }
 
-  function handleSign() {
-    setSignedDocs(prev => ({ ...prev, [signModal.id]: true }));
-    toast.add(`Signature submitted for ${signModal.name}`, "success");
-    setSignModal(null);
+  async function handleSign() {
+    // Find the matching pending signature request to get the signer ID
+    const sig = pendingSigs.find(s => s.documentId === signModal.id || s.document?.id === signModal.id);
+    const mySigner = sig?.signers?.find(s => s.userId === investor.id);
+    if (!mySigner) {
+      toast.add("Unable to find your signature record", "error");
+      return;
+    }
+    try {
+      await signDocument(mySigner.id);
+      setSignedDocs(prev => ({ ...prev, [signModal.id]: true }));
+      toast.add(`Signature submitted for ${signModal.name}`, "success");
+      if (sig) setPendingSigs(prev => prev.filter(s => s.id !== sig.id));
+      setSignModal(null);
+    } catch (err) {
+      toast.add(err.message || "Signing failed", "error");
+    }
   }
 
   function getActionLabel(d) {
@@ -1175,7 +1281,7 @@ function DocumentsPage({ toast, allDocuments, myProjects, investor }) {
           <div key={`${d.id}-${d.project}`} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: i < filtered.length - 1 ? `1px solid ${line}` : "none", cursor: "pointer", transition: "background .12s" }}
             onMouseEnter={e => e.currentTarget.style.background = hover}
             onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-            onClick={() => { window.open(d.file, "_blank"); }}>
+            onClick={() => { downloadDocument(d.id).catch(err => toast.add(err.message || "Download failed", "error")); }}>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}>
                 {d.name}
@@ -1209,6 +1315,16 @@ function DocumentsPage({ toast, allDocuments, myProjects, investor }) {
             <p style={{ fontSize: 13, color: t2, lineHeight: 1.7, marginBottom: 24 }}>
               Please review and sign this document. By clicking "Sign Document" below, you confirm that you have read and agree to the terms outlined in this agreement.
             </p>
+            <div style={{ border: `1px solid #E8E5DE`, borderRadius: 8, padding: 16, marginBottom: 16, background: surface, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 18 }}>📄</span>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: t1 }}>{signModal.name}</div>
+                  <div style={{ fontSize: 11, color: t3, marginTop: 2 }}>Review before signing</div>
+                </div>
+              </div>
+              <span onClick={() => downloadDocument(signModal.id).catch(err => toast.add(err.message || "Failed to open document", "error"))} style={{ fontSize: 12, color: red, cursor: "pointer", padding: "6px 14px", border: `1px solid ${red}33`, borderRadius: 4 }}>View Document</span>
+            </div>
             <div style={{ border: `1px solid ${line}`, borderRadius: 2, padding: 20, marginBottom: 24, background: surface }}>
               <p style={{ fontSize: 12, color: t3, marginBottom: 12 }}>Electronic Signature</p>
               <div style={{ fontFamily: serif, fontSize: 28, fontWeight: 400, color: t1, borderBottom: `1px solid ${t3}`, paddingBottom: 8 }}>
@@ -1242,7 +1358,7 @@ function DocumentsPage({ toast, allDocuments, myProjects, investor }) {
             </div>
             <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
               <span onClick={() => setReviewDoc(null)} style={{ fontSize: 12, padding: "8px 16px", borderRadius: 2, border: `1px solid ${line}`, color: t3, cursor: "pointer" }}>Close</span>
-              <span onClick={() => { window.open(reviewDoc.file, "_blank"); toast.add(`Opened ${reviewDoc.name}`, "success"); setReviewDoc(null); }} style={{ fontSize: 12, padding: "8px 16px", borderRadius: 2, background: red, color: "#fff", cursor: "pointer" }}>Open Full Document</span>
+              <span onClick={() => { downloadDocument(reviewDoc.id).then(() => { toast.add(`Opened ${reviewDoc.name}`, "success"); setReviewDoc(null); }).catch(err => toast.add(err.message || "Download failed", "error")); }} style={{ fontSize: 12, padding: "8px 16px", borderRadius: 2, background: red, color: "#fff", cursor: "pointer" }}>Open Full Document</span>
             </div>
           </>
         )}
@@ -1266,7 +1382,7 @@ function DistributionsPage({ allDistributions, myProjects }) {
         {[
           { label: "Total Distributed", value: `$${fmt(total)}`, accent: red },
           { label: "Projects", value: [...new Set(allDistributions.map(d => d.project))].join(", ") || "—", accent: green },
-          { label: "Next Estimated", value: "Oct 2025", accent: "#5B8DEF" },
+          { label: "Next Estimated", value: "See distributions", accent: "#5B8DEF" },
         ].map((m, i) => (
           <div key={i} style={{ background: surface, padding: "24px", borderRadius: 10, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", borderLeft: `3px solid ${m.accent}` }}>
             <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: t3, marginBottom: 10, fontWeight: 500 }}>{m.label}</div>
@@ -1305,7 +1421,7 @@ function DistributionsPage({ allDistributions, myProjects }) {
 }
 
 // ─── PAGE: MESSAGES (Threaded) ──────────────────────────
-function MessagesPage({ toast, investor }) {
+function MessagesPage({ toast, investor, initialThreadId }) {
   const { bg, surface, line, t1, t2, t3, hover } = useTheme();
   const [threads, setThreads] = useState([]);
   const [selectedThread, setSelectedThread] = useState(null);
@@ -1316,11 +1432,20 @@ function MessagesPage({ toast, investor }) {
   const [composeBody, setComposeBody] = useState("");
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortMode, setSortMode] = useState("newest");
 
   useEffect(() => { loadThreads(); }, []);
 
   async function loadThreads() {
-    try { const t = await fetchThreads(); setThreads(t); } catch (e) { if (!e.message?.includes("unreachable")) console.error(e); }
+    try {
+      const t = await fetchThreads();
+      setThreads(t);
+      if (initialThreadId && !threadDetail) {
+        const target = t.find(th => th.id === initialThreadId);
+        if (target) openThread(target);
+      }
+    } catch (e) { if (!e.message?.includes("unreachable")) console.error(e); }
     finally { setLoading(false); }
   }
 
@@ -1398,26 +1523,6 @@ function MessagesPage({ toast, investor }) {
           })}
         </div>
 
-        {/* Read receipts */}
-        {threadDetail.readReceipts && threadDetail.readReceipts.length > 0 && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, fontSize: 11, color: t3 }}>
-            <span style={{ color: green }}>✓✓</span>
-            <span>Read by </span>
-            {threadDetail.readReceipts.filter(r => !r.unread).map((r, i, arr) => (
-              <span key={r.userId}>
-                <span style={{ fontWeight: 500, color: t2 }}>{r.name}</span>
-                {r.readAt && <span> ({new Date(r.readAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })})</span>}
-                {i < arr.length - 1 && ", "}
-              </span>
-            ))}
-            {threadDetail.readReceipts.some(r => r.unread) && (
-              <span style={{ marginLeft: 8, color: t3 }}>
-                · Unread: {threadDetail.readReceipts.filter(r => r.unread).map(r => r.name).join(", ")}
-              </span>
-            )}
-          </div>
-        )}
-
         {/* Reply box */}
         <div style={{ borderRadius: 12, padding: "16px 20px", background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
           <textarea value={reply} onChange={e => setReply(e.target.value)} placeholder="Write a reply..."
@@ -1473,6 +1578,17 @@ function MessagesPage({ toast, investor }) {
         </div>
         <span onClick={() => setComposing(true)} style={{ fontSize: 13, padding: "10px 20px", borderRadius: 4, cursor: "pointer", background: red, color: "#fff", fontWeight: 500 }}>New Message</span>
       </div>
+      {/* Search and sort controls */}
+      {!loading && threads.length > 0 && (
+        <div style={{ display: "flex", gap: 12, marginBottom: 16, alignItems: "center" }}>
+          <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Search messages..." style={{ flex: 1, padding: "10px 14px", background: "transparent", border: `1px solid ${line}`, borderRadius: 6, color: t1, fontSize: 13, fontFamily: sans, outline: "none", boxSizing: "border-box" }} />
+          <select value={sortMode} onChange={e => setSortMode(e.target.value)} style={{ padding: "10px 14px", background: surface, border: `1px solid ${line}`, borderRadius: 6, color: t1, fontSize: 12, fontFamily: sans, outline: "none", cursor: "pointer" }}>
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+            <option value="unread">Unread first</option>
+          </select>
+        </div>
+      )}
       {loading ? (
         <MessagesSkeleton />
       ) : threads.length === 0 ? (
@@ -1480,10 +1596,20 @@ function MessagesPage({ toast, investor }) {
           <EmptyState title="No messages yet" subtitle="Start a conversation with Northstar." />
           <span onClick={() => setComposing(true)} style={{ fontSize: 13, color: red, cursor: "pointer", marginTop: 8, display: "inline-block" }}>Send your first message →</span>
         </div>
-      ) : (
+      ) : (() => {
+        const filteredThreads = threads
+          .filter(t => !searchTerm || t.subject.toLowerCase().includes(searchTerm.toLowerCase()))
+          .sort((a, b) => {
+            if (sortMode === "unread") return (b.unread ? 1 : 0) - (a.unread ? 1 : 0) || new Date(b.lastMessage?.date || 0) - new Date(a.lastMessage?.date || 0);
+            if (sortMode === "oldest") return new Date(a.lastMessage?.date || 0) - new Date(b.lastMessage?.date || 0);
+            return new Date(b.lastMessage?.date || 0) - new Date(a.lastMessage?.date || 0);
+          });
+        return filteredThreads.length === 0 ? (
+          <div style={{ padding: 24, textAlign: "center", color: t3, fontSize: 13 }}>No messages matching "{searchTerm}".</div>
+        ) : (
         <div style={{ borderRadius: 12, overflow: "hidden", background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
-          {threads.map((t, i) => (
-            <div key={t.id} onClick={() => openThread(t)} style={{ display: "flex", gap: 14, padding: "18px 20px", borderBottom: i < threads.length - 1 ? `1px solid ${line}` : "none", cursor: "pointer", transition: "background .12s", background: t.unread ? `${red}06` : "transparent", borderLeft: t.unread ? `3px solid ${red}` : "3px solid transparent" }}
+          {filteredThreads.map((t, i) => (
+            <div key={t.id} onClick={() => openThread(t)} style={{ display: "flex", gap: 14, padding: "18px 20px", borderBottom: i < filteredThreads.length - 1 ? `1px solid ${line}` : "none", cursor: "pointer", transition: "background .12s", background: t.unread ? `${red}06` : "transparent", borderLeft: t.unread ? `3px solid ${red}` : "3px solid transparent" }}
               onMouseEnter={e => e.currentTarget.style.background = hover}
               onMouseLeave={e => e.currentTarget.style.background = t.unread ? `${red}06` : "transparent"}>
               <div style={{ width: 7, height: 7, borderRadius: "50%", background: t.unread ? red : "transparent", marginTop: 7, flexShrink: 0 }} />
@@ -1508,7 +1634,8 @@ function MessagesPage({ toast, investor }) {
             </div>
           ))}
         </div>
-      )}
+        );
+      })()}
     </>
   );
 }
@@ -1521,6 +1648,13 @@ function FinancialModelerPage({ myProjects, investor }) {
   const project = myProjects[selectedIdx];
 
   const [exitValue, setExitValue] = useState("");
+
+  if (!myProjects.length) return (
+    <div style={{ padding: 40, textAlign: "center", color: t3 }}>
+      <h1 style={{ fontFamily: serif, fontSize: 36, fontWeight: 300 }}>Financial Modeler</h1>
+      <p style={{ fontSize: 14, marginTop: 16 }}>No projects assigned to your account.</p>
+    </div>
+  );
   const [holdYears, setHoldYears] = useState("5");
   const [annualCF, setAnnualCF] = useState("0");
   const [result, setResult] = useState(null);
@@ -1558,7 +1692,7 @@ function FinancialModelerPage({ myProjects, investor }) {
       {/* Project selector */}
       <div style={{ display: "flex", gap: 4, marginBottom: 24, background: `${line}55`, borderRadius: 8, padding: 2, width: "fit-content" }}>
         {myProjects.map((p, i) => (
-          <span key={p.id} onClick={() => { setSelectedIdx(i); setResult(null); }} style={{
+          <span key={p.id} onClick={() => { if (!loading) { setSelectedIdx(i); setResult(null); } }} style={{
             fontSize: 12, padding: "6px 16px", borderRadius: 6, cursor: "pointer",
             color: selectedIdx === i ? t1 : t3,
             background: selectedIdx === i ? surface : "transparent",
@@ -1719,6 +1853,7 @@ function SecuritySection({ toast, inputStyle }) {
   const [saving, setSaving] = useState(false);
   const [loginHistory, setLoginHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [historyLimit, setHistoryLimit] = useState(10);
   // MFA state
   const [mfaEnabled, setMfaEnabled] = useState(false);
   const [mfaLoading, setMfaLoading] = useState(true);
@@ -1791,6 +1926,7 @@ function SecuritySection({ toast, inputStyle }) {
     if (!/[A-Z]/.test(newPw)) { setPwError("Password must contain at least 1 uppercase letter"); return; }
     if (!/[a-z]/.test(newPw)) { setPwError("Password must contain at least 1 lowercase letter"); return; }
     if (!/[0-9]/.test(newPw)) { setPwError("Password must contain at least 1 number"); return; }
+    if (!/[!@#$%^&*]/.test(newPw)) { setPwError("Password must contain at least 1 special character (!@#$%^&*)"); return; }
     setSaving(true);
     try {
       await changePassword(currentPw, newPw);
@@ -1900,7 +2036,10 @@ function SecuritySection({ toast, inputStyle }) {
                 <div key={i} style={{ fontFamily: "monospace", fontSize: 14, padding: "4px 0", letterSpacing: ".08em" }}>{code}</div>
               ))}
             </div>
-            <button onClick={() => { setMfaSetupStep(0); setMfaVerifyCode(""); setMfaBackupCodes([]); }} style={{ padding: "8px 20px", background: red, color: "#fff", border: "none", borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: "pointer" }}>Done</button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => { navigator.clipboard.writeText(mfaBackupCodes.join('\n')).then(() => toast.add("Backup codes copied to clipboard", "success")).catch(() => toast.add("Failed to copy codes", "error")); }} style={{ padding: "8px 20px", background: "#fff", border: `1px solid ${line}`, borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: "pointer", color: t2 }}>Copy All Codes</button>
+              <button onClick={() => { setMfaSetupStep(0); setMfaVerifyCode(""); setMfaBackupCodes([]); }} style={{ padding: "8px 20px", background: red, color: "#fff", border: "none", borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: "pointer" }}>Done</button>
+            </div>
           </>
         )}
       </div>
@@ -1923,13 +2062,18 @@ function SecuritySection({ toast, inputStyle }) {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 120px 80px", fontSize: 10, color: t3, textTransform: "uppercase", letterSpacing: ".06em", padding: "6px 0", borderBottom: `1px solid ${line}` }}>
               <span>Date/Time</span><span>IP Address</span><span>Status</span>
             </div>
-            {loginHistory.slice(0, 10).map(h => (
+            {loginHistory.slice(0, historyLimit).map(h => (
               <div key={h.id} style={{ display: "grid", gridTemplateColumns: "1fr 120px 80px", padding: "8px 0", borderBottom: `1px solid ${line}30`, fontSize: 12 }}>
                 <span style={{ color: t2 }}>{new Date(h.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} {new Date(h.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>
                 <span style={{ color: t3 }}>{h.ip ? h.ip.replace(/^::ffff:/, "") : "—"}</span>
                 <span style={{ color: h.success ? green : red, fontWeight: 500 }}>{h.success ? "Success" : "Failed"}</span>
               </div>
             ))}
+            {loginHistory.length > historyLimit && (
+              <div style={{ padding: "10px 0", textAlign: "center" }}>
+                <span onClick={() => setHistoryLimit(prev => prev + 10)} style={{ fontSize: 12, color: red, cursor: "pointer", padding: "6px 16px", border: `1px solid ${red}33`, borderRadius: 4 }}>Load More ({loginHistory.length - historyLimit} remaining)</span>
+              </div>
+            )}
           </div>
         )}
         {showHistory && loginHistory.length === 0 && (
@@ -1950,20 +2094,27 @@ function ProfilePage({ investor, toast, onUpdate }) {
   const [savingPrefs, setSavingPrefs] = useState(false);
   const [entities, setEntities] = useState([]);
   const [showEntityForm, setShowEntityForm] = useState(false);
+  const [editingEntity, setEditingEntity] = useState(null);
   const [entityForm, setEntityForm] = useState({ name: "", type: "Individual", taxId: "", address: "", state: "", isDefault: false });
 
   useEffect(() => {
     fetchNotificationPreferences().then(p => setNotifPrefs(p)).catch(() => {});
     if (investor.id) loadEntities();
-  }, []);
+  }, [investor.id]);
 
   function loadEntities() { fetchEntities(investor.id).then(setEntities).catch(() => setEntities([])); }
 
   async function handleCreateEntity(e) {
     e.preventDefault();
     try {
-      await createEntity(investor.id, entityForm);
-      toast.add("Entity created", "success");
+      if (editingEntity) {
+        await updateEntity(editingEntity.id, entityForm);
+        toast.add("Entity updated", "success");
+        setEditingEntity(null);
+      } else {
+        await createEntity(investor.id, entityForm);
+        toast.add("Entity created", "success");
+      }
       setShowEntityForm(false);
       setEntityForm({ name: "", type: "Individual", taxId: "", address: "", state: "", isDefault: false });
       loadEntities();
@@ -2062,7 +2213,7 @@ function ProfilePage({ investor, toast, onUpdate }) {
       <div style={{ marginTop: 40 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <h2 style={{ fontFamily: serif, fontSize: 24, fontWeight: 300 }}>Investment Entities</h2>
-          <span onClick={() => setShowEntityForm(!showEntityForm)} style={{ fontSize: 12, padding: "6px 14px", border: `1px solid ${line}`, borderRadius: 4, cursor: "pointer", color: t3 }}>{showEntityForm ? "Cancel" : "Add Entity"}</span>
+          <span onClick={() => { setShowEntityForm(!showEntityForm); if (showEntityForm) { setEditingEntity(null); setEntityForm({ name: "", type: "Individual", taxId: "", address: "", state: "", isDefault: false }); } }} style={{ fontSize: 12, padding: "6px 14px", border: `1px solid ${line}`, borderRadius: 4, cursor: "pointer", color: t3 }}>{showEntityForm ? "Cancel" : "Add Entity"}</span>
         </div>
         {showEntityForm && (
           <form onSubmit={handleCreateEntity} style={{ borderRadius: 12, padding: "20px 24px", background: surface, marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
@@ -2078,20 +2229,28 @@ function ProfilePage({ investor, toast, onUpdate }) {
                 </select>
               </div>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
               <div>
                 <label style={{ fontSize: 11, color: t3, display: "block", marginBottom: 4 }}>Tax ID</label>
                 <input value={entityForm.taxId} onChange={e => setEntityForm(f => ({ ...f, taxId: e.target.value }))} style={inputStyle} placeholder="EIN or SSN" />
               </div>
               <div>
-                <label style={{ fontSize: 11, color: t3, display: "block", marginBottom: 4 }}>State</label>
+                <label style={{ fontSize: 11, color: t3, display: "block", marginBottom: 4 }}>Address</label>
+                <input value={entityForm.address} onChange={e => setEntityForm(f => ({ ...f, address: e.target.value }))} style={inputStyle} placeholder="123 Main St, Vancouver BC" />
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
+              <div>
+                <label style={{ fontSize: 11, color: t3, display: "block", marginBottom: 4 }}>State/Province</label>
                 <input value={entityForm.state} onChange={e => setEntityForm(f => ({ ...f, state: e.target.value }))} style={inputStyle} placeholder="e.g. BC" />
               </div>
               <div style={{ display: "flex", alignItems: "flex-end", gap: 12 }}>
                 <label style={{ fontSize: 12, color: t2, display: "flex", alignItems: "center", gap: 6 }}>
                   <input type="checkbox" checked={entityForm.isDefault} onChange={e => setEntityForm(f => ({ ...f, isDefault: e.target.checked }))} /> Default
                 </label>
-                <button type="submit" style={{ padding: "8px 16px", background: red, color: "#fff", border: "none", borderRadius: 4, fontSize: 13, cursor: "pointer", fontFamily: sans }}>Create</button>
+              </div>
+              <div style={{ display: "flex", alignItems: "flex-end" }}>
+                <button type="submit" style={{ padding: "8px 16px", background: red, color: "#fff", border: "none", borderRadius: 4, fontSize: 13, cursor: "pointer", fontFamily: sans }}>{editingEntity ? "Save" : "Create"}</button>
               </div>
             </div>
           </form>
@@ -2104,12 +2263,13 @@ function ProfilePage({ investor, toast, onUpdate }) {
               <div>
                 <div style={{ fontSize: 14, fontWeight: 500, color: t1 }}>{ent.name}</div>
                 <div style={{ fontSize: 12, color: t3, marginTop: 2 }}>
-                  {ent.type}{ent.state ? ` \u00B7 ${ent.state}` : ""}{ent.taxId ? ` \u00B7 ${ent.taxId}` : ""}
+                  {ent.type}{ent.state ? ` \u00B7 ${ent.state}` : ""}{ent.taxId ? ` \u00B7 ${ent.taxId}` : ""}{ent.address ? ` \u00B7 ${ent.address}` : ""}
                 </div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 {ent.isDefault && <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 3, background: `${green}20`, color: green }}>Default</span>}
                 {ent.investmentCount > 0 && <span style={{ fontSize: 11, color: t3 }}>{ent.investmentCount} investment{ent.investmentCount > 1 ? "s" : ""}</span>}
+                <span onClick={() => { setEditingEntity(ent); setEntityForm({ name: ent.name, type: ent.type, taxId: ent.taxId || "", address: ent.address || "", state: ent.state || "", isDefault: ent.isDefault }); setShowEntityForm(true); }} style={{ fontSize: 12, color: t2, cursor: "pointer" }}>Edit</span>
                 {ent.investmentCount === 0 && <span onClick={() => handleDeleteEntity(ent.id)} style={{ fontSize: 12, color: red, cursor: "pointer" }}>Remove</span>}
               </div>
             </div>
@@ -2543,6 +2703,76 @@ function LoginPage({ onLogin, onShowProspects }) {
   );
 }
 
+// ─── PAGE: RESET PASSWORD ────────────────────────────────
+function ResetPasswordPage({ onBack }) {
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // Extract token from hash params e.g. #/reset-password?token=abc123
+  const token = useMemo(() => {
+    const hash = window.location.hash;
+    const match = hash.match(/[?&]token=([^&]+)/);
+    return match ? decodeURIComponent(match[1]) : "";
+  }, []);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError("");
+    if (!token) { setError("Invalid or missing reset token."); return; }
+    if (newPassword.length < 8) { setError("Password must be at least 8 characters."); return; }
+    if (newPassword !== confirmPassword) { setError("Passwords do not match."); return; }
+    setLoading(true);
+    try {
+      await resetPassword(token, newPassword);
+      setSuccess(true);
+      setTimeout(() => { window.location.hash = "#/login"; }, 2500);
+    } catch (err) {
+      setError(err.message || "Reset failed. The link may have expired.");
+    } finally { setLoading(false); }
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F8F7F4", fontFamily: sans }}>
+      <div style={{ background: "#fff", borderRadius: 12, padding: 40, maxWidth: 400, width: "90%", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
+          <NorthstarIcon size={32} color={red} />
+          <h2 style={{ fontFamily: serif, fontSize: 24, fontWeight: 400, color: darkText, marginTop: 12 }}>Reset Password</h2>
+        </div>
+        {success ? (
+          <div style={{ textAlign: "center" }}>
+            <p style={{ fontSize: 14, color: green, marginBottom: 12 }}>Password reset successfully.</p>
+            <p style={{ fontSize: 13, color: "#888" }}>Redirecting to login...</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit}>
+            {error && <div style={{ fontSize: 12, color: red, marginBottom: 12, padding: "8px 12px", background: "#FFF5F5", borderRadius: 4 }}>{error}</div>}
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", fontSize: 11, color: "#888", fontWeight: 500, marginBottom: 6 }}>New Password</label>
+              <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required placeholder="Enter new password"
+                style={{ width: "100%", padding: "12px 14px", background: "#FAFAFA", border: "1px solid #E0DDD8", borderRadius: 4, color: darkText, fontSize: 14, fontFamily: sans, outline: "none", boxSizing: "border-box" }} />
+            </div>
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: "block", fontSize: 11, color: "#888", fontWeight: 500, marginBottom: 6 }}>Confirm Password</label>
+              <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required placeholder="Confirm new password"
+                style={{ width: "100%", padding: "12px 14px", background: "#FAFAFA", border: "1px solid #E0DDD8", borderRadius: 4, color: darkText, fontSize: 14, fontFamily: sans, outline: "none", boxSizing: "border-box" }} />
+            </div>
+            <button type="submit" disabled={loading}
+              style={{ width: "100%", padding: "12px", background: loading ? `${red}AA` : red, color: "#fff", border: "none", borderRadius: 4, fontSize: 14, cursor: loading ? "default" : "pointer", fontFamily: sans, fontWeight: 500 }}>
+              {loading ? "Resetting..." : "Reset Password"}
+            </button>
+            <div style={{ textAlign: "center", marginTop: 16 }}>
+              <span onClick={() => { window.location.hash = "#/login"; }} style={{ fontSize: 12, color: red, cursor: "pointer" }}>Back to Login</span>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── SESSION TIMEOUT HOOK ────────────────────────────────
 const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 const SESSION_WARNING = 25 * 60 * 1000; // 25 minutes — warn at 5 min remaining
@@ -2608,6 +2838,68 @@ function SessionWarningModal({ onDismiss, onLogout }) {
   );
 }
 
+// ─── PAGE: ACTIVITY ──────────────────────────────────────
+function ActivityPage({ toast, onNavigate }) {
+  const { bg, surface, line, t1, t2, t3, hover } = useTheme();
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchNotifications()
+      .then(n => setNotifications(Array.isArray(n) ? n : []))
+      .catch(() => setNotifications([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const typeConfig = {
+    document_uploaded: { icon: "📄", label: "Document Uploaded", nav: "documents" },
+    distribution: { icon: "💰", label: "Distribution Paid", nav: "distributions" },
+    capital_call: { icon: "📊", label: "Capital Call", nav: "portfolio" },
+    message: { icon: "💬", label: "Message Received", nav: "messages" },
+    signature_request: { icon: "✍️", label: "Signature Request", nav: "documents" },
+    project_update: { icon: "🏗️", label: "Project Update", nav: "portfolio" },
+  };
+
+  return (
+    <>
+      <div style={{ marginBottom: 40 }}>
+        <h1 style={{ fontFamily: serif, fontSize: 36, fontWeight: 300 }}>Activity</h1>
+        <p style={{ fontSize: 14, color: t2, marginTop: 6 }}>Recent events across your portfolio</p>
+      </div>
+      {loading ? (
+        <div style={{ textAlign: "center", padding: 60 }}><LoadingSpinner size={28} /></div>
+      ) : notifications.length === 0 ? (
+        <EmptyState icon="🔔" title="No activity yet" subtitle="Events will appear here as they occur." />
+      ) : (
+        <div style={{ position: "relative", paddingLeft: 28 }}>
+          <div style={{ position: "absolute", left: 12, top: 0, bottom: 0, width: 1, background: line }} />
+          {notifications.map((n, i) => {
+            const cfg = typeConfig[n.type] || { icon: "📌", label: n.type || "Event", nav: "overview" };
+            return (
+              <div key={n.id || i} style={{ display: "flex", gap: 16, marginBottom: 16, position: "relative" }}>
+                <div style={{ width: 24, height: 24, borderRadius: "50%", background: surface, border: `1px solid ${line}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, position: "absolute", left: -16, zIndex: 1 }}>
+                  {cfg.icon}
+                </div>
+                <div style={{ flex: 1, marginLeft: 20, background: surface, borderRadius: 10, padding: "16px 20px", boxShadow: "0 1px 4px rgba(0,0,0,.03)", border: `1px solid ${n.read ? "transparent" : `${red}22`}`, transition: "border-color .15s" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+                    <div>
+                      <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".08em", color: t3, fontWeight: 500 }}>{cfg.label}</span>
+                      {!n.read && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 2, background: `${red}18`, color: red, fontWeight: 600, marginLeft: 8 }}>NEW</span>}
+                    </div>
+                    <span style={{ fontSize: 11, color: t3 }}>{n.createdAt ? new Date(n.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : ""}</span>
+                  </div>
+                  <div style={{ fontSize: 13, color: t1, lineHeight: 1.5, marginBottom: 8 }}>{n.message || n.title || "Activity event"}</div>
+                  <span onClick={() => onNavigate(cfg.nav)} style={{ fontSize: 11, color: red, cursor: "pointer" }}>View →</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </>
+  );
+}
+
 // ─── APP ─────────────────────────────────────────────────
 export default function App() {
   const [authed, setAuthed] = useState(checkAuthed);
@@ -2621,18 +2913,33 @@ export default function App() {
   const [showLogin, setShowLogin] = useState(() => {
     return window.location.hash === "#/login";
   });
+  const [showResetPassword, setShowResetPassword] = useState(() => {
+    return window.location.hash.includes("reset-password");
+  });
   const toast = useToast();
   const [announcement, setAnnouncement] = useState("");
   const [featureFlags, setFeatureFlags] = useState(null);
+  const [notifCount, setNotifCount] = useState(0);
+  const [navParams, setNavParams] = useState({});
   const th = themes[themeMode];
+
+  function navigateTo(page, params) {
+    setView(page);
+    setNavParams(params || {});
+  }
 
   // Listen for hash changes
   useEffect(() => {
     function onHashChange() {
       const hash = window.location.hash;
-      if (hash === "#/login") {
+      if (hash.includes("reset-password")) {
+        setShowResetPassword(true);
+        setShowLogin(false);
+      } else if (hash === "#/login") {
+        setShowResetPassword(false);
         setShowLogin(true);
       } else {
+        setShowResetPassword(false);
         setShowLogin(false);
       }
     }
@@ -2681,6 +2988,16 @@ export default function App() {
     fetchMyFlags().then(setFeatureFlags).catch(() => setFeatureFlags(null));
   }, []);
 
+  // Fetch notification count for bell indicator
+  useEffect(() => {
+    if (authed) {
+      fetchNotifications().then(notifs => {
+        const unread = Array.isArray(notifs) ? notifs.filter(n => !n.read).length : 0;
+        setNotifCount(unread);
+      }).catch(() => {});
+    }
+  }, [authed]);
+
   function toggleTheme() {
     const next = themeMode === "dark" ? "light" : "dark";
     setThemeMode(next);
@@ -2715,6 +3032,8 @@ export default function App() {
           <NorthstarIcon size={40} color={red} />
           <LoadingSpinner size={28} />
         </div>
+      ) : showResetPassword ? (
+        <ResetPasswordPage onBack={() => { setShowResetPassword(false); window.location.hash = "#/login"; }} />
       ) : showLogin ? (
         <LoginPage onLogin={handleLogin} onShowProspects={() => { setShowLogin(false); window.location.hash = ""; }} />
       ) : (
@@ -2746,13 +3065,14 @@ export default function App() {
   const { investor, projects, myProjects, allDocuments, allDistributions } = appData;
 
   const pages = {
-    overview: <Overview onNavigate={setView} investor={investor} projects={projects} myProjects={myProjects} allDistributions={allDistributions} msgs={msgs} />,
-    portfolio: <Portfolio myProjects={myProjects} investor={investor} />,
-    captable: <CapTablePage myProjects={myProjects} investor={investor} />,
+    overview: <Overview onNavigate={navigateTo} investor={investor} projects={projects} myProjects={myProjects} allDistributions={allDistributions} msgs={msgs} onOpenThread={(threadId) => { navigateTo("messages", { threadId }); }} />,
+    portfolio: <Portfolio myProjects={myProjects} investor={investor} initialProjectId={navParams.projectId} />,
+    captable: <CapTablePage myProjects={myProjects} investor={investor} toast={toast} />,
     modeler: <FinancialModelerPage myProjects={myProjects} investor={investor} />,
     documents: <DocumentsPage toast={toast} allDocuments={allDocuments} myProjects={myProjects} investor={investor} />,
     distributions: <DistributionsPage allDistributions={allDistributions} myProjects={myProjects} />,
-    messages: <MessagesPage toast={toast} investor={investor} />,
+    messages: <MessagesPage toast={toast} investor={investor} initialThreadId={navParams.threadId} />,
+    activity: <ActivityPage toast={toast} onNavigate={navigateTo} />,
     profile: <ProfilePage investor={investor} toast={toast} onUpdate={(u) => setAppData(prev => ({ ...prev, investor: { ...prev.investor, ...u } }))} />,
   };
 
@@ -2764,6 +3084,7 @@ export default function App() {
     { id: "documents", label: "Documents" },
     { id: "distributions", label: "Distributions" },
     { id: "messages", label: "Messages" },
+    { id: "activity", label: "Activity" },
     { id: "profile", label: "Profile" },
   ];
 
@@ -2865,6 +3186,13 @@ export default function App() {
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          {/* Notification bell */}
+          <button aria-label={`Notifications${notifCount > 0 ? ` (${notifCount} unread)` : ""}`} onClick={() => navigateTo("activity")} style={{ position: "relative", fontSize: 16, cursor: "pointer", padding: "4px 8px", borderRadius: 6, border: `1px solid ${th.line}`, transition: "border-color .15s", lineHeight: 1, background: "transparent", color: "inherit" }}>
+            &#x1F514;
+            {notifCount > 0 && (
+              <span style={{ position: "absolute", top: -4, right: -4, minWidth: 16, height: 16, borderRadius: "50%", background: red, color: "#fff", fontSize: 10, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", lineHeight: 1 }}>{notifCount > 99 ? "99+" : notifCount}</span>
+            )}
+          </button>
           <button className="theme-toggle" onClick={toggleTheme} aria-label={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"} style={{ fontSize: 14, cursor: "pointer", padding: "4px 8px", borderRadius: 6, border: `1px solid ${th.line}`, transition: "border-color .15s", lineHeight: 1, background: "transparent", color: "inherit" }}
             title={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}>
             {themeMode === "dark" ? "\u2600" : "\u263D"}

@@ -8,7 +8,10 @@ const BRAND_RED = "#EA2028";
 const DARK_TEXT = "#231F20";
 const LIGHT_BG = "#F8F7F4";
 
-function layout(title, bodyContent) {
+function layout(title, bodyContent, branding = {}) {
+  const brandRed = branding.brandColor || BRAND_RED;
+  const companyName = branding.companyName || "Northstar Pacific Development Group";
+  const companyAddr = branding.companyAddress || "710 &ndash; 1199 W Pender, Vancouver BC V6E 2R1";
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
@@ -20,7 +23,7 @@ function layout(title, bodyContent) {
         <tr>
           <td style="padding:28px 32px;border-bottom:1px solid #E8E5DE;">
             <table cellpadding="0" cellspacing="0"><tr>
-              <td style="width:28px;height:28px;background:${BRAND_RED};border-radius:3px;"></td>
+              <td style="width:28px;height:28px;background:${brandRed};border-radius:3px;"></td>
               <td style="padding-left:12px;font-size:16px;font-weight:600;letter-spacing:0.04em;color:${DARK_TEXT};">NORTHSTAR</td>
             </tr></table>
           </td>
@@ -36,9 +39,9 @@ function layout(title, bodyContent) {
         <tr>
           <td style="padding:20px 32px;border-top:1px solid #E8E5DE;background:#FAFAF8;">
             <p style="margin:0;font-size:11px;color:#999;line-height:1.6;">
-              Northstar Pacific Development Group<br>
-              710 &ndash; 1199 W Pender, Vancouver BC V6E 2R1<br>
-              <a href="https://northstardevelopment.ca" style="color:${BRAND_RED};text-decoration:none;">northstardevelopment.ca</a>
+              ${companyName}<br>
+              ${companyAddr}<br>
+              <a href="https://northstardevelopment.ca" style="color:${brandRed};text-decoration:none;">northstardevelopment.ca</a>
             </p>
           </td>
         </tr>
@@ -49,9 +52,10 @@ function layout(title, bodyContent) {
 </html>`;
 }
 
-function button(text, url) {
+function button(text, url, color) {
+  const btnColor = color || BRAND_RED;
   return `<table cellpadding="0" cellspacing="0" style="margin:24px 0;"><tr><td>
-    <a href="${url}" style="display:inline-block;padding:12px 28px;background:${BRAND_RED};color:#FFFFFF;font-size:14px;font-weight:500;text-decoration:none;border-radius:4px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">${text}</a>
+    <a href="${url}" style="display:inline-block;padding:12px 28px;background:${btnColor};color:#FFFFFF;font-size:14px;font-weight:500;text-decoration:none;border-radius:4px;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">${text}</a>
   </td></tr></table>`;
 }
 
@@ -219,4 +223,54 @@ function passwordReset(userName, resetUrl) {
   return { subject: "Reset Your Password — Northstar Portal", html, text };
 }
 
-module.exports = { newDocument, signatureRequired, signatureCompleted, distributionPaid, newMessage, capitalCall, passwordReset };
+function welcomeInvite(userName, email, tempPassword, role, portalUrl) {
+  const roleLabel = role === "INVESTOR" ? "investor" : "staff";
+  const html = layout(`Welcome to Northstar`, `
+    <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 16px;">
+      Dear ${userName},
+    </p>
+    <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 16px;">
+      You've been invited to the Northstar ${roleLabel === "investor" ? "Investor " : ""}Portal. Below are your login credentials:
+    </p>
+    <div style="background:#F8F7F4;border:1px solid #E8E5DE;border-radius:4px;padding:20px;margin:16px 0;">
+      <table cellpadding="0" cellspacing="0" width="100%">
+        <tr><td style="font-size:12px;color:#888;padding-bottom:8px;">Email</td><td style="font-size:14px;font-weight:500;color:${DARK_TEXT};text-align:right;font-family:monospace;">${email}</td></tr>
+        <tr><td style="font-size:12px;color:#888;">Temporary Password</td><td style="font-size:14px;font-weight:500;color:${DARK_TEXT};text-align:right;font-family:monospace;">${tempPassword}</td></tr>
+      </table>
+    </div>
+    <div style="background:#FFF8F0;border:1px solid #F0D8B0;border-radius:4px;padding:16px 20px;margin:16px 0;">
+      <p style="margin:0;font-size:14px;color:${DARK_TEXT};font-weight:500;">Account Pending Approval</p>
+      <p style="margin:8px 0 0;font-size:13px;color:#666;line-height:1.6;">
+        Your account is pending admin approval. You'll receive a confirmation email once your account is activated.
+        <strong>Please do not try to log in until you receive approval.</strong>
+      </p>
+    </div>
+    <p style="font-size:13px;color:#888;margin:0;">
+      Once approved, please change your password after your first login.
+    </p>
+  `);
+  const text = `Dear ${userName},\n\nYou've been invited to the Northstar Portal.\n\nEmail: ${email}\nTemporary Password: ${tempPassword}\n\nYour account is pending admin approval. You'll receive a confirmation email once your account is activated. Please do not try to log in until you receive approval.\n\nOnce approved, please log in at ${portalUrl || "https://portal.northstardevelopment.ca"} and change your password.\n\nNorthstar Pacific Development Group`;
+  return { subject: "Welcome to Northstar Portal", html, text };
+}
+
+function adminPasswordReset(userName, tempPassword, portalUrl) {
+  const html = layout("Password Reset", `
+    <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 16px;">
+      Dear ${userName},
+    </p>
+    <p style="font-size:14px;color:#333;line-height:1.7;margin:0 0 16px;">
+      Your password has been reset by an administrator. Please use the credentials below to log in:
+    </p>
+    <div style="background:#F8F7F4;border:1px solid #E8E5DE;border-radius:4px;padding:16px 20px;margin:16px 0;">
+      <p style="margin:0;font-size:14px;color:${DARK_TEXT};">New Password: <strong style="font-family:monospace;">${tempPassword}</strong></p>
+    </div>
+    ${button("Login to Portal", portalUrl || "https://portal.northstardevelopment.ca")}
+    <p style="font-size:13px;color:#888;margin:0;">
+      Please change your password after logging in.
+    </p>
+  `);
+  const text = `Dear ${userName},\n\nYour password has been reset. New password: ${tempPassword}\n\nPlease log in at ${portalUrl || "https://portal.northstardevelopment.ca"} and change your password.\n\nNorthstar Pacific Development Group`;
+  return { subject: "Password Reset — Northstar Portal", html, text };
+}
+
+module.exports = { newDocument, signatureRequired, signatureCompleted, distributionPaid, newMessage, capitalCall, passwordReset, welcomeInvite, adminPasswordReset };
