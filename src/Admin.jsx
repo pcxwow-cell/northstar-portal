@@ -1,4 +1,8 @@
 import { useState, useEffect } from "react";
+import { useToast } from "./context/ToastContext.jsx";
+import Spinner from "./components/Spinner.jsx";
+import EmptyState from "./components/EmptyState.jsx";
+import ConfirmDialog from "./components/ConfirmDialog.jsx";
 import { fetchDashboard, fetchAdminProjects, updateProject, postUpdate, fetchAdminInvestors, uploadDocument, bulkUploadK1, inviteInvestor, updateInvestor, approveInvestor, deactivateInvestor, resetInvestorPassword, assignInvestorProject, updateInvestorKPI, fetchThreads, fetchThread, createThread, replyToThread, fetchInvestorProfile, fetchGroups, createGroup, updateGroup, deleteGroup, fetchGroupDetail, addGroupMembers, removeGroupMember, fetchStaff, createStaff, updateStaff, deactivateStaff, reactivateStaff, resetStaffPassword, fetchAdminDocuments, fetchAdminDocumentDetail, fetchAdminProjectDetail, updateWaterfall, fetchSignatureRequests, createSignatureRequest, cancelSignatureRequest, fetchProspects, updateProspectStatus, fetchProspectStats, fetchCashFlows, recordCashFlow, recalculateProject, fetchAuditLog, createProject, deleteProject, deleteDocument, assignDocument, fetchEntities, createEntity, updateEntity, deleteEntity, runFinancialModel, updateCashFlow, deleteCashFlow, fetchProjectCashFlows, fetchUserFlags, updateUserFlags, fetchFeatureDefaults, fmt, fmtCurrency, fetchEmailSettings, updateEmailSettings, sendTestEmail, fetchEmailLog, fetchEmailStats, unlockInvestor, createCapTableEntry, updateCapTableEntry, deleteCapTableEntry, createWaterfallTier, updateWaterfallTier, deleteWaterfallTier, recordBulkDistribution } from "./api.js";
 
 const sans = "'DM Sans', -apple-system, sans-serif";
@@ -9,52 +13,6 @@ const inputStyle = { width: "100%", padding: "10px 14px", border: "1px solid #DD
 const btnStyle = { padding: "8px 16px", background: red, color: "#fff", border: "none", borderRadius: 8, fontSize: 13, cursor: "pointer", fontFamily: sans, boxShadow: "0 1px 3px rgba(234,32,40,.3)" };
 const btnOutline = { ...btnStyle, background: "#fff", color: darkText, border: "1px solid #DDD", boxShadow: "none" };
 
-// ─── ADMIN LOADING SPINNER ───
-function AdminSpinner() {
-  return (
-    <div role="status" aria-label="Loading" aria-busy="true" style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "60px 20px", gap: 12 }}>
-      <style>{`@keyframes adminSpin { to { transform: rotate(360deg); } }`}</style>
-      <div style={{ width: 24, height: 24, border: `2px solid ${red}22`, borderTopColor: red, borderRadius: "50%", animation: "adminSpin .7s linear infinite" }} />
-      <span style={{ fontSize: 13, color: "#767168" }}>Loading...</span>
-    </div>
-  );
-}
-
-// ─── ADMIN ERROR BANNER ───
-function AdminError({ message, onRetry }) {
-  return (
-    <div role="alert" style={{ padding: "14px 20px", borderRadius: 10, background: "#FEE", border: `1px solid ${red}30`, display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 13, color: red }}>
-      <span>{message || "Something went wrong."}</span>
-      {onRetry && <span onClick={onRetry} style={{ ...btnOutline, fontSize: 12, color: red, borderColor: `${red}44`, cursor: "pointer" }}>Retry</span>}
-    </div>
-  );
-}
-
-// ─── ADMIN EMPTY STATE ───
-function AdminEmpty({ title, subtitle }) {
-  return (
-    <div style={{ textAlign: "center", padding: "48px 20px" }}>
-      <div style={{ fontSize: 15, fontWeight: 500, color: "#666", marginBottom: 6 }}>{title}</div>
-      {subtitle && <div style={{ fontSize: 13, color: "#767168" }}>{subtitle}</div>}
-    </div>
-  );
-}
-
-// ─── CONFIRM MODAL ───
-function ConfirmModal({ title, message, onConfirm, onCancel, danger }) {
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={onCancel}>
-      <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 12, padding: "28px 32px", maxWidth: 400, width: "90%", boxShadow: "0 8px 32px rgba(0,0,0,.15)" }}>
-        <h3 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 500 }}>{title}</h3>
-        <p style={{ fontSize: 13, color: "#666", margin: "0 0 20px", lineHeight: 1.5 }}>{message}</p>
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <button onClick={onCancel} style={btnOutline}>Cancel</button>
-          <button onClick={onConfirm} style={{ ...btnStyle, background: danger ? "#dc3545" : red }}>{danger ? "Delete" : "Confirm"}</button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ─── SORTABLE HEADER ───
 function SortableHeader({ columns, sortBy, sortDir, onSort }) {
@@ -166,8 +124,7 @@ function DocumentsSection({ docsTab, setDocsTab, toast }) {
 
 export default function AdminPanel({ user, onLogout }) {
   const [view, setView] = useState("dashboard");
-  const [toast, setToast] = useState(null);
-  function showToast(msg, type = "success") { setToast({ msg, type }); setTimeout(() => setToast(null), 3000); }
+  const toast = useToast();
 
   const navItems = [
     { id: "dashboard", label: "Dashboard" },
@@ -194,15 +151,15 @@ export default function AdminPanel({ user, onLogout }) {
       else setView(v);
     }} />,
     projects: projectDetailId
-      ? <ProjectDetail projectId={projectDetailId} onBack={() => setProjectDetailId(null)} toast={showToast} />
-      : <ProjectManager toast={showToast} onViewProject={(id) => setProjectDetailId(id)} />,
-    people: <PeopleSection profileId={profileId} setProfileId={setProfileId} peopleTab={peopleTab} setPeopleTab={setPeopleTab} toast={showToast} />,
-    documents: <DocumentsSection docsTab={docsTab} setDocsTab={setDocsTab} toast={showToast} />,
-    prospects: <ProspectManager toast={showToast} />,
-    statements: <StatementManager toast={showToast} />,
-    inbox: <AdminInbox user={user} toast={showToast} />,
+      ? <ProjectDetail projectId={projectDetailId} onBack={() => setProjectDetailId(null)} toast={toast} />
+      : <ProjectManager toast={toast} onViewProject={(id) => setProjectDetailId(id)} />,
+    people: <PeopleSection profileId={profileId} setProfileId={setProfileId} peopleTab={peopleTab} setPeopleTab={setPeopleTab} toast={toast} />,
+    documents: <DocumentsSection docsTab={docsTab} setDocsTab={setDocsTab} toast={toast} />,
+    prospects: <ProspectManager toast={toast} />,
+    statements: <StatementManager toast={toast} />,
+    inbox: <AdminInbox user={user} toast={toast} />,
     audit: <AuditLogViewer />,
-    settings: <EmailSettingsManager toast={showToast} />,
+    settings: <EmailSettingsManager toast={toast} />,
   };
 
   return (
@@ -266,9 +223,6 @@ export default function AdminPanel({ user, onLogout }) {
         ))}
       </nav>
       <main className="admin-main" role="main" aria-label="Admin content" style={{ maxWidth: 1000, margin: "0 auto" }}>{pages[view]}</main>
-      {toast && (
-        <div role="alert" aria-live="polite" style={{ position: "fixed", bottom: 24, right: 24, padding: "12px 20px", background: toast.type === "error" ? "#FEE" : "#EFE", border: `1px solid ${toast.type === "error" ? red : green}`, borderRadius: 10, fontSize: 13, color: toast.type === "error" ? red : green, zIndex: 100, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>{toast.msg}</div>
-      )}
     </div>
   );
 }
@@ -320,7 +274,7 @@ function Dashboard({ onNavigate }) {
   }
 
   if (error) return <AdminError message={error} onRetry={() => { setError(null); fetchDashboard().then(setData).catch(e => setError(e.message)); }} />;
-  if (!data) return <AdminSpinner />;
+  if (!data) return <Spinner />;
 
   const statCards = [
     { label: "Projects", value: data.projectCount, accent: red, nav: "projects" },
@@ -525,11 +479,11 @@ function ProjectManager({ toast, onViewProject }) {
     });
   }
 
-  if (loading && projects.length === 0) return <AdminSpinner />;
+  if (loading && projects.length === 0) return <Spinner />;
 
   return (
     <>
-      {confirmAction && <ConfirmModal {...confirmAction} onCancel={() => setConfirmAction(null)} />}
+      {confirmAction && <ConfirmDialog {...confirmAction} open={true} onCancel={() => setConfirmAction(null)} />}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <h1 style={{ fontSize: 28, fontWeight: 300 }}>Projects</h1>
         <button onClick={() => setShowCreate(!showCreate)} style={btnStyle}>{showCreate ? "Cancel" : "Create Project"}</button>
@@ -620,7 +574,7 @@ function ProjectManager({ toast, onViewProject }) {
 
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         {filteredProjects.length === 0 && !loading && (
-          <AdminEmpty title="No projects found" subtitle={search || statusFilter ? "Try adjusting your search or filter." : "Create your first project to get started."} />
+          <EmptyState title="No projects found" subtitle={search || statusFilter ? "Try adjusting your search or filter." : "Create your first project to get started."} />
         )}
         {filteredProjects.map(p => {
           // Project thumbnail from Northstar's actual images
@@ -783,11 +737,11 @@ function InvestorManager({ toast, onViewProfile, hideHeader }) {
 
   const statusBadge = (s) => ({ fontSize: 11, padding: "2px 8px", borderRadius: 3, background: s === "ACTIVE" ? "#EFE" : s === "PENDING" ? "#FFF8E1" : "#FEE", color: s === "ACTIVE" ? green : s === "PENDING" ? "#B8860B" : red });
 
-  if (invLoading && investors.length === 0) return <AdminSpinner />;
+  if (invLoading && investors.length === 0) return <Spinner />;
 
   return (
     <>
-      {confirmAction && <ConfirmModal {...confirmAction} onCancel={() => setConfirmAction(null)} />}
+      {confirmAction && <ConfirmDialog {...confirmAction} open={true} onCancel={() => setConfirmAction(null)} />}
       {credentialDialog && <CredentialDialog {...credentialDialog} onClose={() => setCredentialDialog(null)} />}
       {!hideHeader && <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <h1 style={{ fontSize: 28, fontWeight: 300 }}>Investors</h1>
@@ -1045,7 +999,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
     try { await updateInvestorKPI(userId, projectId, { [field]: parseFloat(value) }); toast("KPI updated"); load(); } catch (e) { toast(e.message, "error"); }
   }
 
-  if (!project) return <AdminSpinner />;
+  if (!project) return <Spinner />;
 
   async function handleRunModel() {
     setFmLoading(true);
@@ -1697,7 +1651,7 @@ function DocumentManager({ toast, hideHeader }) {
   if (docDetail) {
     return (
       <>
-        {confirmAction && <ConfirmModal {...confirmAction} onCancel={() => setConfirmAction(null)} />}
+        {confirmAction && <ConfirmDialog {...confirmAction} open={true} onCancel={() => setConfirmAction(null)} />}
         <p style={{ fontSize: 12, color: red, cursor: "pointer", marginBottom: 24 }} onClick={() => { setSelectedDoc(null); setDocDetail(null); }}>← Back to documents</p>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
           <div>
@@ -1988,7 +1942,7 @@ function DocumentManager({ toast, hideHeader }) {
       </div>
 
       {/* Document table */}
-      {loading ? <AdminSpinner /> : (
+      {loading ? <Spinner /> : (
         <div className="admin-table-scroll" style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
           <div style={{ display: "grid", gridTemplateColumns: "2fr 100px 100px 80px 80px 80px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE" }}>
             <SortableHeader columns={[
@@ -3060,7 +3014,7 @@ function StaffManager({ toast, hideHeader }) {
 
   return (
     <>
-      {confirmAction && <ConfirmModal {...confirmAction} onCancel={() => setConfirmAction(null)} />}
+      {confirmAction && <ConfirmDialog {...confirmAction} open={true} onCancel={() => setConfirmAction(null)} />}
       {!hideHeader && <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <h1 style={{ fontSize: 28, fontWeight: 300 }}>Company Staff</h1>
       </div>}
@@ -3155,7 +3109,7 @@ function StaffManager({ toast, hideHeader }) {
               </div>
             </div>
 
-            {loadingFlags ? <AdminSpinner /> : (
+            {loadingFlags ? <Spinner /> : (
               <div style={{ maxHeight: 480, overflowY: "auto" }}>
                 {Object.entries(PERMISSION_GROUPS).map(([groupName, group]) => (
                   <div key={groupName} style={{ padding: "14px 20px", borderBottom: "1px solid #F0EDE8" }}>
@@ -3647,7 +3601,7 @@ function StatementManager({ toast }) {
       {/* Statement list table */}
       <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: cardShadow }}>
         {filteredStatements.length === 0 ? (
-          <AdminEmpty title="No statements" subtitle={stmtSearch ? "No statements match your search" : "Click 'Generate All' to create draft statements for all investors"} />
+          <EmptyState title="No statements" subtitle={stmtSearch ? "No statements match your search" : "Click 'Generate All' to create draft statements for all investors"} />
         ) : (
           <>
             {/* Table header */}
@@ -4458,8 +4412,8 @@ function AuditLogViewer() {
       </div>
 
       {error && <AdminError message={error} onRetry={loadLogs} />}
-      {loading ? <AdminSpinner /> : filteredLogs.length === 0 ? (
-        <AdminEmpty title="No audit log entries" subtitle={auditSearch ? "No entries match your search." : "Actions will appear here as users interact with the system."} />
+      {loading ? <Spinner /> : filteredLogs.length === 0 ? (
+        <EmptyState title="No audit log entries" subtitle={auditSearch ? "No entries match your search." : "Actions will appear here as users interact with the system."} />
       ) : (
         <div style={{ borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
@@ -4583,9 +4537,9 @@ function EmailSettingsManager({ toast }) {
     setSettings(prev => ({ ...prev, [key]: val }));
   }
 
-  if (loading) return <AdminSpinner />;
+  if (loading) return <Spinner />;
   if (error) return <AdminError message={error} onRetry={loadAll} />;
-  if (!settings) return <AdminEmpty title="No email settings found" />;
+  if (!settings) return <EmptyState title="No email settings found" />;
 
   const toggleItems = [
     { key: "enableDocuments", label: "Document notifications" },
@@ -4750,7 +4704,7 @@ function EmailSettingsManager({ toast }) {
 
         {/* Log table */}
         {emailLog.length === 0 ? (
-          <AdminEmpty title="No delivery logs" subtitle="Emails will appear here once sent." />
+          <EmptyState title="No delivery logs" subtitle="Emails will appear here once sent." />
         ) : (
           <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid #E8E5DE" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
