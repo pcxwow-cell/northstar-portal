@@ -3,6 +3,7 @@ import { ToastProvider, useToast } from "./context/ToastContext.jsx";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { login as apiLogin, logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, downloadDocument, fetchThreads, fetchThread, createThread, replyToThread, updateProfile, fetchSignatureRequests, signDocument, fetchNotificationPreferences, updateNotificationPreferences, fetchCapitalAccount, fetchCashFlows, calculateWaterfallApi, fetchEntities, createEntity, updateEntity, deleteEntity, runFinancialModel, changePassword, forgotPassword, resetPassword, fetchLoginHistory, setupMFA, verifyMFASetup, verifyMFA, disableMFA, getMFAStatus, regenerateBackupCodes, setToken, fmt, fmtCurrency, fetchMyFlags, fetchNotifications } from "./api.js";
 import { colors, fonts, inputStyle, btnStyle, btnOutline, shadows, radius, labelStyle } from "./styles/theme.js";
+import Button from "./components/Button.jsx";
 
 // Lazy load heavy components — they get their own chunks
 const AdminPanel = lazy(() => import("./Admin.jsx"));
@@ -1029,8 +1030,7 @@ function CapTablePage({ myProjects, investor, toast }) {
                 style={{ width: "100%", padding: "10px 14px", background: `${line}33`, border: `1px solid ${line}`, borderRadius: 8, fontSize: 14, fontFamily: sans, color: t1, boxSizing: "border-box", outline: "none" }}
               />
             </div>
-            <button
-              onClick={async () => {
+            <Button onClick={async () => {
                 const amount = parseFloat(waterfallInput);
                 if (!amount || isNaN(amount)) { toast("Enter a valid amount", "error"); return; }
                 setWaterfallLoading(true);
@@ -1051,12 +1051,9 @@ function CapTablePage({ myProjects, investor, toast }) {
                   console.error("Waterfall calc error:", err);
                 }
                 setWaterfallLoading(false);
-              }}
-              disabled={waterfallLoading}
-              style={{ padding: "10px 24px", background: red, color: colors.white, border: "none", borderRadius: 8, fontSize: 13, cursor: "pointer", fontFamily: sans, opacity: waterfallLoading ? 0.5 : 1, whiteSpace: "nowrap", boxShadow: "0 1px 3px rgba(234,32,40,.3)" }}
-            >
+              }} disabled={waterfallLoading} style={{ padding: "10px 24px", background: red, color: colors.white, border: "none", borderRadius: 8, fontSize: 13, cursor: "pointer", fontFamily: sans, opacity: waterfallLoading ? 0.5 : 1, whiteSpace: "nowrap", boxShadow: "0 1px 3px rgba(234,32,40,.3)" }}>
               {waterfallLoading ? "Calculating..." : "Calculate"}
-            </button>
+            </Button>
           </div>
 
           {waterfallResult && (
@@ -1553,9 +1550,9 @@ function MessagesPage({ toast, investor, initialThreadId }) {
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
             <span onClick={() => setComposing(false)} style={{ fontSize: 13, padding: "10px 20px", borderRadius: 4, cursor: "pointer", border: `1px solid ${line}`, color: t2 }}>Cancel</span>
-            <button type="submit" disabled={sending} style={{ fontSize: 13, padding: "10px 24px", borderRadius: 4, cursor: sending ? "default" : "pointer", background: sending ? `${red}88` : red, color: colors.white, border: "none", fontWeight: 500, fontFamily: sans }}>
+            <Button type="submit" disabled={sending} style={{ fontSize: 13, padding: "10px 24px", borderRadius: 4, cursor: sending ? "default" : "pointer", background: sending ? `${red}88` : red, color: colors.white, border: "none", fontWeight: 500, fontFamily: sans }}>
               {sending ? "Sending..." : "Send Message"}
-            </button>
+            </Button>
           </div>
         </form>
       </>
@@ -1716,10 +1713,10 @@ function FinancialModelerPage({ myProjects, investor }) {
             <div style={{ fontSize: 11, color: t3, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".06em" }}>Annual Cash Flow ($)</div>
             <input type="number" value={annualCF} onChange={e => setAnnualCF(e.target.value)} placeholder="0" style={inputSt} />
           </div>
-          <button onClick={handleRun} disabled={loading} style={{
+          <Button onClick={handleRun} disabled={loading} style={{
             padding: "10px 24px", background: loading ? `${red}88` : red, color: colors.white,
             border: "none", borderRadius: 8, fontSize: 13, cursor: loading ? "default" : "pointer", fontFamily: sans, whiteSpace: "nowrap", boxShadow: "0 1px 3px rgba(234,32,40,.3)",
-          }}>{loading ? "Running..." : "Run Scenario"}</button>
+          }}>{loading ? "Running..." : "Run Scenario"}</Button>
         </div>
       </div>
 
@@ -1953,10 +1950,10 @@ function SecuritySection({ toast, inputStyle }) {
             <input type="password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} required style={inputStyle} />
             {confirmPw && newPw !== confirmPw && <div style={{ fontSize: 11, color: red, marginTop: 4 }}>Passwords do not match</div>}
           </div>
-          <button type="submit" disabled={saving} style={{
+          <Button type="submit" disabled={saving} style={{
             padding: "8px 20px", background: saving ? `${red}88` : red, color: colors.white,
             border: "none", borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: saving ? "default" : "pointer",
-          }}>{saving ? "Changing..." : "Change Password"}</button>
+          }}>{saving ? "Changing..." : "Change Password"}</Button>
         </form>
       </div>
 
@@ -1972,16 +1969,16 @@ function SecuritySection({ toast, inputStyle }) {
               <span style={{ fontSize: 14, color: t1, fontWeight: 500 }}>Two-factor authentication is enabled</span>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => setShowMfaDisable(true)} style={{ padding: "7px 16px", background: colors.white, border: `1px solid ${line}`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: t2 }}>Disable</button>
-              <button onClick={handleRegenerateBackup} style={{ padding: "7px 16px", background: colors.white, border: `1px solid ${line}`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: t2 }}>Regenerate Backup Codes</button>
+              <Button variant="outline" onClick={() => setShowMfaDisable(true)} style={{ padding: "7px 16px", background: colors.white, border: `1px solid ${line}`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: t2 }}>Disable</Button>
+              <Button variant="outline" onClick={handleRegenerateBackup} style={{ padding: "7px 16px", background: colors.white, border: `1px solid ${line}`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: t2 }}>Regenerate Backup Codes</Button>
             </div>
             {showMfaDisable && (
               <div style={{ marginTop: 12, padding: 16, border: `1px solid ${line}`, borderRadius: 8, background: bg }}>
                 <div style={{ fontSize: 12, color: t2, marginBottom: 8 }}>Enter your password to disable 2FA:</div>
                 <input type="password" value={mfaDisablePw} onChange={e => setMfaDisablePw(e.target.value)} style={inputStyle} placeholder="Password" />
                 <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                  <button onClick={() => { setShowMfaDisable(false); setMfaDisablePw(""); setMfaError(""); }} style={{ padding: "7px 16px", background: colors.white, border: `1px solid ${line}`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: t2 }}>Cancel</button>
-                  <button onClick={handleMfaDisable} disabled={!mfaDisablePw} style={{ padding: "7px 16px", background: red, color: colors.white, border: "none", borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, opacity: mfaDisablePw ? 1 : 0.5 }}>Confirm Disable</button>
+                  <Button variant="outline" onClick={() => { setShowMfaDisable(false); setMfaDisablePw(""); setMfaError(""); }} style={{ padding: "7px 16px", background: colors.white, border: `1px solid ${line}`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: t2 }}>Cancel</Button>
+                  <Button onClick={handleMfaDisable} disabled={!mfaDisablePw} style={{ padding: "7px 16px", background: red, color: colors.white, border: "none", borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, opacity: mfaDisablePw ? 1 : 0.5 }}>Confirm Disable</Button>
                 </div>
               </div>
             )}
@@ -1991,9 +1988,9 @@ function SecuritySection({ toast, inputStyle }) {
         {!mfaEnabled && mfaSetupStep === 0 && (
           <>
             <p style={{ fontSize: 13, color: t2, marginBottom: 12, lineHeight: 1.5 }}>Add an extra layer of security to your account by requiring a verification code from an authenticator app (Google Authenticator, Authy, etc.) when signing in.</p>
-            <button onClick={handleMfaSetup} disabled={mfaLoading} style={{ padding: "8px 20px", background: red, color: colors.white, border: "none", borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: "pointer" }}>
+            <Button onClick={handleMfaSetup} disabled={mfaLoading} style={{ padding: "8px 20px", background: red, color: colors.white, border: "none", borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: "pointer" }}>
               Enable Two-Factor Authentication
-            </button>
+            </Button>
           </>
         )}
 
@@ -2003,7 +2000,7 @@ function SecuritySection({ toast, inputStyle }) {
             {mfaQR && <div style={{ textAlign: "center", marginBottom: 16 }}><img src={mfaQR} alt="MFA QR Code" style={{ width: 200, height: 200, borderRadius: 8, border: `1px solid ${line}` }} /></div>}
             <div style={{ fontSize: 11, color: t3, marginBottom: 4 }}>Or enter this secret key manually:</div>
             <div style={{ fontSize: 14, fontFamily: "monospace", padding: "10px 14px", background: bg, borderRadius: 6, border: `1px solid ${line}`, marginBottom: 16, wordBreak: "break-all", letterSpacing: ".05em", userSelect: "all" }}>{mfaSecret}</div>
-            <button onClick={() => setMfaSetupStep(2)} style={{ padding: "8px 20px", background: red, color: colors.white, border: "none", borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: "pointer" }}>Next</button>
+            <Button onClick={() => setMfaSetupStep(2)} style={{ padding: "8px 20px", background: red, color: colors.white, border: "none", borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: "pointer" }}>Next</Button>
           </>
         )}
 
@@ -2013,8 +2010,8 @@ function SecuritySection({ toast, inputStyle }) {
             <input type="text" inputMode="numeric" maxLength={6} value={mfaVerifyCode} onChange={e => setMfaVerifyCode(e.target.value.replace(/\D/g, ""))}
               placeholder="000000" style={{ ...inputStyle, fontSize: 20, fontFamily: "monospace", textAlign: "center", letterSpacing: ".3em", maxWidth: 180 }} />
             <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-              <button onClick={() => { setMfaSetupStep(0); setMfaVerifyCode(""); setMfaError(""); }} style={{ padding: "7px 16px", background: colors.white, border: `1px solid ${line}`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: t2 }}>Cancel</button>
-              <button onClick={handleMfaVerify} disabled={mfaVerifyCode.length !== 6 || mfaLoading} style={{ padding: "7px 16px", background: red, color: colors.white, border: "none", borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, opacity: mfaVerifyCode.length === 6 ? 1 : 0.5 }}>Verify & Enable</button>
+              <Button variant="outline" onClick={() => { setMfaSetupStep(0); setMfaVerifyCode(""); setMfaError(""); }} style={{ padding: "7px 16px", background: colors.white, border: `1px solid ${line}`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: t2 }}>Cancel</Button>
+              <Button onClick={handleMfaVerify} disabled={mfaVerifyCode.length !== 6 || mfaLoading} style={{ padding: "7px 16px", background: red, color: colors.white, border: "none", borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, opacity: mfaVerifyCode.length === 6 ? 1 : 0.5 }}>Verify & Enable</Button>
             </div>
           </>
         )}
@@ -2032,8 +2029,8 @@ function SecuritySection({ toast, inputStyle }) {
               ))}
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => { navigator.clipboard.writeText(mfaBackupCodes.join('\n')).then(() => toast("Backup codes copied to clipboard", "success")).catch(() => toast("Failed to copy codes", "error")); }} style={{ padding: "8px 20px", background: colors.white, border: `1px solid ${line}`, borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: "pointer", color: t2 }}>Copy All Codes</button>
-              <button onClick={() => { setMfaSetupStep(0); setMfaVerifyCode(""); setMfaBackupCodes([]); }} style={{ padding: "8px 20px", background: red, color: colors.white, border: "none", borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: "pointer" }}>Done</button>
+              <Button variant="outline" onClick={() => { navigator.clipboard.writeText(mfaBackupCodes.join('\n')).then(() => toast("Backup codes copied to clipboard", "success")).catch(() => toast("Failed to copy codes", "error")); }} style={{ padding: "8px 20px", background: colors.white, border: `1px solid ${line}`, borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: "pointer", color: t2 }}>Copy All Codes</Button>
+              <Button onClick={() => { setMfaSetupStep(0); setMfaVerifyCode(""); setMfaBackupCodes([]); }} style={{ padding: "8px 20px", background: red, color: colors.white, border: "none", borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: "pointer" }}>Done</Button>
             </div>
           </>
         )}
@@ -2178,12 +2175,12 @@ function ProfilePage({ investor, toast, onUpdate }) {
               <label style={{ display: "block", fontSize: 11, color: t3, fontWeight: 500, marginBottom: 6 }}>Initials</label>
               <input value={initials} onChange={e => setInitials(e.target.value)} maxLength={3} style={{ ...inputStyle, width: 80 }} />
             </div>
-            <button type="submit" disabled={saving} style={{
+            <Button type="submit" disabled={saving} style={{
               padding: "10px 24px", background: saving ? `${red}88` : red, color: colors.white,
               border: "none", borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: saving ? "default" : "pointer",
             }}>
               {saving ? "Saving..." : "Save Changes"}
-            </button>
+            </Button>
           </div>
         </form>
 
@@ -2245,7 +2242,7 @@ function ProfilePage({ investor, toast, onUpdate }) {
                 </label>
               </div>
               <div style={{ display: "flex", alignItems: "flex-end" }}>
-                <button type="submit" style={{ padding: "8px 16px", background: red, color: colors.white, border: "none", borderRadius: 4, fontSize: 13, cursor: "pointer", fontFamily: sans }}>{editingEntity ? "Save" : "Create"}</button>
+                <Button type="submit" style={{ padding: "8px 16px", background: red, color: colors.white, border: "none", borderRadius: 4, fontSize: 13, cursor: "pointer", fontFamily: sans }}>{editingEntity ? "Save" : "Create"}</Button>
               </div>
             </div>
           </form>
@@ -2561,13 +2558,13 @@ function LoginPage({ onLogin, onShowProspects }) {
                     </div>
                   </>
                 )}
-                <button type="submit" disabled={loading} style={{
+                <Button type="submit" disabled={loading} style={{
                   width: "100%", padding: "13px", background: loading ? `${red}AA` : red, color: colors.white,
                   border: "none", borderRadius: 8, fontSize: 14, fontFamily: sans, fontWeight: 500, cursor: loading ? "default" : "pointer",
                   letterSpacing: ".02em", transition: "background .15s", boxShadow: "0 1px 3px rgba(234,32,40,.3)",
                 }}>
                   {loading ? "Verifying..." : "Verify"}
-                </button>
+                </Button>
                 <div style={{ textAlign: "center", marginTop: 16 }}>
                   <span onClick={() => { setMfaPending(false); setMfaCode(["","","","","",""]); setBackupCode(""); setUseBackupCode(false); setError(""); setPassword(""); }}
                     style={{ fontSize: 12, color: "#888", cursor: "pointer" }}>Back to login</span>
@@ -2608,27 +2605,25 @@ function LoginPage({ onLogin, onShowProspects }) {
                     onFocus={e => e.target.style.borderColor = red}
                     onBlur={e => e.target.style.borderColor = "#E0DDD8"} />
                 </div>
-                <button type="submit" disabled={loading} style={{
+                <Button type="submit" disabled={loading} style={{
                   width: "100%", padding: "13px", background: loading ? `${red}AA` : red, color: colors.white,
                   border: "none", borderRadius: 8, fontSize: 14, fontFamily: sans, fontWeight: 500, cursor: loading ? "default" : "pointer",
                   letterSpacing: ".02em", transition: "background .15s", boxShadow: "0 1px 3px rgba(234,32,40,.3)",
                 }}>
                   {loading ? "Signing in..." : "Sign In"}
-                </button>
+                </Button>
                 <div style={{ textAlign: "right", marginTop: 10 }}>
                   <span onClick={() => setShowForgot(true)} style={{ fontSize: 12, color: red, cursor: "pointer" }}>Forgot password?</span>
                 </div>
                 <div style={{ marginTop: 14, padding: "14px 16px", border: "1px solid #ECEAE5", borderRadius: 4, background: cream }}>
                   <div style={{ fontSize: 9, color: "#888", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 10 }}>Quick Demo Login</div>
                   <div style={{ display: "flex", gap: 8 }}>
-                    <button type="button" onClick={() => { setEmail("j.chen@pacificventures.ca"); setPassword("northstar2025"); setTimeout(() => document.querySelector("form")?.requestSubmit(), 100); }}
-                      style={{ flex: 1, padding: "10px", background: colors.white, border: "1px solid #DDD", borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: darkText, fontWeight: 500 }}>
+                    <Button variant="outline" type="button" onClick={() => { setEmail("j.chen@pacificventures.ca"); setPassword("northstar2025"); setTimeout(() => document.querySelector("form")?.requestSubmit(), 100); }} style={{ flex: 1, padding: "10px", background: colors.white, border: "1px solid #DDD", borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: darkText, fontWeight: 500 }}>
                       Investor Demo
-                    </button>
-                    <button type="button" onClick={() => { setEmail("admin@northstardevelopment.ca"); setPassword("admin2025"); setTimeout(() => document.querySelector("form")?.requestSubmit(), 100); }}
-                      style={{ flex: 1, padding: "10px", background: colors.white, border: `1px solid ${red}40`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: red, fontWeight: 500 }}>
+                    </Button>
+                    <Button variant="outline" type="button" onClick={() => { setEmail("admin@northstardevelopment.ca"); setPassword("admin2025"); setTimeout(() => document.querySelector("form")?.requestSubmit(), 100); }} style={{ flex: 1, padding: "10px", background: colors.white, border: `1px solid ${red}40`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: red, fontWeight: 500 }}>
                       Admin Demo
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </form>
@@ -2660,10 +2655,9 @@ function LoginPage({ onLogin, onShowProspects }) {
                 <p style={{ fontSize: 11, color: colors.mutedText, fontStyle: "italic" }}>
                   (Demo mode — check the server console for the reset link)
                 </p>
-                <button onClick={() => { setShowForgot(false); setForgotSent(false); setForgotEmail(""); }}
-                  style={{ marginTop: 16, padding: "10px 24px", background: red, color: colors.white, border: "none", borderRadius: 4, fontSize: 13, cursor: "pointer", fontFamily: sans }}>
+                <Button onClick={() => { setShowForgot(false); setForgotSent(false); setForgotEmail(""); }} style={{ marginTop: 16, padding: "10px 24px", background: red, color: colors.white, border: "none", borderRadius: 4, fontSize: 13, cursor: "pointer", fontFamily: sans }}>
                   Back to Login
-                </button>
+                </Button>
               </>
             ) : (
               <form onSubmit={handleForgotSubmit}>
@@ -2674,14 +2668,12 @@ function LoginPage({ onLogin, onShowProspects }) {
                     style={{ width: "100%", padding: "12px 14px", background: "#FAFAFA", border: "1px solid #E0DDD8", borderRadius: 4, color: darkText, fontSize: 14, fontFamily: sans, outline: "none", boxSizing: "border-box" }} />
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button type="button" onClick={() => { setShowForgot(false); setForgotEmail(""); }}
-                    style={{ flex: 1, padding: "10px", background: colors.white, border: "1px solid #DDD", borderRadius: 4, fontSize: 13, cursor: "pointer", fontFamily: sans, color: darkText }}>
+                  <Button variant="outline" type="button" onClick={() => { setShowForgot(false); setForgotEmail(""); }} style={{ flex: 1, padding: "10px", background: colors.white, border: "1px solid #DDD", borderRadius: 4, fontSize: 13, cursor: "pointer", fontFamily: sans, color: darkText }}>
                     Cancel
-                  </button>
-                  <button type="submit" disabled={forgotLoading}
-                    style={{ flex: 1, padding: "10px", background: forgotLoading ? `${red}AA` : red, color: colors.white, border: "none", borderRadius: 4, fontSize: 13, cursor: forgotLoading ? "default" : "pointer", fontFamily: sans }}>
+                  </Button>
+                  <Button type="submit" disabled={forgotLoading} style={{ flex: 1, padding: "10px", background: forgotLoading ? `${red}AA` : red, color: colors.white, border: "none", borderRadius: 4, fontSize: 13, cursor: forgotLoading ? "default" : "pointer", fontFamily: sans }}>
                     {forgotLoading ? "Sending..." : "Send Reset Link"}
-                  </button>
+                  </Button>
                 </div>
               </form>
             )}
@@ -2754,10 +2746,9 @@ function ResetPasswordPage({ onBack }) {
               <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required placeholder="Confirm new password"
                 style={{ width: "100%", padding: "12px 14px", background: "#FAFAFA", border: "1px solid #E0DDD8", borderRadius: 4, color: darkText, fontSize: 14, fontFamily: sans, outline: "none", boxSizing: "border-box" }} />
             </div>
-            <button type="submit" disabled={loading}
-              style={{ width: "100%", padding: "12px", background: loading ? `${red}AA` : red, color: colors.white, border: "none", borderRadius: 4, fontSize: 14, cursor: loading ? "default" : "pointer", fontFamily: sans, fontWeight: 500 }}>
+            <Button type="submit" disabled={loading} style={{ width: "100%", padding: "12px", background: loading ? `${red}AA` : red, color: colors.white, border: "none", borderRadius: 4, fontSize: 14, cursor: loading ? "default" : "pointer", fontFamily: sans, fontWeight: 500 }}>
               {loading ? "Resetting..." : "Reset Password"}
-            </button>
+            </Button>
             <div style={{ textAlign: "center", marginTop: 16 }}>
               <span onClick={() => { window.location.hash = "#/login"; }} style={{ fontSize: 12, color: red, cursor: "pointer" }}>Back to Login</span>
             </div>
