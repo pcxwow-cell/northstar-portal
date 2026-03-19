@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback } from "react";
+import { colors, fonts, shadows } from "../styles/theme.js";
 
 const ToastContext = createContext(null);
 
@@ -18,10 +19,10 @@ export function ToastProvider({ children }) {
         {toasts.map(t => (
           <div key={t.id} style={{
             padding: "12px 20px", borderRadius: 8, fontSize: 13, fontWeight: 500,
-            background: t.type === "error" ? "#dc3545" : t.type === "warning" ? "#B8860B" : "#3D7A54",
-            color: "#fff", boxShadow: "0 4px 12px rgba(0,0,0,.15)",
+            background: t.type === "error" ? colors.danger : t.type === "warning" ? colors.warningText : colors.green,
+            color: colors.white, boxShadow: shadows.elevated,
             animation: "fadeIn .2s ease",
-            fontFamily: "'DM Sans', -apple-system, sans-serif",
+            fontFamily: fonts.sans,
           }}>
             {t.message}
           </div>

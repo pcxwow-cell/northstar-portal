@@ -8,7 +8,7 @@ export default function FormInput({ label, value, onChange, type = "text", place
       <input
         id={id} type={type} value={value} onChange={onChange}
         placeholder={placeholder} required={required} disabled={disabled}
-        style={{ ...inputStyle, borderColor: error ? colors.red : "#DDD", ...inputProps }}
+        style={{ ...inputStyle, borderColor: error ? colors.red : colors.inputBorder, ...inputProps }}
       />
       {error && <div style={{ fontSize: 11, color: colors.red, marginTop: 4 }}>{error}</div>}
     </div>

@@ -8,9 +8,9 @@ const STATUS_COLORS = {
   INACTIVE: { bg: colors.errorBg, color: colors.red },
   inactive: { bg: colors.errorBg, color: colors.red },
   LOCKED: { bg: colors.errorBg, color: colors.red },
-  DRAFT: { bg: "#F5F5F5", color: "#666" },
+  DRAFT: { bg: colors.draftBg, color: colors.draftText },
   APPROVED: { bg: colors.successBg, color: colors.green },
-  SENT: { bg: "#E8F4FE", color: "#2196F3" },
+  SENT: { bg: colors.sentBg, color: colors.sentText },
   REJECTED: { bg: colors.errorBg, color: colors.red },
   signed: { bg: colors.successBg, color: colors.green },
   declined: { bg: colors.errorBg, color: colors.red },
@@ -19,7 +19,7 @@ const STATUS_COLORS = {
 };
 
 export default function StatusBadge({ status, size = "md", style = {} }) {
-  const { bg, color } = STATUS_COLORS[status] || { bg: "#F5F5F5", color: "#666" };
+  const { bg, color } = STATUS_COLORS[status] || { bg: colors.draftBg, color: colors.draftText };
   const fontSize = size === "sm" ? 10 : 12;
   const padding = size === "sm" ? "2px 8px" : "3px 10px";
   return (

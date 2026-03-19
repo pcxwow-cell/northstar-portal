@@ -7,6 +7,12 @@ export default function Tabs({ tabs, active, onChange, style = {} }) {
         <button
           key={tab.id} role="tab" aria-selected={active === tab.id}
           onClick={() => onChange(tab.id)}
+          tabIndex={active === tab.id ? 0 : -1}
+          onKeyDown={(e) => {
+            const idx = tabs.findIndex(t => t.id === tab.id);
+            if (e.key === "ArrowRight" && idx < tabs.length - 1) { e.preventDefault(); onChange(tabs[idx + 1].id); }
+            if (e.key === "ArrowLeft" && idx > 0) { e.preventDefault(); onChange(tabs[idx - 1].id); }
+          }}
           style={{
             padding: "10px 16px", fontSize: 13, fontWeight: active === tab.id ? 600 : 400,
             color: active === tab.id ? colors.red : colors.mutedText,

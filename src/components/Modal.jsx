@@ -10,6 +10,22 @@ export default function Modal({ open, onClose, title, children, maxWidth = 520 }
     return () => document.removeEventListener("keydown", handler);
   }, [open, onClose]);
 
+  useEffect(() => {
+    if (!open || !ref.current) return;
+    const focusable = ref.current.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    first.focus();
+    const trap = (e) => {
+      if (e.key !== "Tab") return;
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", trap);
+    return () => document.removeEventListener("keydown", trap);
+  }, [open]);
+
   if (!open) return null;
   return (
     <div role="dialog" aria-modal="true" aria-label={title} style={{
@@ -17,7 +33,7 @@ export default function Modal({ open, onClose, title, children, maxWidth = 520 }
       alignItems: "center", justifyContent: "center", zIndex: 1000,
     }} onClick={onClose}>
       <div ref={ref} onClick={e => e.stopPropagation()} style={{
-        background: "#fff", borderRadius: radius.lg, padding: "28px 32px",
+        background: colors.white, borderRadius: radius.lg, padding: "28px 32px",
         maxWidth: `min(90vw, ${maxWidth}px)`, width: "100%", maxHeight: "85vh", overflowY: "auto",
         boxShadow: shadows.modal,
       }}>
