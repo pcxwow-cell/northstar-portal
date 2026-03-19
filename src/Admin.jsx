@@ -10,6 +10,7 @@ import { colors, fonts, inputStyle, btnStyle, btnOutline, shadows, radius, label
 import Button from "./components/Button.jsx";
 import Card from "./components/Card.jsx";
 import FormInput from "./components/FormInput.jsx";
+import Modal from "./components/Modal.jsx";
 
 
 // ─── SORTABLE HEADER ───
@@ -655,26 +656,23 @@ function CredentialDialog({ name, email, tempPassword, onClose }) {
     navigator.clipboard.writeText(copyText).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
   }
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
-      <Card onClick={e => e.stopPropagation()} padding="32px" style={{ maxWidth: 440, width: "90%", boxShadow: "0 20px 60px rgba(0,0,0,.15)" }}>
-        <div style={{ fontSize: 18, fontWeight: 500, marginBottom: 4 }}>Investor Created</div>
-        <p style={{ fontSize: 13, color: colors.mutedText, marginBottom: 20 }}>Save these credentials — the password cannot be retrieved later.</p>
-        <div style={{ background: colors.cardBg, border: "1px solid #ECEAE5", borderRadius: 8, padding: "16px 20px", marginBottom: 20, fontFamily: "monospace", fontSize: 13, lineHeight: 2 }}>
-          <div><span style={{ color: "#999" }}>Name:</span> <strong>{name}</strong></div>
-          <div><span style={{ color: "#999" }}>Email:</span> <strong>{email}</strong></div>
-          <div><span style={{ color: "#999" }}>Password:</span> <strong style={{ color: colors.red }}>{tempPassword}</strong></div>
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={handleCopy} style={{ flex: 1, padding: "10px", background: copied ? colors.green : colors.red, color: colors.white, border: "none", borderRadius: 6, fontSize: 13, cursor: "pointer", fontWeight: 500 }}>
-            {copied ? "✓ Copied!" : "Copy Credentials"}
-          </button>
-          <button onClick={onClose} style={{ padding: "10px 20px", background: "#F5F3EF", border: "1px solid #ECEAE5", borderRadius: 6, fontSize: 13, cursor: "pointer", color: "#666" }}>
-            Close
-          </button>
-        </div>
-        <p style={{ fontSize: 11, color: "#AAA", marginTop: 12 }}>A welcome email has been sent to {email}.</p>
-      </Card>
-    </div>
+    <Modal open={true} onClose={onClose} title="Investor Created" maxWidth={440}>
+      <p style={{ fontSize: 13, color: colors.mutedText, marginBottom: 20 }}>Save these credentials — the password cannot be retrieved later.</p>
+      <div style={{ background: colors.cardBg, border: "1px solid #ECEAE5", borderRadius: 8, padding: "16px 20px", marginBottom: 20, fontFamily: "monospace", fontSize: 13, lineHeight: 2 }}>
+        <div><span style={{ color: "#999" }}>Name:</span> <strong>{name}</strong></div>
+        <div><span style={{ color: "#999" }}>Email:</span> <strong>{email}</strong></div>
+        <div><span style={{ color: "#999" }}>Password:</span> <strong style={{ color: colors.red }}>{tempPassword}</strong></div>
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button onClick={handleCopy} style={{ flex: 1, padding: "10px", background: copied ? colors.green : colors.red, color: colors.white, border: "none", borderRadius: 6, fontSize: 13, cursor: "pointer", fontWeight: 500 }}>
+          {copied ? "✓ Copied!" : "Copy Credentials"}
+        </button>
+        <button onClick={onClose} style={{ padding: "10px 20px", background: "#F5F3EF", border: "1px solid #ECEAE5", borderRadius: 6, fontSize: 13, cursor: "pointer", color: "#666" }}>
+          Close
+        </button>
+      </div>
+      <p style={{ fontSize: 11, color: "#AAA", marginTop: 12 }}>A welcome email has been sent to {email}.</p>
+    </Modal>
   );
 }
 
@@ -1670,39 +1668,33 @@ function DocumentManager({ toast, hideHeader }) {
         </div>
 
         {/* Signature Request Modal */}
-        {showSignModal && (
-          <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,.4)", display: "flex", alignItems: "center", justifyContent: "center" }}
-            onClick={() => setShowSignModal(false)}>
-            <Card onClick={e => e.stopPropagation()} padding="28px 24px" style={{ maxWidth: 480, width: "90%", maxHeight: "70vh", overflow: "auto" }}>
-              <h3 style={{ fontSize: 18, fontWeight: 400, marginBottom: 20 }}>Request Signature</h3>
-              <p style={{ fontSize: 13, color: "#666", marginBottom: 16 }}>Select investors to sign <strong>{docDetail.name}</strong></p>
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Subject</label>
-                <input value={sigSubject} onChange={e => setSigSubject(e.target.value)} style={inputStyle} />
-              </div>
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Signers</label>
-                <div style={{ border: "1px solid #DDD", borderRadius: 4, maxHeight: 200, overflow: "auto" }}>
-                  {sigInvestors.map(inv => (
-                    <label key={inv.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderBottom: `1px solid ${colors.lightBorder}`, cursor: "pointer", fontSize: 13 }}>
-                      <input type="checkbox" checked={sigSelectedIds.includes(inv.id)}
-                        onChange={e => setSigSelectedIds(prev => e.target.checked ? [...prev, inv.id] : prev.filter(id => id !== inv.id))} />
-                      <span style={{ fontWeight: 500 }}>{inv.name}</span>
-                      <span style={{ color: colors.mutedText }}>{inv.email}</span>
-                    </label>
-                  ))}
-                  {sigInvestors.length === 0 && <div style={{ padding: 14, color: colors.mutedText, fontSize: 12 }}>Loading investors...</div>}
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-                <Button variant="outline" onClick={() => setShowSignModal(false)}>Cancel</Button>
-                <Button onClick={handleSendSignature} disabled={sigSending} style={{ opacity: sigSending ? 0.5 : 1 }}>
-                  {sigSending ? "Sending..." : "Send Request"}
-                </Button>
-              </div>
-            </Card>
+        <Modal open={showSignModal} onClose={() => setShowSignModal(false)} title="Request Signature" maxWidth={480}>
+          <p style={{ fontSize: 13, color: "#666", marginBottom: 16 }}>Select investors to sign <strong>{docDetail.name}</strong></p>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Subject</label>
+            <input value={sigSubject} onChange={e => setSigSubject(e.target.value)} style={inputStyle} />
           </div>
-        )}
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Signers</label>
+            <div style={{ border: "1px solid #DDD", borderRadius: 4, maxHeight: 200, overflow: "auto" }}>
+              {sigInvestors.map(inv => (
+                <label key={inv.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderBottom: `1px solid ${colors.lightBorder}`, cursor: "pointer", fontSize: 13 }}>
+                  <input type="checkbox" checked={sigSelectedIds.includes(inv.id)}
+                    onChange={e => setSigSelectedIds(prev => e.target.checked ? [...prev, inv.id] : prev.filter(id => id !== inv.id))} />
+                  <span style={{ fontWeight: 500 }}>{inv.name}</span>
+                  <span style={{ color: colors.mutedText }}>{inv.email}</span>
+                </label>
+              ))}
+              {sigInvestors.length === 0 && <div style={{ padding: 14, color: colors.mutedText, fontSize: 12 }}>Loading investors...</div>}
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+            <Button variant="outline" onClick={() => setShowSignModal(false)}>Cancel</Button>
+            <Button onClick={handleSendSignature} disabled={sigSending} style={{ opacity: sigSending ? 0.5 : 1 }}>
+              {sigSending ? "Sending..." : "Send Request"}
+            </Button>
+          </div>
+        </Modal>
 
         {/* Access audit table */}
         <Card className="admin-table-scroll" padding="0" style={{ overflow: "hidden" }}>
@@ -2528,49 +2520,44 @@ function ProjectCashFlowsTab({ project, projectId, cashFlowsList, cfInvestors, s
       ) : <p style={{ color: "#BBB", fontSize: 13, fontStyle: "italic" }}>No cash flows recorded</p>}
 
       {/* Record Cash Flow Modal */}
-      {showCfModal && (
-        <div onClick={() => setShowCfModal(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <Card onClick={e => e.stopPropagation()} padding="32px" style={{ width: 420, boxShadow: "0 8px 32px rgba(0,0,0,.15)" }}>
-            <h3 style={{ fontSize: 18, fontWeight: 500, marginBottom: 20 }}>Record Cash Flow</h3>
-            <form onSubmit={handleRecordCashFlow}>
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ fontSize: 11, color: "#888" }}>Investor</label>
-                <select value={cfUserId} onChange={e => setCfUserId(e.target.value)} style={{ ...inputStyle, marginTop: 4 }} required>
-                  <option value="">Select investor...</option>
-                  {(cfInvestors || []).map(inv => <option key={inv.userId} value={inv.userId}>{inv.name}</option>)}
-                </select>
-              </div>
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ fontSize: 11, color: "#888" }}>Date</label>
-                <input type="date" value={cfDate} onChange={e => setCfDate(e.target.value)} style={{ ...inputStyle, marginTop: 4 }} required />
-              </div>
-              <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: 11, color: "#888" }}>Amount ($)</label>
-                  <input type="number" step="0.01" value={cfAmount} onChange={e => setCfAmount(e.target.value)} placeholder="e.g. 50000" style={{ ...inputStyle, marginTop: 4 }} required />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: 11, color: "#888" }}>Type</label>
-                  <select value={cfType} onChange={e => setCfType(e.target.value)} style={{ ...inputStyle, marginTop: 4 }}>
-                    <option value="capital_call">Capital Call</option>
-                    <option value="distribution">Distribution</option>
-                    <option value="return_of_capital">Return of Capital</option>
-                    <option value="income">Income</option>
-                  </select>
-                </div>
-              </div>
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ fontSize: 11, color: "#888" }}>Description</label>
-                <input value={cfDesc} onChange={e => setCfDesc(e.target.value)} placeholder="Optional description" style={{ ...inputStyle, marginTop: 4 }} />
-              </div>
-              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                <Button variant="outline" type="button" onClick={() => setShowCfModal(false)}>Cancel</Button>
-                <Button type="submit">Record</Button>
-              </div>
-            </form>
-          </Card>
-        </div>
-      )}
+      <Modal open={showCfModal} onClose={() => setShowCfModal(false)} title="Record Cash Flow" maxWidth={420}>
+        <form onSubmit={handleRecordCashFlow}>
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 11, color: "#888" }}>Investor</label>
+            <select value={cfUserId} onChange={e => setCfUserId(e.target.value)} style={{ ...inputStyle, marginTop: 4 }} required>
+              <option value="">Select investor...</option>
+              {(cfInvestors || []).map(inv => <option key={inv.userId} value={inv.userId}>{inv.name}</option>)}
+            </select>
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 11, color: "#888" }}>Date</label>
+            <input type="date" value={cfDate} onChange={e => setCfDate(e.target.value)} style={{ ...inputStyle, marginTop: 4 }} required />
+          </div>
+          <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 11, color: "#888" }}>Amount ($)</label>
+              <input type="number" step="0.01" value={cfAmount} onChange={e => setCfAmount(e.target.value)} placeholder="e.g. 50000" style={{ ...inputStyle, marginTop: 4 }} required />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 11, color: "#888" }}>Type</label>
+              <select value={cfType} onChange={e => setCfType(e.target.value)} style={{ ...inputStyle, marginTop: 4 }}>
+                <option value="capital_call">Capital Call</option>
+                <option value="distribution">Distribution</option>
+                <option value="return_of_capital">Return of Capital</option>
+                <option value="income">Income</option>
+              </select>
+            </div>
+          </div>
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ fontSize: 11, color: "#888" }}>Description</label>
+            <input value={cfDesc} onChange={e => setCfDesc(e.target.value)} placeholder="Optional description" style={{ ...inputStyle, marginTop: 4 }} />
+          </div>
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+            <Button variant="outline" type="button" onClick={() => setShowCfModal(false)}>Cancel</Button>
+            <Button type="submit">Record</Button>
+          </div>
+        </form>
+      </Modal>
     </Card>
   );
 }
@@ -3129,12 +3116,9 @@ function StaffManager({ toast, hideHeader }) {
       </div>
 
       {/* Credential dialog */}
-      {credentialDialog && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={() => setCredentialDialog(null)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: colors.white, borderRadius: 12, padding: "28px 32px", maxWidth: 440, width: "90%", boxShadow: "0 8px 32px rgba(0,0,0,.15)" }}>
-            <h3 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 500 }}>
-              {credentialDialog.action === "created" ? "Staff Member Created" : "Password Reset"}
-            </h3>
+      <Modal open={!!credentialDialog} onClose={() => setCredentialDialog(null)} title={credentialDialog?.action === "created" ? "Staff Member Created" : "Password Reset"} maxWidth={440}>
+        {credentialDialog && (
+          <>
             <p style={{ fontSize: 13, color: "#888", margin: "0 0 16px" }}>
               {credentialDialog.action === "created"
                 ? `${credentialDialog.name} has been added and a welcome email has been sent.`
@@ -3148,9 +3132,9 @@ function StaffManager({ toast, hideHeader }) {
               <Button variant="outline" onClick={() => { navigator.clipboard.writeText(credentialDialog.tempPassword); toast("Password copied"); }}>Copy Password</Button>
               <Button onClick={() => setCredentialDialog(null)}>Done</Button>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
     </>
   );
 }
@@ -3391,25 +3375,18 @@ function StatementManager({ toast }) {
       </div>
 
       {/* Rejection reason modal */}
-      {rejectingId && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}
-          onClick={() => { setRejectingId(null); setRejectReason(""); }}>
-          <div style={{ background: colors.white, borderRadius: 12, padding: 28, width: 420, maxWidth: "90vw", boxShadow: "0 8px 32px rgba(0,0,0,.15)" }}
-            onClick={e => e.stopPropagation()}>
-            <h3 style={{ fontSize: 16, fontWeight: 500, marginBottom: 16 }}>Reject Statement</h3>
-            <label style={labelStyle}>Reason for rejection</label>
-            <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} rows={3}
-              placeholder="Describe what needs to be revised..."
-              style={{ ...inputStyle, resize: "vertical", marginBottom: 16 }} />
-            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-              <Button variant="outline" onClick={() => { setRejectingId(null); setRejectReason(""); }}>Cancel</Button>
-              <Button onClick={() => handleReject(rejectingId, rejectReason)} style={{ background: colors.red }}>
-                Reject Statement
-              </Button>
-            </div>
-          </div>
+      <Modal open={!!rejectingId} onClose={() => { setRejectingId(null); setRejectReason(""); }} title="Reject Statement" maxWidth={420}>
+        <label style={labelStyle}>Reason for rejection</label>
+        <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} rows={3}
+          placeholder="Describe what needs to be revised..."
+          style={{ ...inputStyle, resize: "vertical", marginBottom: 16 }} />
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+          <Button variant="outline" onClick={() => { setRejectingId(null); setRejectReason(""); }}>Cancel</Button>
+          <Button onClick={() => handleReject(rejectingId, rejectReason)} style={{ background: colors.red }}>
+            Reject Statement
+          </Button>
         </div>
-      )}
+      </Modal>
 
       {/* Statement detail panel */}
       {selectedId && (
