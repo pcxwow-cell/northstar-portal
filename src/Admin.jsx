@@ -608,7 +608,7 @@ function ProjectManager({ toast, onViewProject }) {
                     <div style={{ fontSize: 12, color: colors.mutedText, marginTop: 2 }}>{p.location}</div>
                   </div>
                   <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                    <span style={{ fontSize: 10, padding: "3px 10px", borderRadius: 4, background: statusBg, color: statusColor, fontWeight: 500 }}>{p.status}</span>
+                    <StatusBadge status={p.status} />
                     <Button onClick={(e) => { e.stopPropagation(); setEditing(editing === p.id ? null : p.id); }} variant="outline" style={{ padding: "4px 12px", fontSize: 11 }}>{editing === p.id ? "Close" : "Quick Edit"}</Button>
                     <Button onClick={(e) => { e.stopPropagation(); handleDeleteProject(p.id, p.name); }} variant="outline" style={{ padding: "4px 12px", fontSize: 11, color: colors.red, borderColor: colors.red }}>Delete</Button>
                   </div>
@@ -1405,7 +1405,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
               </div>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <span style={{ color: colors.mutedText, fontSize: 12 }}>{t.threshold}</span>
-                <span style={{ padding: "2px 8px", borderRadius: 3, fontSize: 10, background: t.status === "complete" ? "#EFE" : t.status === "accruing" ? "#FFF8E1" : colors.lightBorder, color: t.status === "complete" ? colors.green : t.status === "accruing" ? "#B8860B" : "#999" }}>{t.status}</span>
+                <StatusBadge status={t.status} size="sm" />
                 <Button variant="outline" onClick={() => { setEditingTierId(t.id); setTierForm({ tierName: t.name, lpShare: t.lpShare, gpShare: t.gpShare, threshold: t.threshold }); setShowTierForm(true); }} style={{ padding: "2px 6px", fontSize: 10 }}>Edit</Button>
                 <Button variant="outline" onClick={async () => { if (!confirm(`Delete tier "${t.name}"?`)) return; try { await deleteWaterfallTier(projectId, t.id); toast("Tier deleted"); load(); } catch (e) { toast(e.message, "error"); } }} style={{ padding: "2px 6px", fontSize: 10, color: colors.red, borderColor: colors.red }}>&times;</Button>
               </div>
@@ -1646,7 +1646,7 @@ function DocumentManager({ toast, hideHeader }) {
             <h2 style={{ fontSize: 22, fontWeight: 400, marginBottom: 6 }}>{docDetail.name}</h2>
             <div style={{ fontSize: 12, color: colors.mutedText }}>
               {docDetail.project?.name || "General"} · {docDetail.category} · {docDetail.date} · {docDetail.size}
-              <span style={{ marginLeft: 8, padding: "2px 8px", borderRadius: 3, fontSize: 10, background: docDetail.status === "published" ? "#EFE" : "#FFF8E1", color: docDetail.status === "published" ? colors.green : "#B8860B" }}>{docDetail.status}</span>
+              <StatusBadge status={docDetail.status} style={{ marginLeft: 8 }} />
             </div>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
@@ -1717,7 +1717,7 @@ function DocumentManager({ toast, hideHeader }) {
                 {(req.signers || []).map(signer => (
                   <div key={signer.id || signer.userId} style={{ display: "grid", gridTemplateColumns: "1fr 100px 160px 120px", padding: "10px 20px", borderBottom: `1px solid ${colors.lightBorder}`, fontSize: 13, alignItems: "center" }}>
                     <span style={{ fontWeight: 500 }}>{signer.name || signer.investorName || "Unknown"}</span>
-                    <span><span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 3, background: signer.status === "signed" ? "#EFE" : signer.status === "declined" ? "#FEE" : "#FFF8E1", color: signer.status === "signed" ? colors.green : signer.status === "declined" ? colors.red : "#B8860B" }}>{signer.status || "pending"}</span></span>
+                    <span><StatusBadge status={signer.status || "pending"} size="sm" /></span>
                     <span style={{ fontSize: 12, color: colors.mutedText }}>{signer.signedAt ? new Date(signer.signedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }) : "\u2014"}</span>
                     {(signer.status === "pending" || !signer.status) && (
                       <Button variant="outline" onClick={async () => {
@@ -3785,11 +3785,11 @@ function SignatureManager({ toast, hideHeader }) {
               <div>
                 {sig.signers?.map(s => (
                   <div key={s.id} style={{ fontSize: 12, marginBottom: 2 }}>
-                    {s.name} <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 3, background: statusBg(s.status), color: statusColor(s.status) }}>{s.status}</span>
+                    {s.name} <StatusBadge status={s.status} size="sm" />
                   </div>
                 ))}
               </div>
-              <span style={{ padding: "2px 10px", borderRadius: 3, fontSize: 11, background: statusBg(sig.status), color: statusColor(sig.status), display: "inline-block", width: "fit-content" }}>{sig.status}</span>
+              <StatusBadge status={sig.status} />
               <div>
                 {sig.status === "pending" && (
                   <Button variant="outline" onClick={() => handleCancel(sig.id)} style={{ fontSize: 11, padding: "4px 12px", color: colors.red, borderColor: colors.red }}>Cancel</Button>
