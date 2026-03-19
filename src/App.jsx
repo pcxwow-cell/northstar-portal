@@ -2,19 +2,19 @@ import { useState, useCallback, useEffect, useRef, createContext, useContext, us
 import { ToastProvider, useToast } from "./context/ToastContext.jsx";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { login as apiLogin, logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, downloadDocument, fetchThreads, fetchThread, createThread, replyToThread, updateProfile, fetchSignatureRequests, signDocument, fetchNotificationPreferences, updateNotificationPreferences, fetchCapitalAccount, fetchCashFlows, calculateWaterfallApi, fetchEntities, createEntity, updateEntity, deleteEntity, runFinancialModel, changePassword, forgotPassword, resetPassword, fetchLoginHistory, setupMFA, verifyMFASetup, verifyMFA, disableMFA, getMFAStatus, regenerateBackupCodes, setToken, fmt, fmtCurrency, fetchMyFlags, fetchNotifications } from "./api.js";
-import { colors as themeColors, fonts } from "./styles/theme.js";
+import { colors, fonts, inputStyle, btnStyle, btnOutline, shadows, radius, labelStyle } from "./styles/theme.js";
 
 // Lazy load heavy components — they get their own chunks
 const AdminPanel = lazy(() => import("./Admin.jsx"));
 const ProspectPortal = lazy(() => import("./ProspectPortal.jsx"));
 
 // ─── THEME ───────────────────────────────────────────────
-export const serif = fonts.serif;
-export const sans = fonts.sans;
-export const red = themeColors.red;
-export const darkText = themeColors.darkText;
-export const cream = "#FDFAF2"; // not in theme.js
-export const green = themeColors.green;
+const serif = fonts.serif;
+const sans = fonts.sans;
+const red = colors.red;
+const darkText = colors.darkText;
+const cream = colors.cream;
+const green = colors.green;
 
 // Northstar "N" icon — two parallelogram shapes from brand
 export const NorthstarIcon = ({ size = 32, color = red }) => (
@@ -41,7 +41,7 @@ export const NorthstarWordmark = ({ height = 20, color = darkText }) => (
 
 const themes = {
   dark: { bg: "#0A0A0F", surface: "#0C0C0C", line: "#1A1A1A", t1: "#E8E4DE", t2: "#8C887F", t3: "#4A4843", hover: "#0F0F0F", headerBg: "#0A0A0FF0", avatarGrad: "linear-gradient(135deg, #EA2028, #c41920)" },
-  light: { bg: "#F8F7F4", surface: "#FFFFFF", line: "#ECEAE5", t1: "#1A1816", t2: "#5C5850", t3: "#767168", hover: "#F0EDE8", headerBg: "#FFFFFFFA", avatarGrad: "linear-gradient(135deg, #EA2028, #c41920)" },
+  light: { bg: "#F8F7F4", surface: "#FFFFFF", line: "#ECEAE5", t1: "#1A1816", t2: "#5C5850", t3: colors.mutedText, hover: colors.lightBorder, headerBg: "#FFFFFFFA", avatarGrad: "linear-gradient(135deg, #EA2028, #c41920)" },
 };
 
 const ThemeContext = createContext(themes.light);
@@ -537,8 +537,8 @@ function Overview({ onNavigate, investor, projects, myProjects, allDistributions
             {img && (
               <div style={{ height: 140, backgroundImage: `url(${img})`, backgroundSize: "cover", backgroundPosition: "center", position: "relative" }}>
                 <div style={{ position: "absolute", inset: 0, background: "linear-gradient(0deg, rgba(0,0,0,.4) 0%, transparent 60%)" }} />
-                <span style={{ position: "absolute", top: 12, right: 12, fontSize: 10, padding: "4px 10px", borderRadius: 20, background: "rgba(255,255,255,.9)", color: "#231F20", fontWeight: 500, zIndex: 1, backdropFilter: "blur(4px)" }}>{p.status}</span>
-                <div style={{ position: "absolute", bottom: 12, left: 16, color: "#fff", fontSize: 18, fontWeight: 500, zIndex: 1 }}>{p.name}</div>
+                <span style={{ position: "absolute", top: 12, right: 12, fontSize: 10, padding: "4px 10px", borderRadius: 20, background: "rgba(255,255,255,.9)", color: colors.darkText, fontWeight: 500, zIndex: 1, backdropFilter: "blur(4px)" }}>{p.status}</span>
+                <div style={{ position: "absolute", bottom: 12, left: 16, color: colors.white, fontSize: 18, fontWeight: 500, zIndex: 1 }}>{p.name}</div>
               </div>
             )}
             <div style={{ padding: "20px" }}>
@@ -1053,7 +1053,7 @@ function CapTablePage({ myProjects, investor, toast }) {
                 setWaterfallLoading(false);
               }}
               disabled={waterfallLoading}
-              style={{ padding: "10px 24px", background: red, color: "#fff", border: "none", borderRadius: 8, fontSize: 13, cursor: "pointer", fontFamily: sans, opacity: waterfallLoading ? 0.5 : 1, whiteSpace: "nowrap", boxShadow: "0 1px 3px rgba(234,32,40,.3)" }}
+              style={{ padding: "10px 24px", background: red, color: colors.white, border: "none", borderRadius: 8, fontSize: 13, cursor: "pointer", fontFamily: sans, opacity: waterfallLoading ? 0.5 : 1, whiteSpace: "nowrap", boxShadow: "0 1px 3px rgba(234,32,40,.3)" }}
             >
               {waterfallLoading ? "Calculating..." : "Calculate"}
             </button>
@@ -1069,10 +1069,10 @@ function CapTablePage({ myProjects, investor, toast }) {
                   const gpPct = total > 0 ? (waterfallResult.gpTotal / total) * 100 : 0;
                   return (
                     <>
-                      <div style={{ width: `${lpPct}%`, background: green, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "#fff", fontWeight: 500, transition: "width .3s" }}>
+                      <div style={{ width: `${lpPct}%`, background: green, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: colors.white, fontWeight: 500, transition: "width .3s" }}>
                         LP {lpPct.toFixed(1)}%
                       </div>
-                      <div style={{ width: `${gpPct}%`, background: red, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "#fff", fontWeight: 500, transition: "width .3s" }}>
+                      <div style={{ width: `${gpPct}%`, background: red, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: colors.white, fontWeight: 500, transition: "width .3s" }}>
                         GP {gpPct.toFixed(1)}%
                       </div>
                     </>
@@ -1210,7 +1210,7 @@ function DocumentsPage({ toast, allDocuments, myProjects, investor }) {
                 <div style={{ fontSize: 12, color: t3, marginTop: 2 }}>{sig.subject}</div>
               </div>
               <button onClick={() => handleSignNow(sig)} disabled={signingId !== null} style={{
-                padding: "8px 20px", background: red, color: "#fff", border: "none", borderRadius: 4,
+                padding: "8px 20px", background: red, color: colors.white, border: "none", borderRadius: 4,
                 fontSize: 13, fontFamily: sans, cursor: signingId ? "default" : "pointer", opacity: signingId === sig.id ? 0.5 : 1,
               }}>
                 {signingId === sig.id ? "Signing..." : "Sign Now"}
@@ -1317,7 +1317,7 @@ function DocumentsPage({ toast, allDocuments, myProjects, investor }) {
             </div>
             <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
               <span onClick={() => setSignModal(null)} style={{ fontSize: 12, padding: "8px 16px", borderRadius: 2, border: `1px solid ${line}`, color: t3, cursor: "pointer" }}>Cancel</span>
-              <span onClick={handleSign} style={{ fontSize: 12, padding: "8px 16px", borderRadius: 2, background: red, color: "#fff", cursor: "pointer" }}>Sign Document</span>
+              <span onClick={handleSign} style={{ fontSize: 12, padding: "8px 16px", borderRadius: 2, background: red, color: colors.white, cursor: "pointer" }}>Sign Document</span>
             </div>
           </>
         )}
@@ -1339,7 +1339,7 @@ function DocumentsPage({ toast, allDocuments, myProjects, investor }) {
             </div>
             <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
               <span onClick={() => setReviewDoc(null)} style={{ fontSize: 12, padding: "8px 16px", borderRadius: 2, border: `1px solid ${line}`, color: t3, cursor: "pointer" }}>Close</span>
-              <span onClick={() => { downloadDocument(reviewDoc.id).then(() => { toast(`Opened ${reviewDoc.name}`, "success"); setReviewDoc(null); }).catch(err => toast(err.message || "Download failed", "error")); }} style={{ fontSize: 12, padding: "8px 16px", borderRadius: 2, background: red, color: "#fff", cursor: "pointer" }}>Open Full Document</span>
+              <span onClick={() => { downloadDocument(reviewDoc.id).then(() => { toast(`Opened ${reviewDoc.name}`, "success"); setReviewDoc(null); }).catch(err => toast(err.message || "Download failed", "error")); }} style={{ fontSize: 12, padding: "8px 16px", borderRadius: 2, background: red, color: colors.white, cursor: "pointer" }}>Open Full Document</span>
             </div>
           </>
         )}
@@ -1525,7 +1525,7 @@ function MessagesPage({ toast, investor, initialThreadId }) {
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
             <span onClick={!sending ? handleReply : undefined} style={{
               fontSize: 13, padding: "8px 20px", borderRadius: 4, cursor: sending ? "default" : "pointer",
-              background: reply.trim() && !sending ? red : `${red}44`, color: "#fff", fontWeight: 500,
+              background: reply.trim() && !sending ? red : `${red}44`, color: colors.white, fontWeight: 500,
             }}>{sending ? "Sending..." : "Send Reply"}</span>
           </div>
         </div>
@@ -1553,7 +1553,7 @@ function MessagesPage({ toast, investor, initialThreadId }) {
           </div>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}>
             <span onClick={() => setComposing(false)} style={{ fontSize: 13, padding: "10px 20px", borderRadius: 4, cursor: "pointer", border: `1px solid ${line}`, color: t2 }}>Cancel</span>
-            <button type="submit" disabled={sending} style={{ fontSize: 13, padding: "10px 24px", borderRadius: 4, cursor: sending ? "default" : "pointer", background: sending ? `${red}88` : red, color: "#fff", border: "none", fontWeight: 500, fontFamily: sans }}>
+            <button type="submit" disabled={sending} style={{ fontSize: 13, padding: "10px 24px", borderRadius: 4, cursor: sending ? "default" : "pointer", background: sending ? `${red}88` : red, color: colors.white, border: "none", fontWeight: 500, fontFamily: sans }}>
               {sending ? "Sending..." : "Send Message"}
             </button>
           </div>
@@ -1571,7 +1571,7 @@ function MessagesPage({ toast, investor, initialThreadId }) {
           <h1 style={{ fontFamily: serif, fontSize: 36, fontWeight: 300 }}>Messages</h1>
           <p style={{ fontSize: 14, color: t2, marginTop: 6 }}>{unreadCount} unread · {threads.length} conversations</p>
         </div>
-        <span onClick={() => setComposing(true)} style={{ fontSize: 13, padding: "10px 20px", borderRadius: 4, cursor: "pointer", background: red, color: "#fff", fontWeight: 500 }}>New Message</span>
+        <span onClick={() => setComposing(true)} style={{ fontSize: 13, padding: "10px 20px", borderRadius: 4, cursor: "pointer", background: red, color: colors.white, fontWeight: 500 }}>New Message</span>
       </div>
       {/* Search and sort controls */}
       {!loading && threads.length > 0 && (
@@ -1717,7 +1717,7 @@ function FinancialModelerPage({ myProjects, investor }) {
             <input type="number" value={annualCF} onChange={e => setAnnualCF(e.target.value)} placeholder="0" style={inputSt} />
           </div>
           <button onClick={handleRun} disabled={loading} style={{
-            padding: "10px 24px", background: loading ? `${red}88` : red, color: "#fff",
+            padding: "10px 24px", background: loading ? `${red}88` : red, color: colors.white,
             border: "none", borderRadius: 8, fontSize: 13, cursor: loading ? "default" : "pointer", fontFamily: sans, whiteSpace: "nowrap", boxShadow: "0 1px 3px rgba(234,32,40,.3)",
           }}>{loading ? "Running..." : "Run Scenario"}</button>
         </div>
@@ -1954,7 +1954,7 @@ function SecuritySection({ toast, inputStyle }) {
             {confirmPw && newPw !== confirmPw && <div style={{ fontSize: 11, color: red, marginTop: 4 }}>Passwords do not match</div>}
           </div>
           <button type="submit" disabled={saving} style={{
-            padding: "8px 20px", background: saving ? `${red}88` : red, color: "#fff",
+            padding: "8px 20px", background: saving ? `${red}88` : red, color: colors.white,
             border: "none", borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: saving ? "default" : "pointer",
           }}>{saving ? "Changing..." : "Change Password"}</button>
         </form>
@@ -1972,16 +1972,16 @@ function SecuritySection({ toast, inputStyle }) {
               <span style={{ fontSize: 14, color: t1, fontWeight: 500 }}>Two-factor authentication is enabled</span>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => setShowMfaDisable(true)} style={{ padding: "7px 16px", background: "#fff", border: `1px solid ${line}`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: t2 }}>Disable</button>
-              <button onClick={handleRegenerateBackup} style={{ padding: "7px 16px", background: "#fff", border: `1px solid ${line}`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: t2 }}>Regenerate Backup Codes</button>
+              <button onClick={() => setShowMfaDisable(true)} style={{ padding: "7px 16px", background: colors.white, border: `1px solid ${line}`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: t2 }}>Disable</button>
+              <button onClick={handleRegenerateBackup} style={{ padding: "7px 16px", background: colors.white, border: `1px solid ${line}`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: t2 }}>Regenerate Backup Codes</button>
             </div>
             {showMfaDisable && (
               <div style={{ marginTop: 12, padding: 16, border: `1px solid ${line}`, borderRadius: 8, background: bg }}>
                 <div style={{ fontSize: 12, color: t2, marginBottom: 8 }}>Enter your password to disable 2FA:</div>
                 <input type="password" value={mfaDisablePw} onChange={e => setMfaDisablePw(e.target.value)} style={inputStyle} placeholder="Password" />
                 <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                  <button onClick={() => { setShowMfaDisable(false); setMfaDisablePw(""); setMfaError(""); }} style={{ padding: "7px 16px", background: "#fff", border: `1px solid ${line}`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: t2 }}>Cancel</button>
-                  <button onClick={handleMfaDisable} disabled={!mfaDisablePw} style={{ padding: "7px 16px", background: red, color: "#fff", border: "none", borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, opacity: mfaDisablePw ? 1 : 0.5 }}>Confirm Disable</button>
+                  <button onClick={() => { setShowMfaDisable(false); setMfaDisablePw(""); setMfaError(""); }} style={{ padding: "7px 16px", background: colors.white, border: `1px solid ${line}`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: t2 }}>Cancel</button>
+                  <button onClick={handleMfaDisable} disabled={!mfaDisablePw} style={{ padding: "7px 16px", background: red, color: colors.white, border: "none", borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, opacity: mfaDisablePw ? 1 : 0.5 }}>Confirm Disable</button>
                 </div>
               </div>
             )}
@@ -1991,7 +1991,7 @@ function SecuritySection({ toast, inputStyle }) {
         {!mfaEnabled && mfaSetupStep === 0 && (
           <>
             <p style={{ fontSize: 13, color: t2, marginBottom: 12, lineHeight: 1.5 }}>Add an extra layer of security to your account by requiring a verification code from an authenticator app (Google Authenticator, Authy, etc.) when signing in.</p>
-            <button onClick={handleMfaSetup} disabled={mfaLoading} style={{ padding: "8px 20px", background: red, color: "#fff", border: "none", borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: "pointer" }}>
+            <button onClick={handleMfaSetup} disabled={mfaLoading} style={{ padding: "8px 20px", background: red, color: colors.white, border: "none", borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: "pointer" }}>
               Enable Two-Factor Authentication
             </button>
           </>
@@ -2003,7 +2003,7 @@ function SecuritySection({ toast, inputStyle }) {
             {mfaQR && <div style={{ textAlign: "center", marginBottom: 16 }}><img src={mfaQR} alt="MFA QR Code" style={{ width: 200, height: 200, borderRadius: 8, border: `1px solid ${line}` }} /></div>}
             <div style={{ fontSize: 11, color: t3, marginBottom: 4 }}>Or enter this secret key manually:</div>
             <div style={{ fontSize: 14, fontFamily: "monospace", padding: "10px 14px", background: bg, borderRadius: 6, border: `1px solid ${line}`, marginBottom: 16, wordBreak: "break-all", letterSpacing: ".05em", userSelect: "all" }}>{mfaSecret}</div>
-            <button onClick={() => setMfaSetupStep(2)} style={{ padding: "8px 20px", background: red, color: "#fff", border: "none", borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: "pointer" }}>Next</button>
+            <button onClick={() => setMfaSetupStep(2)} style={{ padding: "8px 20px", background: red, color: colors.white, border: "none", borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: "pointer" }}>Next</button>
           </>
         )}
 
@@ -2013,8 +2013,8 @@ function SecuritySection({ toast, inputStyle }) {
             <input type="text" inputMode="numeric" maxLength={6} value={mfaVerifyCode} onChange={e => setMfaVerifyCode(e.target.value.replace(/\D/g, ""))}
               placeholder="000000" style={{ ...inputStyle, fontSize: 20, fontFamily: "monospace", textAlign: "center", letterSpacing: ".3em", maxWidth: 180 }} />
             <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-              <button onClick={() => { setMfaSetupStep(0); setMfaVerifyCode(""); setMfaError(""); }} style={{ padding: "7px 16px", background: "#fff", border: `1px solid ${line}`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: t2 }}>Cancel</button>
-              <button onClick={handleMfaVerify} disabled={mfaVerifyCode.length !== 6 || mfaLoading} style={{ padding: "7px 16px", background: red, color: "#fff", border: "none", borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, opacity: mfaVerifyCode.length === 6 ? 1 : 0.5 }}>Verify & Enable</button>
+              <button onClick={() => { setMfaSetupStep(0); setMfaVerifyCode(""); setMfaError(""); }} style={{ padding: "7px 16px", background: colors.white, border: `1px solid ${line}`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: t2 }}>Cancel</button>
+              <button onClick={handleMfaVerify} disabled={mfaVerifyCode.length !== 6 || mfaLoading} style={{ padding: "7px 16px", background: red, color: colors.white, border: "none", borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, opacity: mfaVerifyCode.length === 6 ? 1 : 0.5 }}>Verify & Enable</button>
             </div>
           </>
         )}
@@ -2032,8 +2032,8 @@ function SecuritySection({ toast, inputStyle }) {
               ))}
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => { navigator.clipboard.writeText(mfaBackupCodes.join('\n')).then(() => toast("Backup codes copied to clipboard", "success")).catch(() => toast("Failed to copy codes", "error")); }} style={{ padding: "8px 20px", background: "#fff", border: `1px solid ${line}`, borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: "pointer", color: t2 }}>Copy All Codes</button>
-              <button onClick={() => { setMfaSetupStep(0); setMfaVerifyCode(""); setMfaBackupCodes([]); }} style={{ padding: "8px 20px", background: red, color: "#fff", border: "none", borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: "pointer" }}>Done</button>
+              <button onClick={() => { navigator.clipboard.writeText(mfaBackupCodes.join('\n')).then(() => toast("Backup codes copied to clipboard", "success")).catch(() => toast("Failed to copy codes", "error")); }} style={{ padding: "8px 20px", background: colors.white, border: `1px solid ${line}`, borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: "pointer", color: t2 }}>Copy All Codes</button>
+              <button onClick={() => { setMfaSetupStep(0); setMfaVerifyCode(""); setMfaBackupCodes([]); }} style={{ padding: "8px 20px", background: red, color: colors.white, border: "none", borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: "pointer" }}>Done</button>
             </div>
           </>
         )}
@@ -2179,7 +2179,7 @@ function ProfilePage({ investor, toast, onUpdate }) {
               <input value={initials} onChange={e => setInitials(e.target.value)} maxLength={3} style={{ ...inputStyle, width: 80 }} />
             </div>
             <button type="submit" disabled={saving} style={{
-              padding: "10px 24px", background: saving ? `${red}88` : red, color: "#fff",
+              padding: "10px 24px", background: saving ? `${red}88` : red, color: colors.white,
               border: "none", borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: saving ? "default" : "pointer",
             }}>
               {saving ? "Saving..." : "Save Changes"}
@@ -2245,7 +2245,7 @@ function ProfilePage({ investor, toast, onUpdate }) {
                 </label>
               </div>
               <div style={{ display: "flex", alignItems: "flex-end" }}>
-                <button type="submit" style={{ padding: "8px 16px", background: red, color: "#fff", border: "none", borderRadius: 4, fontSize: 13, cursor: "pointer", fontFamily: sans }}>{editingEntity ? "Save" : "Create"}</button>
+                <button type="submit" style={{ padding: "8px 16px", background: red, color: colors.white, border: "none", borderRadius: 4, fontSize: 13, cursor: "pointer", fontFamily: sans }}>{editingEntity ? "Save" : "Create"}</button>
               </div>
             </div>
           </form>
@@ -2296,7 +2296,7 @@ function ProfilePage({ investor, toast, onUpdate }) {
                   position: "relative", transition: "background .2s",
                 }}>
                   <div style={{
-                    width: 20, height: 20, borderRadius: "50%", background: "#fff",
+                    width: 20, height: 20, borderRadius: "50%", background: colors.white,
                     position: "absolute", top: 2,
                     left: notifPrefs[item.key] ? 22 : 2,
                     transition: "left .2s", boxShadow: "0 1px 3px rgba(0,0,0,.2)",
@@ -2420,7 +2420,7 @@ function LoginPage({ onLogin, onShowProspects }) {
   };
 
   return (
-    <div style={{ fontFamily: sans, color: darkText, minHeight: "100vh", display: "flex", flexDirection: "column", background: "#fff" }}>
+    <div style={{ fontFamily: sans, color: darkText, minHeight: "100vh", display: "flex", flexDirection: "column", background: colors.white }}>
       <style>{`
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
@@ -2494,14 +2494,14 @@ function LoginPage({ onLogin, onShowProspects }) {
                 }}>
                   <div style={{ position: "absolute", inset: 0, background: "linear-gradient(0deg, rgba(0,0,0,.7) 0%, rgba(0,0,0,.1) 60%, transparent 100%)" }} />
                   <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: 14 }}>
-                    <div style={{ fontSize: 15, fontWeight: 500, color: "#fff", marginBottom: 2 }}>{p.name}</div>
+                    <div style={{ fontSize: 15, fontWeight: 500, color: colors.white, marginBottom: 2 }}>{p.name}</div>
                     <div style={{ fontSize: 10, color: "rgba(255,255,255,.6)" }}>{p.loc}</div>
                   </div>
                   <div style={{ position: "absolute", top: 10, right: 10 }}>
                     <span style={{
                       fontSize: 9, padding: "3px 8px", borderRadius: 2,
                       background: p.status === "Completed" ? "rgba(61,122,84,.9)" : "rgba(0,0,0,.5)",
-                      color: "#fff", letterSpacing: ".03em", backdropFilter: "blur(4px)",
+                      color: colors.white, letterSpacing: ".03em", backdropFilter: "blur(4px)",
                     }}>{p.status}</span>
                   </div>
                 </div>
@@ -2514,7 +2514,7 @@ function LoginPage({ onLogin, onShowProspects }) {
             {mfaPending ? (
               /* ── MFA Verification Form ── */
               <form onSubmit={handleMfaSubmit} style={{
-                background: "#fff", border: "1px solid #ECEAE5", borderRadius: 12, padding: "40px 32px",
+                background: colors.white, border: "1px solid #ECEAE5", borderRadius: 12, padding: "40px 32px",
                 boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)",
               }}>
                 <div style={{ textAlign: "center", marginBottom: 32 }}>
@@ -2522,7 +2522,7 @@ function LoginPage({ onLogin, onShowProspects }) {
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={red} strokeWidth="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M12 16v2"/><path d="M8 11V7a4 4 0 118 0v4"/></svg>
                   </div>
                   <h2 style={{ fontSize: 20, fontWeight: 400, marginBottom: 4, color: darkText }}>Two-Factor Authentication</h2>
-                  <p style={{ fontSize: 13, color: "#767168" }}>Enter the code from your authenticator app</p>
+                  <p style={{ fontSize: 13, color: colors.mutedText }}>Enter the code from your authenticator app</p>
                 </div>
                 {error && (
                   <div style={{ fontSize: 12, color: red, padding: "10px 14px", border: `1px solid ${red}22`, borderRadius: 4, marginBottom: 16, background: `${red}08` }}>{error}</div>
@@ -2562,7 +2562,7 @@ function LoginPage({ onLogin, onShowProspects }) {
                   </>
                 )}
                 <button type="submit" disabled={loading} style={{
-                  width: "100%", padding: "13px", background: loading ? `${red}AA` : red, color: "#fff",
+                  width: "100%", padding: "13px", background: loading ? `${red}AA` : red, color: colors.white,
                   border: "none", borderRadius: 8, fontSize: 14, fontFamily: sans, fontWeight: 500, cursor: loading ? "default" : "pointer",
                   letterSpacing: ".02em", transition: "background .15s", boxShadow: "0 1px 3px rgba(234,32,40,.3)",
                 }}>
@@ -2576,13 +2576,13 @@ function LoginPage({ onLogin, onShowProspects }) {
             ) : (
               /* ── Standard Login Form ── */
               <form onSubmit={handleSubmit} style={{
-                background: "#fff", border: "1px solid #ECEAE5", borderRadius: 12, padding: "40px 32px",
+                background: colors.white, border: "1px solid #ECEAE5", borderRadius: 12, padding: "40px 32px",
                 boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)",
               }}>
                 <div style={{ textAlign: "center", marginBottom: 32 }}>
                   <NorthstarIcon size={40} color={red} />
                   <h2 style={{ fontSize: 20, fontWeight: 400, marginBottom: 4, marginTop: 16, color: darkText }}>Investor Portal</h2>
-                  <p style={{ fontSize: 13, color: "#767168" }}>Sign in to access your account</p>
+                  <p style={{ fontSize: 13, color: colors.mutedText }}>Sign in to access your account</p>
                 </div>
                 {error && (
                   <div style={{ fontSize: 12, color: red, padding: "10px 14px", border: `1px solid ${red}22`, borderRadius: 4, marginBottom: 16, background: `${red}08` }}>
@@ -2609,7 +2609,7 @@ function LoginPage({ onLogin, onShowProspects }) {
                     onBlur={e => e.target.style.borderColor = "#E0DDD8"} />
                 </div>
                 <button type="submit" disabled={loading} style={{
-                  width: "100%", padding: "13px", background: loading ? `${red}AA` : red, color: "#fff",
+                  width: "100%", padding: "13px", background: loading ? `${red}AA` : red, color: colors.white,
                   border: "none", borderRadius: 8, fontSize: 14, fontFamily: sans, fontWeight: 500, cursor: loading ? "default" : "pointer",
                   letterSpacing: ".02em", transition: "background .15s", boxShadow: "0 1px 3px rgba(234,32,40,.3)",
                 }}>
@@ -2622,18 +2622,18 @@ function LoginPage({ onLogin, onShowProspects }) {
                   <div style={{ fontSize: 9, color: "#888", textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 10 }}>Quick Demo Login</div>
                   <div style={{ display: "flex", gap: 8 }}>
                     <button type="button" onClick={() => { setEmail("j.chen@pacificventures.ca"); setPassword("northstar2025"); setTimeout(() => document.querySelector("form")?.requestSubmit(), 100); }}
-                      style={{ flex: 1, padding: "10px", background: "#fff", border: "1px solid #DDD", borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: darkText, fontWeight: 500 }}>
+                      style={{ flex: 1, padding: "10px", background: colors.white, border: "1px solid #DDD", borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: darkText, fontWeight: 500 }}>
                       Investor Demo
                     </button>
                     <button type="button" onClick={() => { setEmail("admin@northstardevelopment.ca"); setPassword("admin2025"); setTimeout(() => document.querySelector("form")?.requestSubmit(), 100); }}
-                      style={{ flex: 1, padding: "10px", background: "#fff", border: `1px solid ${red}40`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: red, fontWeight: 500 }}>
+                      style={{ flex: 1, padding: "10px", background: colors.white, border: `1px solid ${red}40`, borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans, color: red, fontWeight: 500 }}>
                       Admin Demo
                     </button>
                   </div>
                 </div>
               </form>
             )}
-            <p style={{ fontSize: 12, color: "#767168", textAlign: "center", marginTop: 20 }}>
+            <p style={{ fontSize: 12, color: colors.mutedText, textAlign: "center", marginTop: 20 }}>
               Interested in investing? <span onClick={onShowProspects} style={{ color: red, cursor: "pointer", fontWeight: 500 }}>Learn more →</span>
             </p>
           </div>
@@ -2648,7 +2648,7 @@ function LoginPage({ onLogin, onShowProspects }) {
           backdropFilter: "blur(4px)",
         }}>
           <div onClick={e => e.stopPropagation()} style={{
-            background: "#fff", borderRadius: 12, padding: "32px", maxWidth: 400, width: "90%",
+            background: colors.white, borderRadius: 12, padding: "32px", maxWidth: 400, width: "90%",
             boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)",
           }}>
             <h3 style={{ fontSize: 18, fontWeight: 400, marginBottom: 8, color: darkText }}>Reset Password</h3>
@@ -2657,11 +2657,11 @@ function LoginPage({ onLogin, onShowProspects }) {
                 <p style={{ fontSize: 13, color: "#666", lineHeight: 1.6, marginBottom: 20 }}>
                   If an account exists with that email, we have sent a password reset link. Please check your inbox.
                 </p>
-                <p style={{ fontSize: 11, color: "#767168", fontStyle: "italic" }}>
+                <p style={{ fontSize: 11, color: colors.mutedText, fontStyle: "italic" }}>
                   (Demo mode — check the server console for the reset link)
                 </p>
                 <button onClick={() => { setShowForgot(false); setForgotSent(false); setForgotEmail(""); }}
-                  style={{ marginTop: 16, padding: "10px 24px", background: red, color: "#fff", border: "none", borderRadius: 4, fontSize: 13, cursor: "pointer", fontFamily: sans }}>
+                  style={{ marginTop: 16, padding: "10px 24px", background: red, color: colors.white, border: "none", borderRadius: 4, fontSize: 13, cursor: "pointer", fontFamily: sans }}>
                   Back to Login
                 </button>
               </>
@@ -2675,11 +2675,11 @@ function LoginPage({ onLogin, onShowProspects }) {
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
                   <button type="button" onClick={() => { setShowForgot(false); setForgotEmail(""); }}
-                    style={{ flex: 1, padding: "10px", background: "#fff", border: "1px solid #DDD", borderRadius: 4, fontSize: 13, cursor: "pointer", fontFamily: sans, color: darkText }}>
+                    style={{ flex: 1, padding: "10px", background: colors.white, border: "1px solid #DDD", borderRadius: 4, fontSize: 13, cursor: "pointer", fontFamily: sans, color: darkText }}>
                     Cancel
                   </button>
                   <button type="submit" disabled={forgotLoading}
-                    style={{ flex: 1, padding: "10px", background: forgotLoading ? `${red}AA` : red, color: "#fff", border: "none", borderRadius: 4, fontSize: 13, cursor: forgotLoading ? "default" : "pointer", fontFamily: sans }}>
+                    style={{ flex: 1, padding: "10px", background: forgotLoading ? `${red}AA` : red, color: colors.white, border: "none", borderRadius: 4, fontSize: 13, cursor: forgotLoading ? "default" : "pointer", fontFamily: sans }}>
                     {forgotLoading ? "Sending..." : "Send Reset Link"}
                   </button>
                 </div>
@@ -2731,7 +2731,7 @@ function ResetPasswordPage({ onBack }) {
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F8F7F4", fontFamily: sans }}>
-      <div style={{ background: "#fff", borderRadius: 12, padding: 40, maxWidth: 400, width: "90%", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+      <div style={{ background: colors.white, borderRadius: 12, padding: 40, maxWidth: 400, width: "90%", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <NorthstarIcon size={32} color={red} />
           <h2 style={{ fontFamily: serif, fontSize: 24, fontWeight: 400, color: darkText, marginTop: 12 }}>Reset Password</h2>
@@ -2755,7 +2755,7 @@ function ResetPasswordPage({ onBack }) {
                 style={{ width: "100%", padding: "12px 14px", background: "#FAFAFA", border: "1px solid #E0DDD8", borderRadius: 4, color: darkText, fontSize: 14, fontFamily: sans, outline: "none", boxSizing: "border-box" }} />
             </div>
             <button type="submit" disabled={loading}
-              style={{ width: "100%", padding: "12px", background: loading ? `${red}AA` : red, color: "#fff", border: "none", borderRadius: 4, fontSize: 14, cursor: loading ? "default" : "pointer", fontFamily: sans, fontWeight: 500 }}>
+              style={{ width: "100%", padding: "12px", background: loading ? `${red}AA` : red, color: colors.white, border: "none", borderRadius: 4, fontSize: 14, cursor: loading ? "default" : "pointer", fontFamily: sans, fontWeight: 500 }}>
               {loading ? "Resetting..." : "Reset Password"}
             </button>
             <div style={{ textAlign: "center", marginTop: 16 }}>
@@ -2826,7 +2826,7 @@ function SessionWarningModal({ onDismiss, onLogout }) {
         </p>
         <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
           <span onClick={onLogout} style={{ fontSize: 13, padding: "10px 20px", borderRadius: 4, border: `1px solid ${th.line}`, color: th.t3, cursor: "pointer" }}>Sign Out</span>
-          <span onClick={onDismiss} style={{ fontSize: 13, padding: "10px 24px", borderRadius: 4, background: red, color: "#fff", cursor: "pointer", fontWeight: 500 }}>Stay Signed In</span>
+          <span onClick={onDismiss} style={{ fontSize: 13, padding: "10px 24px", borderRadius: 4, background: red, color: colors.white, cursor: "pointer", fontWeight: 500 }}>Stay Signed In</span>
         </div>
       </div>
     </div>
@@ -3194,7 +3194,7 @@ export default function App() {
           <button aria-label={`Notifications${notifCount > 0 ? ` (${notifCount} unread)` : ""}`} onClick={() => navigateTo("activity")} style={{ position: "relative", fontSize: 16, cursor: "pointer", padding: "4px 8px", borderRadius: 6, border: `1px solid ${th.line}`, transition: "border-color .15s", lineHeight: 1, background: "transparent", color: "inherit" }}>
             &#x1F514;
             {notifCount > 0 && (
-              <span style={{ position: "absolute", top: -4, right: -4, minWidth: 16, height: 16, borderRadius: "50%", background: red, color: "#fff", fontSize: 10, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", lineHeight: 1 }}>{notifCount > 99 ? "99+" : notifCount}</span>
+              <span style={{ position: "absolute", top: -4, right: -4, minWidth: 16, height: 16, borderRadius: "50%", background: red, color: colors.white, fontSize: 10, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", lineHeight: 1 }}>{notifCount > 99 ? "99+" : notifCount}</span>
             )}
           </button>
           <button className="theme-toggle" onClick={toggleTheme} aria-label={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"} style={{ fontSize: 14, cursor: "pointer", padding: "4px 8px", borderRadius: 6, border: `1px solid ${th.line}`, transition: "border-color .15s", lineHeight: 1, background: "transparent", color: "inherit" }}
@@ -3207,7 +3207,7 @@ export default function App() {
               width: 34, height: 34, borderRadius: "50%",
               background: th.avatarGrad,
               display: "flex", alignItems: "center",
-              justifyContent: "center", fontSize: 12, fontWeight: 600, color: "#fff",
+              justifyContent: "center", fontSize: 12, fontWeight: 600, color: colors.white,
             }}>{investor.initials}</div>
           </div>
           <button onClick={handleLogout} aria-label="Sign out of your account" style={{ fontSize: 12, color: th.t3, cursor: "pointer", padding: "5px 14px", border: `1px solid ${th.line}`, borderRadius: 6, transition: "color .15s, border-color .15s", background: "transparent", fontFamily: sans }}
