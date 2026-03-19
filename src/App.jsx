@@ -12,6 +12,7 @@ import StatusBadge from "./components/StatusBadge.jsx";
 import Spinner from "./components/Spinner.jsx";
 import EmptyState from "./components/EmptyState.jsx";
 import ConfirmDialog from "./components/ConfirmDialog.jsx";
+import Tabs from "./components/Tabs.jsx";
 
 // Lazy load heavy components — they get their own chunks
 const AdminPanel = lazy(() => import("./Admin.jsx"));
@@ -638,20 +639,12 @@ function Portfolio({ myProjects, investor, initialProjectId }) {
           ))}
         </div>
         {/* Detail tabs */}
-        <div style={{ display: "flex", gap: 0, marginBottom: 32, borderBottom: `1px solid ${line}` }}>
-          {[
-            { id: "overview", label: "Overview" },
-            { id: "documents", label: "Documents" },
-            { id: "updates", label: "Updates" },
-            { id: "distributions", label: "Distributions" },
-          ].map(tab => (
-            <span key={tab.id} onClick={() => setDetailTab(tab.id)} style={{
-              fontSize: 13, padding: "10px 20px", cursor: "pointer", fontWeight: detailTab === tab.id ? 600 : 400,
-              color: detailTab === tab.id ? red : t3, borderBottom: detailTab === tab.id ? `2px solid ${red}` : "2px solid transparent",
-              transition: "all .15s", marginBottom: -1,
-            }}>{tab.label}</span>
-          ))}
-        </div>
+        <Tabs tabs={[
+          { id: "overview", label: "Overview" },
+          { id: "documents", label: "Documents" },
+          { id: "updates", label: "Updates" },
+          { id: "distributions", label: "Distributions" },
+        ]} active={detailTab} onChange={setDetailTab} style={{ marginBottom: 32 }} />
 
         {detailLoading && (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 0" }}>
