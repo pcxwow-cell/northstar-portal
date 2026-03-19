@@ -9,6 +9,7 @@ import { fetchDashboard, fetchAdminProjects, updateProject, postUpdate, fetchAdm
 import { colors, fonts, inputStyle, btnStyle, btnOutline, shadows, radius, labelStyle } from "./styles/theme.js";
 import Button from "./components/Button.jsx";
 import Card from "./components/Card.jsx";
+import FormInput from "./components/FormInput.jsx";
 
 
 // ─── SORTABLE HEADER ───
@@ -3343,18 +3344,9 @@ function StatementManager({ toast }) {
         <div style={{ background: colors.white, borderRadius: 12, padding: 24, boxShadow: cardShadow, marginBottom: 24 }}>
           <h3 style={{ fontSize: 16, fontWeight: 400, marginBottom: 20 }}>Generate Statements</h3>
           <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
-            <div style={{ flex: 1 }}>
-              <label style={labelStyle}>Period Label</label>
-              <input value={genPeriod} onChange={e => setGenPeriod(e.target.value)} placeholder="Q1 2026" style={inputStyle} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={labelStyle}>Period Start</label>
-              <input type="date" value={genPeriodStart} onChange={e => setGenPeriodStart(e.target.value)} style={inputStyle} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={labelStyle}>Period End</label>
-              <input type="date" value={genPeriodEnd} onChange={e => setGenPeriodEnd(e.target.value)} style={inputStyle} />
-            </div>
+            <FormInput label="Period Label" value={genPeriod} onChange={e => setGenPeriod(e.target.value)} placeholder="Q1 2026" style={{ flex: 1 }} />
+            <FormInput label="Period Start" type="date" value={genPeriodStart} onChange={e => setGenPeriodStart(e.target.value)} style={{ flex: 1 }} />
+            <FormInput label="Period End" type="date" value={genPeriodEnd} onChange={e => setGenPeriodEnd(e.target.value)} style={{ flex: 1 }} />
           </div>
           <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
             <Button variant="outline" onClick={() => setShowGenerateForm(false)}>Cancel</Button>
@@ -3678,20 +3670,11 @@ function StatementManager({ toast }) {
                   {stmtProjects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </div>
-              <div style={{ flex: 1 }}>
-                <label style={labelStyle}>Call Amount ($)</label>
-                <input type="number" value={capCallAmount} onChange={e => setCapCallAmount(e.target.value)} placeholder="500000" style={inputStyle} />
-              </div>
+              <FormInput label="Call Amount ($)" type="number" value={capCallAmount} onChange={e => setCapCallAmount(e.target.value)} placeholder="500000" style={{ flex: 1 }} />
             </div>
             <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
-              <div style={{ flex: 1 }}>
-                <label style={labelStyle}>Due Date</label>
-                <input type="date" value={capCallDueDate} onChange={e => setCapCallDueDate(e.target.value)} style={inputStyle} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label style={labelStyle}>Wire Instructions</label>
-                <input value={capCallWireInstructions} onChange={e => setCapCallWireInstructions(e.target.value)} placeholder="Bank name, routing, account..." style={inputStyle} />
-              </div>
+              <FormInput label="Due Date" type="date" value={capCallDueDate} onChange={e => setCapCallDueDate(e.target.value)} style={{ flex: 1 }} />
+              <FormInput label="Wire Instructions" value={capCallWireInstructions} onChange={e => setCapCallWireInstructions(e.target.value)} placeholder="Bank name, routing, account..." style={{ flex: 1 }} />
             </div>
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
               <Button variant="outline" onClick={() => setShowCapCallForm(false)}>Cancel</Button>
@@ -3736,10 +3719,7 @@ function StatementManager({ toast }) {
                   {stmtProjects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </div>
-              <div style={{ flex: 1 }}>
-                <label style={labelStyle}>Quarter</label>
-                <input value={qtrReportQuarter} onChange={e => setQtrReportQuarter(e.target.value)} placeholder="Q1 2026" style={inputStyle} />
-              </div>
+              <FormInput label="Quarter" value={qtrReportQuarter} onChange={e => setQtrReportQuarter(e.target.value)} placeholder="Q1 2026" style={{ flex: 1 }} />
             </div>
             <div style={{ marginBottom: 16 }}>
               <label style={labelStyle}>Summary</label>
