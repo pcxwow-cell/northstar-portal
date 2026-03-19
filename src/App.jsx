@@ -375,7 +375,7 @@ function DocumentsSkeleton() {
         <SkeletonBlock width={180} height={36} style={{ marginBottom: 8 }} />
         <SkeletonBlock width={240} height={14} />
       </div>
-      <div style={{ borderRadius: 12, overflow: "hidden", background: th.surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+      <Card padding="0" style={{ overflow: "hidden", background: th.surface }}>
         {[0,1,2,3,4].map(i => (
           <div key={i} style={{ padding: "16px 20px", borderBottom: i < 4 ? `1px solid ${th.line}` : "none", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ flex: 1 }}>
@@ -385,7 +385,7 @@ function DocumentsSkeleton() {
             <SkeletonBlock width={70} height={24} />
           </div>
         ))}
-      </div>
+      </Card>
     </div>
   );
 }
@@ -398,7 +398,7 @@ function MessagesSkeleton() {
         <SkeletonBlock width={180} height={36} style={{ marginBottom: 8 }} />
         <SkeletonBlock width={200} height={14} />
       </div>
-      <div style={{ borderRadius: 12, overflow: "hidden", background: th.surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+      <Card padding="0" style={{ overflow: "hidden", background: th.surface }}>
         {[0,1,2,3].map(i => (
           <div key={i} style={{ display: "flex", gap: 14, padding: "18px 20px", borderBottom: i < 3 ? `1px solid ${th.line}` : "none" }}>
             <SkeletonBlock width={7} height={7} style={{ borderRadius: "50%", marginTop: 7, flexShrink: 0 }} />
@@ -409,7 +409,7 @@ function MessagesSkeleton() {
             </div>
           </div>
         ))}
-      </div>
+      </Card>
     </div>
   );
 }
@@ -861,7 +861,7 @@ function Portfolio({ myProjects, investor, initialProjectId }) {
         {detailTab === "distributions" && (<>
         <SectionHeader title="Distributions" />
         {cashFlows.filter(cf => cf.type === "distribution" || cf.amount > 0).length > 0 ? (
-          <div style={{ borderRadius: 12, overflow: "hidden", marginBottom: 40, background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+          <Card padding="0" style={{ overflow: "hidden", marginBottom: 40, background: surface }}>
             {cashFlows.filter(cf => cf.type === "distribution" || cf.amount > 0).map((cf, i, arr) => (
               <div key={cf.id || i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: i < arr.length - 1 ? `1px solid ${line}` : "none" }}>
                 <div>
@@ -871,7 +871,7 @@ function Portfolio({ myProjects, investor, initialProjectId }) {
                 <span style={{ fontSize: 13, fontWeight: 500, color: green }}>+${fmt(Math.abs(cf.amount))}</span>
               </div>
             ))}
-          </div>
+          </Card>
         ) : (
           <div style={{ padding: 24, textAlign: "center", color: t3, fontSize: 13 }}>No distributions yet.</div>
         )}
@@ -1255,7 +1255,7 @@ function DocumentsPage({ toast, allDocuments, myProjects, investor }) {
       {filtered.length === 0 ? (
         <EmptyState icon="\uD83D\uDCC4" title="No documents available" subtitle="Documents will appear here when they are uploaded to your projects." />
       ) : (
-      <div style={{ borderRadius: 12, overflow: "hidden", background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+      <Card padding="0" style={{ overflow: "hidden", background: surface }}>
         {filtered.map((d, i) => (
           <div key={`${d.id}-${d.project}`} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: i < filtered.length - 1 ? `1px solid ${line}` : "none", cursor: "pointer", transition: "background .12s" }}
             onMouseEnter={e => e.currentTarget.style.background = hover}
@@ -1280,7 +1280,7 @@ function DocumentsPage({ toast, allDocuments, myProjects, investor }) {
             </span>
           </div>
         ))}
-      </div>
+      </Card>
       )}
 
       {/* Sign Modal */}
@@ -1517,7 +1517,7 @@ function MessagesPage({ toast, investor, initialThreadId }) {
         </div>
 
         {/* Reply box */}
-        <div style={{ borderRadius: 12, padding: "16px 20px", background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+        <Card padding="16px 20px" style={{ background: surface }}>
           <textarea value={reply} onChange={e => setReply(e.target.value)} placeholder="Write a reply..."
             rows={3} style={{ width: "100%", background: "transparent", border: "none", color: t1, fontSize: 14, fontFamily: sans, outline: "none", resize: "vertical", boxSizing: "border-box", lineHeight: 1.6 }} />
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
@@ -1526,7 +1526,7 @@ function MessagesPage({ toast, investor, initialThreadId }) {
               background: reply.trim() && !sending ? red : `${red}44`, color: colors.white, fontWeight: 500,
             }}>{sending ? "Sending..." : "Send Reply"}</span>
           </div>
-        </div>
+        </Card>
       </>
     );
   }
@@ -1600,7 +1600,7 @@ function MessagesPage({ toast, investor, initialThreadId }) {
         return filteredThreads.length === 0 ? (
           <div style={{ padding: 24, textAlign: "center", color: t3, fontSize: 13 }}>No messages matching "{searchTerm}".</div>
         ) : (
-        <div style={{ borderRadius: 12, overflow: "hidden", background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+        <Card padding="0" style={{ overflow: "hidden", background: surface }}>
           {filteredThreads.map((t, i) => (
             <div key={t.id} onClick={() => openThread(t)} style={{ display: "flex", gap: 14, padding: "18px 20px", borderBottom: i < filteredThreads.length - 1 ? `1px solid ${line}` : "none", cursor: "pointer", transition: "background .12s", background: t.unread ? `${red}06` : "transparent", borderLeft: t.unread ? `3px solid ${red}` : "3px solid transparent" }}
               onMouseEnter={e => e.currentTarget.style.background = hover}
@@ -1626,7 +1626,7 @@ function MessagesPage({ toast, investor, initialThreadId }) {
               </div>
             </div>
           ))}
-        </div>
+        </Card>
         );
       })()}
     </>
@@ -1697,7 +1697,7 @@ function FinancialModelerPage({ myProjects, investor }) {
       </div>
 
       {/* Inputs */}
-      <div style={{ borderRadius: 12, padding: 24, background: surface, marginBottom: 32, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+      <Card padding="24px" style={{ background: surface, marginBottom: 32 }}>
         <div style={{ fontSize: 12, color: t3, marginBottom: 16 }}>
           Total Investment: ${fmt(project.totalRaise || 0)} | Pref: {project.waterfall?.prefReturn || 8}% | Carry: {project.waterfall?.carry || 20}%
         </div>
@@ -1719,7 +1719,7 @@ function FinancialModelerPage({ myProjects, investor }) {
             border: "none", borderRadius: 8, fontSize: 13, cursor: loading ? "default" : "pointer", fontFamily: sans, whiteSpace: "nowrap", boxShadow: "0 1px 3px rgba(234,32,40,.3)",
           }}>{loading ? "Running..." : "Run Scenario"}</Button>
         </div>
-      </div>
+      </Card>
 
       {result && (
         <>
@@ -1740,7 +1740,7 @@ function FinancialModelerPage({ myProjects, investor }) {
 
           {/* Waterfall breakdown */}
           <SectionHeader title="Waterfall Breakdown" />
-          <div style={{ borderRadius: 12, overflow: "hidden", marginBottom: 40, background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+          <Card padding="0" style={{ overflow: "hidden", marginBottom: 40, background: surface }}>
             {result.waterfallBreakdown.map((tier, i) => {
               const total = tier.lpAmount + tier.gpAmount;
               const lpPct = total > 0 ? (tier.lpAmount / total) * 100 : 0;
@@ -1757,7 +1757,7 @@ function FinancialModelerPage({ myProjects, investor }) {
                 </div>
               );
             })}
-          </div>
+          </Card>
 
           {/* Year-by-year */}
           <SectionHeader title="Year-by-Year Cash Flow" />
@@ -1933,7 +1933,7 @@ function SecuritySection({ toast, inputStyle }) {
 
   return (
     <>
-      <div style={{ borderRadius: 12, padding: "28px 24px", background: surface, marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+      <Card padding="28px 24px" style={{ background: surface, marginBottom: 16 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: t3, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 16 }}>Change Password</div>
         <form onSubmit={handleChangePassword}>
           {pwError && <div style={{ fontSize: 12, color: red, padding: "8px 12px", border: `1px solid ${red}22`, borderRadius: 4, marginBottom: 12, background: `${red}08` }}>{pwError}</div>}
@@ -1956,10 +1956,10 @@ function SecuritySection({ toast, inputStyle }) {
             border: "none", borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: saving ? "default" : "pointer",
           }}>{saving ? "Changing..." : "Change Password"}</Button>
         </form>
-      </div>
+      </Card>
 
       {/* Two-Factor Authentication */}
-      <div style={{ borderRadius: 12, padding: "28px 24px", background: surface, marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+      <Card padding="28px 24px" style={{ background: surface, marginBottom: 16 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: t3, textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 16 }}>Two-Factor Authentication</div>
         {mfaError && <div style={{ fontSize: 12, color: red, padding: "8px 12px", border: `1px solid ${red}22`, borderRadius: 4, marginBottom: 12, background: `${red}08` }}>{mfaError}</div>}
 
@@ -2035,7 +2035,7 @@ function SecuritySection({ toast, inputStyle }) {
             </div>
           </>
         )}
-      </div>
+      </Card>
 
       {/* Login History */}
       <div style={{ borderRadius: 12, padding: "28px 24px", background: surface, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
