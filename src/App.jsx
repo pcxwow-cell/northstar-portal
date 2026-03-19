@@ -16,6 +16,7 @@ import CapTablePage from "./pages/CapTable.jsx";
 import DocumentsPage from "./pages/Documents.jsx";
 import MessagesPage from "./pages/Messages.jsx";
 import ProfilePage from "./pages/Profile.jsx";
+import SecurityPage from "./pages/Security.jsx";
 import Portfolio from "./pages/Portfolio.jsx";
 import Overview from "./pages/Overview.jsx";
 import LoginPage from "./pages/Login.jsx";
@@ -258,6 +259,7 @@ export default function App() {
     messages: <MessagesPage toast={toast} investor={investor} initialThreadId={navParams.threadId} />,
     activity: <ActivityPage toast={toast} onNavigate={navigateTo} />,
     profile: <ProfilePage investor={investor} toast={toast} onUpdate={(u) => setAppData(prev => ({ ...prev, investor: { ...prev.investor, ...u } }))} />,
+    security: <SecurityPage toast={toast} />,
   };
 
   const allNavItems = [
@@ -270,6 +272,7 @@ export default function App() {
     { id: "messages", label: "Messages" },
     { id: "activity", label: "Activity" },
     { id: "profile", label: "Profile" },
+    { id: "security", label: "Security" },
   ];
 
   // Filter nav by feature flags (if loaded). If flags not loaded, show all.
