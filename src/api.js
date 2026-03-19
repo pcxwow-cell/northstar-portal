@@ -635,6 +635,11 @@ export async function updateEmailSettings(data) {
   return apiFetch("/settings/email", { method: "PUT", body: JSON.stringify(data) });
 }
 
+export async function sendSignatureReminder(userId) {
+  if (_demoMode) return { success: true };
+  return apiFetch("/notifications/test", { method: "POST", body: JSON.stringify({ type: "signature_required", userId }) });
+}
+
 export async function sendTestEmail() {
   if (_demoMode) return { success: true, sentTo: "demo@example.com" };
   return apiFetch("/settings/email/test", { method: "POST" });

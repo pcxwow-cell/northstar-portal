@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAdminData } from "../context/AdminDataContext.jsx";
-import { fetchAdminDocuments, fetchAdminDocumentDetail, fetchAdminInvestors, uploadDocument, bulkUploadK1, deleteDocument, assignDocument, createSignatureRequest, downloadSignedDocument } from "../api.js";
+import { fetchAdminDocuments, fetchAdminDocumentDetail, fetchAdminInvestors, uploadDocument, bulkUploadK1, deleteDocument, assignDocument, createSignatureRequest, downloadSignedDocument, sendSignatureReminder } from "../api.js";
 import { colors, inputStyle } from "../styles/theme.js";
 import Spinner from "../components/Spinner.jsx";
 import SectionHeader from "../components/SectionHeader.jsx";
@@ -11,28 +11,7 @@ import StatusBadge from "../components/StatusBadge.jsx";
 import ConfirmDialog from "../components/ConfirmDialog.jsx";
 import DataTable from "../components/DataTable.jsx";
 import SearchFilterBar from "../components/SearchFilterBar.jsx";
-
-function useSortable(defaultSort = "", defaultDir = "asc") {
-  const [sortBy, setSortBy] = useState(defaultSort);
-  const [sortDir, setSortDir] = useState(defaultDir);
-  function onSort(key) {
-    if (sortBy === key) setSortDir(d => d === "asc" ? "desc" : "asc");
-    else { setSortBy(key); setSortDir("asc"); }
-  }
-  function sortData(data) {
-    if (!sortBy) return data;
-    return [...data].sort((a, b) => {
-      let va = a[sortBy], vb = b[sortBy];
-      if (va == null) return 1; if (vb == null) return -1;
-      if (typeof va === "string") va = va.toLowerCase();
-      if (typeof vb === "string") vb = vb.toLowerCase();
-      if (va < vb) return sortDir === "asc" ? -1 : 1;
-      if (va > vb) return sortDir === "asc" ? 1 : -1;
-      return 0;
-    });
-  }
-  return { sortBy, sortDir, onSort, sortData };
-}
+import useSortable from "../hooks/useSortable.js";
 
 export default function DocumentManager({ toast, hideHeader }) {
   const { projects } = useAdminData();
@@ -231,9 +210,7 @@ export default function DocumentManager({ toast, hideHeader }) {
                     {(signer.status === "pending" || !signer.status) && (
                       <Button variant="outline" onClick={async () => {
                         try {
-                          const BASE = import.meta.env.VITE_API_URL || "";
-                          const token = localStorage.getItem("token");
-                          await fetch(`${BASE}/notifications/test`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ type: "signature_required", userId: signer.userId }) });
+                          await sendSignatureReminder(signer.userId);
                           toast("Reminder sent");
                         } catch (e) { toast("Failed to send reminder", "error"); }
                       }} style={{ padding: "3px 8px", fontSize: 10 }}>Send Reminder</Button>
