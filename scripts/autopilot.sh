@@ -1,6 +1,6 @@
 #!/bin/bash
-# Northstar Portal — Autopilot v9
-# Bash dispatches parallel Sonnet agents → Opus reviews each round
+# Northstar Portal — Autopilot v10
+# Bash dispatches parallel Sonnet agents → Opus reviews → memory persists across rounds
 # Usage: ./scripts/autopilot.sh
 
 set -eo pipefail
@@ -21,16 +21,52 @@ trap 'rm -f "$LOCKFILE"' EXIT
 
 LOG_DIR="logs"
 STATUS="$LOG_DIR/autopilot-status.txt"
+MEMORY="$LOG_DIR/agent-memory.md"
 mkdir -p "$LOG_DIR"
 
 log() { echo "[$(date '+%H:%M:%S')] $1" | tee -a "$STATUS"; }
 
-SONNET_PROMPT="You are in autopilot mode. Do NOT greet, summarize, or ask questions. Execute immediately. Run npm run build to verify after changes. If build fails, fix it. Task:"
+# Update memory file after each round so agents know what's done
+update_memory() {
+  local round_name="$1"
+  local result="$2"
+  local admin=$(wc -l < src/Admin.jsx)
+  local app=$(wc -l < src/App.jsx)
+  local components=$(grep "from.*./components/" src/Admin.jsx src/App.jsx 2>/dev/null | sed 's/.*import /- /' || echo "- none")
+
+  cat > "$MEMORY" << MEMEOF
+# Agent Memory — Auto-updated after $round_name
+
+## Current State
+- Admin.jsx: $admin lines
+- App.jsx: $app lines
+- Build: $(npm run build 2>&1 | grep -q "built in" && echo "PASS" || echo "FAIL")
+- Last round: $round_name — $result
+
+## Components Imported
+$components
+
+## Completed Rounds
+$(grep "━━ ROUND\|Done\|commit(s)\|PASS\|FAIL" "$STATUS" 2>/dev/null | tail -20)
+
+## Known Issues
+- Sonnet sometimes creates tag mismatches (<Button> with </button>) — always verify tags match
+- When replacing inline styles with components, preserve all event handlers (onClick, onChange, etc.)
+- Some components have variant props — check the component source before wiring
+MEMEOF
+}
 
 run_task() {
   local task="$1"
   local logfile="$2"
-  echo "$SONNET_PROMPT $task" | claude -p --dangerously-skip-permissions --model claude-sonnet-4-6 --max-turns 30 > "$logfile" 2>&1 || true
+  local memory_context=$(cat "$MEMORY" 2>/dev/null || echo "No previous memory.")
+  echo "You are in autopilot mode. Do NOT greet, summarize, or ask questions. Execute immediately. Run npm run build to verify after changes. If build fails, fix it.
+
+MEMORY FROM PREVIOUS ROUNDS:
+$memory_context
+
+YOUR TASK:
+$task" | claude -p --dangerously-skip-permissions --model claude-sonnet-4-6 --max-turns 30 > "$logfile" 2>&1 || true
 }
 
 opus_review() {
@@ -46,6 +82,8 @@ opus_review() {
   local commits=$(git log --oneline "$before"..HEAD 2>/dev/null || echo "none")
   local component_imports=$(grep "from.*./components/" src/Admin.jsx src/App.jsx 2>/dev/null || echo "none")
 
+  local memory_context=$(cat "$MEMORY" 2>/dev/null || echo "No memory.")
+
   # Opus reviews the round
   cat << REVIEW_EOF | claude -p --dangerously-skip-permissions --model claude-opus-4-6 --max-turns 10 > "$review_log" 2>&1 || true
 You are the QA reviewer. Do NOT greet or ask questions. Review this round and output ONLY:
@@ -53,6 +91,10 @@ Line 1: PASS or FAIL
 Line 2-5: Brief explanation (what was done well, what's wrong)
 Line 6+: If FAIL, exact fix instructions for the next Sonnet agent
 
+MEMORY (what happened before this round):
+$memory_context
+
+THIS ROUND:
 Round: $round_name
 Commits: $commits
 Diff stat: $diff_stat
@@ -141,6 +183,7 @@ PID2=$!
 
 wait $PID1 $PID2
 validate_round "Round 1" "$BEFORE" || exit 1
+update_memory "Round 1" "FormInput→App + Modal→Admin"
 
 # ══════════════════════════════════════════════════
 # ROUND 2: Modal in App.jsx + StatCard in Admin.jsx (parallel)
@@ -158,6 +201,7 @@ PID2=$!
 
 wait $PID1 $PID2
 validate_round "Round 2" "$BEFORE" || exit 1
+update_memory "Round 2" "Modal→App + StatCard→Admin"
 
 # ══════════════════════════════════════════════════
 # ROUND 3: StatusBadge in both (parallel)
@@ -175,6 +219,7 @@ PID2=$!
 
 wait $PID1 $PID2
 validate_round "Round 3" "$BEFORE" || exit 1
+update_memory "Round 3" "StatusBadge→both"
 
 # ══════════════════════════════════════════════════
 # ROUND 4: Tabs in Admin.jsx + SectionHeader in App.jsx (parallel)
@@ -192,6 +237,7 @@ PID2=$!
 
 wait $PID1 $PID2
 validate_round "Round 4" "$BEFORE" || exit 1
+update_memory "Round 4" "Tabs→Admin + SectionHeader→App"
 
 # ══════════════════════════════════════════════════
 # ROUND 5: DataTable + SearchFilterBar in Admin.jsx (sequential — same file)
@@ -202,6 +248,7 @@ log "━━ ROUND 5: DataTable→Admin.jsx (sequential) ━━"
 run_task "In src/Admin.jsx, replace inline sortable table patterns with <DataTable> from ./components/DataTable. Look for <table> elements with sortable column headers (the local SortableHeader component). Replace with <DataTable columns={[...]} data={[...]} sortable />. Delete the local SortableHeader function definition if it exists. Do ALL table instances. Commit: 'Wire DataTable into Admin.jsx'. Git push." \
   "$LOG_DIR/r5-table-admin-$(date +%s).log"
 validate_round "Round 5a" "$BEFORE" || exit 1
+update_memory "Round 5a" "DataTable→Admin"
 
 BEFORE=$(git rev-parse HEAD)
 log "━━ ROUND 5b: SearchFilterBar→Admin.jsx (sequential) ━━"
@@ -209,6 +256,7 @@ log "━━ ROUND 5b: SearchFilterBar→Admin.jsx (sequential) ━━"
 run_task "In src/Admin.jsx, replace inline search input + filter dropdown combo patterns with <SearchFilterBar> from ./components/SearchFilterBar. These are typically a text input for searching plus one or more select/dropdown elements for filtering, wrapped in a flex row. Replace with <SearchFilterBar searchValue={search} onSearchChange={setSearch} filters={[...]} />. Do ALL instances. Commit: 'Wire SearchFilterBar into Admin.jsx'. Git push." \
   "$LOG_DIR/r5-search-admin-$(date +%s).log"
 validate_round "Round 5b" "$BEFORE" || exit 1
+update_memory "Round 5b" "SearchFilterBar→Admin"
 
 # ══════════════════════════════════════════════════
 # ROUND 6: SectionHeader + Tabs in Admin.jsx (sequential — same file)
@@ -219,6 +267,7 @@ log "━━ ROUND 6: SectionHeader→Admin.jsx ━━"
 run_task "In src/Admin.jsx, replace section title + action button patterns with <SectionHeader> from ./components/SectionHeader. Replace with <SectionHeader title=\"...\" action={<Button .../>} />. Do ALL instances. Commit: 'Wire SectionHeader into Admin.jsx'. Git push." \
   "$LOG_DIR/r6-header-admin-$(date +%s).log"
 validate_round "Round 6" "$BEFORE" || exit 1
+update_memory "Round 6" "SectionHeader→Admin"
 
 # ══════════════════════════════════════════════════
 # ROUND 7: Final cleanup — hardcoded colors in both (parallel)
@@ -236,6 +285,7 @@ PID2=$!
 
 wait $PID1 $PID2
 validate_round "Round 7" "$BEFORE" || exit 1
+update_memory "Round 7" "Hardcoded colors cleanup"
 
 # ══════════════════════════════════════════════════
 # DONE
