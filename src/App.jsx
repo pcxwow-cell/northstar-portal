@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef, createContext, useContext, useMemo, lazy, Suspense } from "react";
+import { ToastProvider, useToast } from "./context/ToastContext.jsx";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { login as apiLogin, logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, downloadDocument, fetchThreads, fetchThread, createThread, replyToThread, updateProfile, fetchSignatureRequests, signDocument, fetchNotificationPreferences, updateNotificationPreferences, fetchCapitalAccount, fetchCashFlows, calculateWaterfallApi, fetchEntities, createEntity, updateEntity, deleteEntity, runFinancialModel, changePassword, forgotPassword, resetPassword, fetchLoginHistory, setupMFA, verifyMFASetup, verifyMFA, disableMFA, getMFAStatus, regenerateBackupCodes, setToken, fmt, fmtCurrency, fetchMyFlags, fetchNotifications } from "./api.js";
 
@@ -47,46 +48,6 @@ const useTheme = () => useContext(ThemeContext);
 
 const bg = "#060606", surface = "#0C0C0C", line = "#1A1A1A", t1 = "#E8E4DE", t2 = "#8C887F", t3 = "#4A4843";
 
-// ─── TOAST SYSTEM ────────────────────────────────────────
-function ToastContainer({ toasts, onDismiss }) {
-  const { bg, surface, line, t1, t2, t3 } = useTheme();
-  return (
-    <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 1000, display: "flex", flexDirection: "column", gap: 8 }}>
-      {toasts.map(t => (
-        <div key={t.id} role="alert" aria-live="polite" onClick={() => onDismiss(t.id)} style={{
-          background: surface, border: `1px solid ${t.type === "success" ? green : t.type === "error" ? red : line}`,
-          borderRadius: 10, padding: "12px 20px", minWidth: 280, maxWidth: 400,
-          fontFamily: sans, fontSize: 13, color: t1, cursor: "pointer",
-          animation: "fadeIn .2s ease", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)",
-          display: "flex", alignItems: "center", gap: 10,
-        }}>
-          <span style={{ color: t.type === "success" ? green : t.type === "error" ? red : t2 }}>
-            {t.type === "success" ? "✓" : t.type === "error" ? "✕" : "↓"}
-          </span>
-          {t.message}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function useToast() {
-  const [toasts, setToasts] = useState([]);
-  const add = useCallback((message, type = "info") => {
-    const id = Date.now();
-    setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3500);
-  }, []);
-  const dismiss = useCallback((id) => setToasts(prev => prev.filter(t => t.id !== id)), []);
-  return { toasts, add, dismiss };
-}
-
-// ─── RESPONSIVE WIDTH HOOK ───────────────────────────────
-function useWindowWidth() {
-  const [w, setW] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
-  useEffect(() => { const h = () => setW(window.innerWidth); window.addEventListener("resize", h); return () => window.removeEventListener("resize", h); }, []);
-  return w;
-}
 
 // ─── MODAL ───────────────────────────────────────────────
 function Modal({ open, onClose, children, ariaLabel }) {
@@ -1070,7 +1031,7 @@ function CapTablePage({ myProjects, investor, toast }) {
             <button
               onClick={async () => {
                 const amount = parseFloat(waterfallInput);
-                if (!amount || isNaN(amount)) { toast.add("Enter a valid amount", "error"); return; }
+                if (!amount || isNaN(amount)) { toast("Enter a valid amount", "error"); return; }
                 setWaterfallLoading(true);
                 try {
                   const lpCap = project.capTable.reduce((s, r) => r.type !== "GP Interest" ? s + r.called : s, 0);
@@ -1176,10 +1137,10 @@ function DocumentsPage({ toast, allDocuments, myProjects, investor }) {
     setSigningId(mySigner.id);
     try {
       await signDocument(mySigner.id);
-      toast.add(`Signature submitted for ${sig.document?.name || sig.subject}`, "success");
+      toast(`Signature submitted for ${sig.document?.name || sig.subject}`, "success");
       setPendingSigs(prev => prev.filter(s => s.id !== sig.id));
     } catch (err) {
-      toast.add(err.message || "Signing failed", "error");
+      toast(err.message || "Signing failed", "error");
     } finally { setSigningId(null); }
   }
   const categories = ["All", ...new Set(allDocuments.map(d => d.category))];
@@ -1197,9 +1158,9 @@ function DocumentsPage({ toast, allDocuments, myProjects, investor }) {
       setReviewDoc(d);
     } else {
       downloadDocument(d.id).then(() => {
-        toast.add(`Downloaded ${d.name}`, "success");
+        toast(`Downloaded ${d.name}`, "success");
       }).catch((err) => {
-        toast.add(err.message || "Download failed", "error");
+        toast(err.message || "Download failed", "error");
       });
     }
   }
@@ -1209,17 +1170,17 @@ function DocumentsPage({ toast, allDocuments, myProjects, investor }) {
     const sig = pendingSigs.find(s => s.documentId === signModal.id || s.document?.id === signModal.id);
     const mySigner = sig?.signers?.find(s => s.userId === investor.id);
     if (!mySigner) {
-      toast.add("Unable to find your signature record", "error");
+      toast("Unable to find your signature record", "error");
       return;
     }
     try {
       await signDocument(mySigner.id);
       setSignedDocs(prev => ({ ...prev, [signModal.id]: true }));
-      toast.add(`Signature submitted for ${signModal.name}`, "success");
+      toast(`Signature submitted for ${signModal.name}`, "success");
       if (sig) setPendingSigs(prev => prev.filter(s => s.id !== sig.id));
       setSignModal(null);
     } catch (err) {
-      toast.add(err.message || "Signing failed", "error");
+      toast(err.message || "Signing failed", "error");
     }
   }
 
@@ -1300,7 +1261,7 @@ function DocumentsPage({ toast, allDocuments, myProjects, investor }) {
           <div key={`${d.id}-${d.project}`} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: i < filtered.length - 1 ? `1px solid ${line}` : "none", cursor: "pointer", transition: "background .12s" }}
             onMouseEnter={e => e.currentTarget.style.background = hover}
             onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-            onClick={() => { downloadDocument(d.id).catch(err => toast.add(err.message || "Download failed", "error")); }}>
+            onClick={() => { downloadDocument(d.id).catch(err => toast(err.message || "Download failed", "error")); }}>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}>
                 {d.name}
@@ -1342,7 +1303,7 @@ function DocumentsPage({ toast, allDocuments, myProjects, investor }) {
                   <div style={{ fontSize: 11, color: t3, marginTop: 2 }}>Review before signing</div>
                 </div>
               </div>
-              <span onClick={() => downloadDocument(signModal.id).catch(err => toast.add(err.message || "Failed to open document", "error"))} style={{ fontSize: 12, color: red, cursor: "pointer", padding: "6px 14px", border: `1px solid ${red}33`, borderRadius: 4 }}>View Document</span>
+              <span onClick={() => downloadDocument(signModal.id).catch(err => toast(err.message || "Failed to open document", "error"))} style={{ fontSize: 12, color: red, cursor: "pointer", padding: "6px 14px", border: `1px solid ${red}33`, borderRadius: 4 }}>View Document</span>
             </div>
             <div style={{ border: `1px solid ${line}`, borderRadius: 2, padding: 20, marginBottom: 24, background: surface }}>
               <p style={{ fontSize: 12, color: t3, marginBottom: 12 }}>Electronic Signature</p>
@@ -1377,7 +1338,7 @@ function DocumentsPage({ toast, allDocuments, myProjects, investor }) {
             </div>
             <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
               <span onClick={() => setReviewDoc(null)} style={{ fontSize: 12, padding: "8px 16px", borderRadius: 2, border: `1px solid ${line}`, color: t3, cursor: "pointer" }}>Close</span>
-              <span onClick={() => { downloadDocument(reviewDoc.id).then(() => { toast.add(`Opened ${reviewDoc.name}`, "success"); setReviewDoc(null); }).catch(err => toast.add(err.message || "Download failed", "error")); }} style={{ fontSize: 12, padding: "8px 16px", borderRadius: 2, background: red, color: "#fff", cursor: "pointer" }}>Open Full Document</span>
+              <span onClick={() => { downloadDocument(reviewDoc.id).then(() => { toast(`Opened ${reviewDoc.name}`, "success"); setReviewDoc(null); }).catch(err => toast(err.message || "Download failed", "error")); }} style={{ fontSize: 12, padding: "8px 16px", borderRadius: 2, background: red, color: "#fff", cursor: "pointer" }}>Open Full Document</span>
             </div>
           </>
         )}
@@ -1478,7 +1439,7 @@ function MessagesPage({ toast, investor, initialThreadId }) {
       setThreadDetail(detail);
       // Update unread status in list
       setThreads(prev => prev.map(t => t.id === thread.id ? { ...t, unread: false } : t));
-    } catch (e) { toast.add("Failed to load thread", "error"); }
+    } catch (e) { toast("Failed to load thread", "error"); }
     finally { setThreadLoading(false); }
   }
 
@@ -1489,8 +1450,8 @@ function MessagesPage({ toast, investor, initialThreadId }) {
       const msg = await replyToThread(threadDetail.id, reply);
       setThreadDetail(prev => ({ ...prev, messages: [...prev.messages, msg] }));
       setReply("");
-      toast.add("Reply sent", "success");
-    } catch (e) { toast.add(e.message, "error"); }
+      toast("Reply sent", "success");
+    } catch (e) { toast(e.message, "error"); }
     finally { setSending(false); }
   }
 
@@ -1500,10 +1461,10 @@ function MessagesPage({ toast, investor, initialThreadId }) {
     setSending(true);
     try {
       await createThread({ subject: composeSubject, body: composeBody });
-      toast.add("Message sent to Northstar", "success");
+      toast("Message sent to Northstar", "success");
       setComposing(false); setComposeSubject(""); setComposeBody("");
       loadThreads();
-    } catch (e) { toast.add(e.message, "error"); }
+    } catch (e) { toast(e.message, "error"); }
     finally { setSending(false); }
   }
 
@@ -1924,7 +1885,7 @@ function SecuritySection({ toast, inputStyle }) {
       setMfaBackupCodes(data.backupCodes);
       setMfaEnabled(true);
       setMfaSetupStep(3);
-      toast.add("Two-factor authentication enabled", "success");
+      toast("Two-factor authentication enabled", "success");
     } catch (err) { setMfaError(err.message); }
     setMfaLoading(false);
   }
@@ -1937,7 +1898,7 @@ function SecuritySection({ toast, inputStyle }) {
       setMfaEnabled(false);
       setShowMfaDisable(false);
       setMfaDisablePw("");
-      toast.add("Two-factor authentication disabled", "success");
+      toast("Two-factor authentication disabled", "success");
     } catch (err) { setMfaError(err.message); }
     setMfaLoading(false);
   }
@@ -1963,7 +1924,7 @@ function SecuritySection({ toast, inputStyle }) {
     setSaving(true);
     try {
       await changePassword(currentPw, newPw);
-      toast.add("Password changed successfully", "success");
+      toast("Password changed successfully", "success");
       setCurrentPw(""); setNewPw(""); setConfirmPw("");
     } catch (err) { setPwError(err.message || "Failed to change password"); }
     setSaving(false);
@@ -2070,7 +2031,7 @@ function SecuritySection({ toast, inputStyle }) {
               ))}
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => { navigator.clipboard.writeText(mfaBackupCodes.join('\n')).then(() => toast.add("Backup codes copied to clipboard", "success")).catch(() => toast.add("Failed to copy codes", "error")); }} style={{ padding: "8px 20px", background: "#fff", border: `1px solid ${line}`, borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: "pointer", color: t2 }}>Copy All Codes</button>
+              <button onClick={() => { navigator.clipboard.writeText(mfaBackupCodes.join('\n')).then(() => toast("Backup codes copied to clipboard", "success")).catch(() => toast("Failed to copy codes", "error")); }} style={{ padding: "8px 20px", background: "#fff", border: `1px solid ${line}`, borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: "pointer", color: t2 }}>Copy All Codes</button>
               <button onClick={() => { setMfaSetupStep(0); setMfaVerifyCode(""); setMfaBackupCodes([]); }} style={{ padding: "8px 20px", background: red, color: "#fff", border: "none", borderRadius: 4, fontSize: 13, fontFamily: sans, cursor: "pointer" }}>Done</button>
             </div>
           </>
@@ -2142,20 +2103,20 @@ function ProfilePage({ investor, toast, onUpdate }) {
     try {
       if (editingEntity) {
         await updateEntity(editingEntity.id, entityForm);
-        toast.add("Entity updated", "success");
+        toast("Entity updated", "success");
         setEditingEntity(null);
       } else {
         await createEntity(investor.id, entityForm);
-        toast.add("Entity created", "success");
+        toast("Entity created", "success");
       }
       setShowEntityForm(false);
       setEntityForm({ name: "", type: "Individual", taxId: "", address: "", state: "", isDefault: false });
       loadEntities();
-    } catch (err) { toast.add(err.message, "error"); }
+    } catch (err) { toast(err.message, "error"); }
   }
 
   async function handleDeleteEntity(entityId) {
-    try { await deleteEntity(entityId); toast.add("Entity deleted", "success"); loadEntities(); } catch (err) { toast.add(err.message, "error"); }
+    try { await deleteEntity(entityId); toast("Entity deleted", "success"); loadEntities(); } catch (err) { toast(err.message, "error"); }
   }
 
   async function handlePrefToggle(key) {
@@ -2165,7 +2126,7 @@ function ProfilePage({ investor, toast, onUpdate }) {
     try {
       await updateNotificationPreferences({ [key]: updated[key] });
     } catch (err) {
-      toast.add("Failed to update preferences", "error");
+      toast("Failed to update preferences", "error");
       setNotifPrefs(prev => ({ ...prev, [key]: !prev[key] }));
     } finally { setSavingPrefs(false); }
   }
@@ -2176,9 +2137,9 @@ function ProfilePage({ investor, toast, onUpdate }) {
     try {
       const updated = await updateProfile({ name, email, initials });
       onUpdate(updated);
-      toast.add("Profile updated", "success");
+      toast("Profile updated", "success");
     } catch (err) {
-      toast.add(err.message || "Failed to update", "error");
+      toast(err.message || "Failed to update", "error");
     } finally { setSaving(false); }
   }
 
@@ -3329,7 +3290,6 @@ export default function App() {
         <span>710 – 1199 W Pender, Vancouver BC V6E 2R1</span>
       </footer>
 
-      <ToastContainer toasts={toast.toasts} onDismiss={toast.dismiss} />
       {showWarning && <SessionWarningModal onDismiss={dismissWarning} onLogout={handleLogout} />}
     </div>
     </ThemeContext.Provider>);
