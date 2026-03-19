@@ -108,6 +108,19 @@ app.use("/api/v1", authenticate, require("./routes/entities"));
 // Serve uploaded files through auth-protected route only
 app.use("/uploads", authenticate, express.static(path.resolve(__dirname, "../uploads")));
 
+// ─── Admin seed endpoint (re-seeds database, requires ADMIN JWT) ───
+app.post("/api/v1/admin/reseed", authenticate, async (req, res) => {
+  if (req.user.role !== "ADMIN") return res.status(403).json({ error: "Admin only" });
+  try {
+    // Run seed in a child process so it uses the same DATABASE_URL
+    const { execSync } = require("child_process");
+    const output = execSync("node seed.js", { cwd: __dirname, timeout: 120000, encoding: "utf8" });
+    res.json({ ok: true, output });
+  } catch (err) {
+    res.status(500).json({ error: "Seed failed", details: err.stderr || err.message });
+  }
+});
+
 // ─── Production: serve built frontend ───
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.resolve(__dirname, "../dist")));
