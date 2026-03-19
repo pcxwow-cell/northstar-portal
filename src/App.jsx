@@ -15,6 +15,7 @@ import ConfirmDialog from "./components/ConfirmDialog.jsx";
 import Tabs from "./components/Tabs.jsx";
 import DataTable from "./components/DataTable.jsx";
 import SearchFilterBar from "./components/SearchFilterBar.jsx";
+import SectionHeaderShared from "./components/SectionHeader.jsx";
 
 // Lazy load heavy components — they get their own chunks
 const AdminPanel = lazy(() => import("./Admin.jsx"));
@@ -703,10 +704,7 @@ function Portfolio({ myProjects, investor, initialProjectId }) {
 
   return (
     <>
-      <div style={{ marginBottom: 40 }}>
-        <h1 style={{ fontFamily: serif, fontSize: 36, fontWeight: 300 }}>Portfolio</h1>
-        <p style={{ fontSize: 14, color: t2, marginTop: 6 }}>{myProjects.length} investments · ${fmt(myProjects.reduce((s, p) => s + p.currentValue, 0))} total value</p>
-      </div>
+      <SectionHeaderShared title="Portfolio" subtitle={`${myProjects.length} investments · $${fmt(myProjects.reduce((s, p) => s + p.currentValue, 0))} total value`} size="lg" style={{ marginBottom: 40 }} />
       <DataTable
         columns={[
           { key: "name", label: "Project", render: r => (
@@ -740,17 +738,14 @@ function CapTablePage({ myProjects, investor, toast }) {
 
   if (!myProjects.length) return (
     <div style={{ padding: 40, textAlign: "center", color: t3 }}>
-      <h1 style={{ fontFamily: serif, fontSize: 36, fontWeight: 300 }}>Cap Table</h1>
+      <SectionHeaderShared title="Cap Table" size="lg" />
       <p style={{ fontSize: 14, marginTop: 16 }}>No projects assigned to your account.</p>
     </div>
   );
 
   return (
     <>
-      <div style={{ marginBottom: 40 }}>
-        <h1 style={{ fontFamily: serif, fontSize: 36, fontWeight: 300 }}>Cap Table</h1>
-        <p style={{ fontSize: 14, color: t2, marginTop: 6 }}>Project-level capitalization</p>
-      </div>
+      <SectionHeaderShared title="Cap Table" subtitle="Project-level capitalization" size="lg" style={{ marginBottom: 40 }} />
 
       {/* Project selector */}
       <div style={{ display: "flex", gap: 4, marginBottom: 24, background: `${line}55`, borderRadius: 8, padding: 2, width: "fit-content" }}>
@@ -1012,10 +1007,7 @@ function DocumentsPage({ toast, allDocuments, myProjects, investor }) {
 
   return (
     <>
-      <div style={{ marginBottom: 40 }}>
-        <h1 style={{ fontFamily: serif, fontSize: 36, fontWeight: 300 }}>Documents</h1>
-        <p style={{ fontSize: 14, color: t2, marginTop: 6 }}>{allDocuments.length} documents · {allDocuments.filter(d => d.status !== "published" && !signedDocs[d.id]).length} requiring action</p>
-      </div>
+      <SectionHeaderShared title="Documents" subtitle={`${allDocuments.length} documents · ${allDocuments.filter(d => d.status !== "published" && !signedDocs[d.id]).length} requiring action`} size="lg" style={{ marginBottom: 40 }} />
 
       {/* Pending Signatures */}
       {pendingSigs.length > 0 && (
@@ -1172,10 +1164,7 @@ function DistributionsPage({ allDistributions, myProjects }) {
   const total = allDistributions.reduce((a, d) => a + d.amount, 0);
   return (
     <>
-      <div style={{ marginBottom: 40 }}>
-        <h1 style={{ fontFamily: serif, fontSize: 36, fontWeight: 300 }}>Distributions</h1>
-        <p style={{ fontSize: 14, color: t2, marginTop: 6 }}>${fmt(total)} total distributed · {allDistributions.length} payments</p>
-      </div>
+      <SectionHeaderShared title="Distributions" subtitle={`$${fmt(total)} total distributed · ${allDistributions.length} payments`} size="lg" style={{ marginBottom: 40 }} />
 
       <div className="inline-stats-3" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, marginBottom: 40 }}>
         {[
@@ -1383,13 +1372,7 @@ function MessagesPage({ toast, investor, initialThreadId }) {
   const unreadCount = threads.filter(t => t.unread).length;
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 40 }}>
-        <div>
-          <h1 style={{ fontFamily: serif, fontSize: 36, fontWeight: 300 }}>Messages</h1>
-          <p style={{ fontSize: 14, color: t2, marginTop: 6 }}>{unreadCount} unread · {threads.length} conversations</p>
-        </div>
-        <span onClick={() => setComposing(true)} style={{ fontSize: 13, padding: "10px 20px", borderRadius: 4, cursor: "pointer", background: red, color: colors.white, fontWeight: 500 }}>New Message</span>
-      </div>
+      <SectionHeaderShared title="Messages" subtitle={`${unreadCount} unread · ${threads.length} conversations`} size="lg" right={<span onClick={() => setComposing(true)} style={{ fontSize: 13, padding: "10px 20px", borderRadius: 4, cursor: "pointer", background: red, color: colors.white, fontWeight: 500 }}>New Message</span>} style={{ marginBottom: 40 }} />
       {/* Search and sort controls */}
       {!loading && threads.length > 0 && (
         <SearchFilterBar search={searchTerm} onSearchChange={setSearchTerm} placeholder="Search messages..." filters={[
@@ -1458,7 +1441,7 @@ function FinancialModelerPage({ myProjects, investor }) {
 
   if (!myProjects.length) return (
     <div style={{ padding: 40, textAlign: "center", color: t3 }}>
-      <h1 style={{ fontFamily: serif, fontSize: 36, fontWeight: 300 }}>Financial Modeler</h1>
+      <SectionHeaderShared title="Financial Modeler" size="lg" />
       <p style={{ fontSize: 14, marginTop: 16 }}>No projects assigned to your account.</p>
     </div>
   );
@@ -1491,10 +1474,7 @@ function FinancialModelerPage({ myProjects, investor }) {
 
   return (
     <>
-      <div style={{ marginBottom: 40 }}>
-        <h1 style={{ fontFamily: serif, fontSize: 36, fontWeight: 300 }}>Financial Modeler</h1>
-        <p style={{ fontSize: 14, color: t2, marginTop: 6 }}>Scenario modeling with waterfall distribution analysis</p>
-      </div>
+      <SectionHeaderShared title="Financial Modeler" subtitle="Scenario modeling with waterfall distribution analysis" size="lg" style={{ marginBottom: 40 }} />
 
       {/* Project selector */}
       <div style={{ display: "flex", gap: 4, marginBottom: 24, background: `${line}55`, borderRadius: 8, padding: 2, width: "fit-content" }}>
@@ -1955,10 +1935,7 @@ function ProfilePage({ investor, toast, onUpdate }) {
 
   return (
     <>
-      <div style={{ marginBottom: 40 }}>
-        <h1 style={{ fontFamily: serif, fontSize: 36, fontWeight: 300 }}>Profile</h1>
-        <p style={{ fontSize: 14, color: t2, marginTop: 6 }}>Manage your account information</p>
-      </div>
+      <SectionHeaderShared title="Profile" subtitle="Manage your account information" size="lg" style={{ marginBottom: 40 }} />
 
       <div className="profile-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48 }}>
         {/* Profile form */}
@@ -2619,10 +2596,7 @@ function ActivityPage({ toast, onNavigate }) {
 
   return (
     <>
-      <div style={{ marginBottom: 40 }}>
-        <h1 style={{ fontFamily: serif, fontSize: 36, fontWeight: 300 }}>Activity</h1>
-        <p style={{ fontSize: 14, color: t2, marginTop: 6 }}>Recent events across your portfolio</p>
-      </div>
+      <SectionHeaderShared title="Activity" subtitle="Recent events across your portfolio" size="lg" style={{ marginBottom: 40 }} />
       {loading ? (
         <div style={{ textAlign: "center", padding: 60 }}><Spinner size={28} /></div>
       ) : notifications.length === 0 ? (
