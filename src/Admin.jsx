@@ -15,6 +15,7 @@ import StatCard from "./components/StatCard.jsx";
 import StatusBadge from "./components/StatusBadge.jsx";
 import SectionHeader from "./components/SectionHeader.jsx";
 import Tabs from "./components/Tabs.jsx";
+import DataTable from "./components/DataTable.jsx";
 
 
 // ─── SORTABLE HEADER ───
@@ -1882,38 +1883,27 @@ function DocumentManager({ toast, hideHeader }) {
 
       {/* Document table */}
       {loading ? <Spinner /> : (
-        <Card className="admin-table-scroll" padding="0" style={{ overflow: "hidden" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 100px 100px 80px 80px 80px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE" }}>
-            <SortableHeader columns={[
-              { key: "name", label: "Document" },
-              { key: "project", label: "Project" },
-              { key: "category", label: "Category" },
-              { key: "totalInvestors", label: "Investors" },
-              { key: "viewed", label: "Viewed" },
-              { key: "downloaded", label: "Downloaded" },
-            ]} sortBy={docSort.sortBy} sortDir={docSort.sortDir} onSort={docSort.onSort} />
-          </div>
-          {docSort.sortData(docs).map((d, i) => (
-            <div key={d.id} onClick={() => openDoc(d)} style={{
-              display: "grid", gridTemplateColumns: "2fr 100px 100px 80px 80px 80px",
-              padding: "14px 20px", borderBottom: i < docs.length - 1 ? `1px solid ${colors.lightBorder}` : "none",
-              cursor: "pointer", fontSize: 13, alignItems: "center",
-            }}
-              onMouseEnter={e => e.currentTarget.style.background = colors.cardBg}
-              onMouseLeave={e => e.currentTarget.style.background = colors.white}>
+        <DataTable
+          columns={[
+            { key: "name", label: "Document", render: (d) => (
               <div>
                 <div style={{ fontWeight: 500, display: "flex", alignItems: "center", gap: 6 }}>{d.name}{d.date && (Date.now() - new Date(d.date).getTime()) < 7 * 86400000 && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 2, background: `${colors.red}18`, color: colors.red, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em" }}>NEW</span>}</div>
                 <div style={{ fontSize: 11, color: "#BBB" }}>{d.date} · {d.size}</div>
               </div>
-              <span style={{ fontSize: 12, color: "#666" }}>{d.project}</span>
-              <span style={{ fontSize: 11, padding: "2px 8px", background: colors.lightBorder, borderRadius: 3 }}>{d.category}</span>
-              <span>{d.totalInvestors}</span>
-              <span style={{ color: d.viewed > 0 ? colors.green : "#CCC" }}>{d.viewed}</span>
-              <span style={{ color: d.downloaded > 0 ? colors.green : "#CCC" }}>{d.downloaded}</span>
-            </div>
-          ))}
-          {docs.length === 0 && <div style={{ padding: 24, color: colors.mutedText, textAlign: "center" }}>No documents found</div>}
-        </Card>
+            ) },
+            { key: "project", label: "Project", muted: true },
+            { key: "category", label: "Category", render: (d) => <span style={{ fontSize: 11, padding: "2px 8px", background: colors.lightBorder, borderRadius: 3 }}>{d.category}</span> },
+            { key: "totalInvestors", label: "Investors" },
+            { key: "viewed", label: "Viewed", render: (d) => <span style={{ color: d.viewed > 0 ? colors.green : "#CCC" }}>{d.viewed}</span> },
+            { key: "downloaded", label: "Downloaded", render: (d) => <span style={{ color: d.downloaded > 0 ? colors.green : "#CCC" }}>{d.downloaded}</span> },
+          ]}
+          data={docSort.sortData(docs)}
+          sortBy={docSort.sortBy}
+          sortDir={docSort.sortDir}
+          onSort={docSort.onSort}
+          onRowClick={openDoc}
+          emptyMessage="No documents found"
+        />
       )}
     </>
   );
@@ -3484,71 +3474,53 @@ function StatementManager({ toast }) {
       )}
 
       {/* Statement list table */}
-      <div style={{ background: colors.white, borderRadius: 12, overflow: "hidden", boxShadow: cardShadow }}>
-        {filteredStatements.length === 0 ? (
-          <EmptyState title="No statements" subtitle={stmtSearch ? "No statements match your search" : "Click 'Generate All' to create draft statements for all investors"} />
-        ) : (
-          <>
-            {/* Table header */}
-            <div style={{ display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1fr 1fr 1fr 100px 160px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", alignItems: "center" }}>
-              <SortableHeader columns={[
-                { key: "investorName", label: "Investor" },
-                { key: "projectName", label: "Project" },
-                { key: "period", label: "Period" },
-                { key: "committed", label: "Committed" },
-                { key: "nav", label: "NAV" },
-                { key: "status", label: "Status" },
-              ]} sortBy={stmtSort.sortBy} sortDir={stmtSort.sortDir} onSort={stmtSort.onSort} />
-              <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: colors.mutedText }}>Date</span>
-              <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: colors.mutedText }}>Actions</span>
+      <DataTable
+        columns={[
+          { key: "investorName", label: "Investor", render: (s) => (
+            <div>
+              <div style={{ fontWeight: 500 }}>{s.investorName || "Unknown"}</div>
+              <div style={{ fontSize: 11, color: "#999", marginTop: 1 }}>{s.investorEmail || ""}</div>
             </div>
-            {/* Table rows */}
-            {stmtSort.sortData(filteredStatements).map((s, i) => (
-              <div key={s.id} onClick={() => loadDetail(s.id)} style={{
-                display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1fr 1fr 1fr 100px 160px",
-                padding: "12px 20px", borderBottom: i < filteredStatements.length - 1 ? `1px solid ${colors.lightBorder}` : "none",
-                alignItems: "center", cursor: "pointer", fontSize: 13,
-                background: selectedId === s.id ? "#FBF9F6" : colors.white,
-                transition: "background .1s",
-              }}
-                onMouseEnter={e => { if (selectedId !== s.id) e.currentTarget.style.background = colors.cardBg; }}
-                onMouseLeave={e => { if (selectedId !== s.id) e.currentTarget.style.background = colors.white; }}>
-                <div>
-                  <div style={{ fontWeight: 500, fontSize: 13 }}>{s.investorName || "Unknown"}</div>
-                  <div style={{ fontSize: 11, color: "#999", marginTop: 1 }}>{s.investorEmail || ""}</div>
-                </div>
-                <span style={{ color: "#555" }}>{s.projectName || "--"}</span>
-                <span style={{ color: "#555", fontSize: 12 }}>{s.period || "--"}</span>
-                <span style={{ fontSize: 12, color: "#555" }}>{s.committed != null ? fc(s.committed) : "--"}</span>
-                <span style={{ fontSize: 12, color: "#555" }}>{s.nav != null ? fc(s.nav) : "--"}</span>
-                <div>
-                  <span style={{
-                    padding: "3px 10px", borderRadius: 4, fontSize: 11, fontWeight: 500,
-                    background: statusColors[s.status]?.bg || "#F5F5F5",
-                    color: statusColors[s.status]?.text || "#666",
-                  }}>{s.status}</span>
-                  {s.status === "APPROVED" && s.approvedByName && (
-                    <div style={{ fontSize: 10, color: colors.green, marginTop: 2 }}>by {s.approvedByName}</div>
-                  )}
-                </div>
-                <span style={{ fontSize: 12, color: "#888" }}>{new Date(s.createdAt).toLocaleDateString()}</span>
-                <div style={{ display: "flex", gap: 6 }} onClick={e => e.stopPropagation()}>
-                  {s.status === "DRAFT" && (
-                    <Button variant="outline" onClick={() => handleApprove(s.id)} style={{ padding: "4px 10px", fontSize: 10, color: colors.green, borderColor: colors.green }}>Approve</Button>
-                  )}
-                  {s.status === "APPROVED" && (
-                    <>
-                      <Button onClick={() => handleSend(s.id)} style={{ padding: "4px 10px", fontSize: 10 }}>Send</Button>
-                      <Button variant="outline" onClick={() => { setRejectingId(s.id); }} style={{ padding: "4px 10px", fontSize: 10, color: "#999" }}>Reject</Button>
-                    </>
-                  )}
-                  {s.status === "SENT" && s.sentAt && <span style={{ fontSize: 10, color: "#999" }}>Sent {new Date(s.sentAt).toLocaleDateString()}</span>}
-                </div>
-              </div>
-            ))}
-          </>
-        )}
-      </div>
+          ) },
+          { key: "projectName", label: "Project", muted: true, render: (s) => s.projectName || "--" },
+          { key: "period", label: "Period", muted: true, render: (s) => s.period || "--" },
+          { key: "committed", label: "Committed", muted: true, render: (s) => s.committed != null ? fc(s.committed) : "--" },
+          { key: "nav", label: "NAV", muted: true, render: (s) => s.nav != null ? fc(s.nav) : "--" },
+          { key: "status", label: "Status", render: (s) => (
+            <div>
+              <span style={{
+                padding: "3px 10px", borderRadius: 4, fontSize: 11, fontWeight: 500,
+                background: statusColors[s.status]?.bg || "#F5F5F5",
+                color: statusColors[s.status]?.text || "#666",
+              }}>{s.status}</span>
+              {s.status === "APPROVED" && s.approvedByName && (
+                <div style={{ fontSize: 10, color: colors.green, marginTop: 2 }}>by {s.approvedByName}</div>
+              )}
+            </div>
+          ) },
+          { key: "createdAt", label: "Date", sortable: false, muted: true, render: (s) => new Date(s.createdAt).toLocaleDateString() },
+          { key: "actions", label: "Actions", sortable: false, render: (s) => (
+            <div style={{ display: "flex", gap: 6 }} onClick={e => e.stopPropagation()}>
+              {s.status === "DRAFT" && (
+                <Button variant="outline" onClick={() => handleApprove(s.id)} style={{ padding: "4px 10px", fontSize: 10, color: colors.green, borderColor: colors.green }}>Approve</Button>
+              )}
+              {s.status === "APPROVED" && (
+                <>
+                  <Button onClick={() => handleSend(s.id)} style={{ padding: "4px 10px", fontSize: 10 }}>Send</Button>
+                  <Button variant="outline" onClick={() => { setRejectingId(s.id); }} style={{ padding: "4px 10px", fontSize: 10, color: "#999" }}>Reject</Button>
+                </>
+              )}
+              {s.status === "SENT" && s.sentAt && <span style={{ fontSize: 10, color: "#999" }}>Sent {new Date(s.sentAt).toLocaleDateString()}</span>}
+            </div>
+          ) },
+        ]}
+        data={stmtSort.sortData(filteredStatements)}
+        sortBy={stmtSort.sortBy}
+        sortDir={stmtSort.sortDir}
+        onSort={stmtSort.onSort}
+        onRowClick={(s) => loadDetail(s.id)}
+        emptyMessage={stmtSearch ? "No statements match your search" : "Click 'Generate All' to create draft statements for all investors"}
+      />
 
       {/* Generate Capital Call */}
       <div style={{ marginTop: 32 }}>
@@ -3691,23 +3663,16 @@ function SignatureManager({ toast, hideHeader }) {
           {sigSearch ? "No matching signature requests." : "No signature requests yet. Use the Documents section to request signatures."}
         </div>
       ) : (
-        <div className="admin-table-scroll" style={{ background: colors.white, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 120px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE" }}>
-            <SortableHeader columns={[
-              { key: "subject", label: "Document" },
-              { key: "createdByName", label: "Created By" },
-              { key: "signerCount", label: "Signers" },
-              { key: "status", label: "Status" },
-            ]} sortBy={sigSort.sortBy} sortDir={sigSort.sortDir} onSort={sigSort.onSort} />
-            <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: colors.mutedText }}>Actions</span>
-          </div>
-          {sigSort.sortData(filteredSigs).map((sig, i) => (
-            <div key={sig.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 120px", padding: "14px 20px", borderBottom: i < filteredSigs.length - 1 ? `1px solid ${colors.lightBorder}` : "none", fontSize: 13, alignItems: "center" }}>
+        <DataTable
+          columns={[
+            { key: "subject", label: "Document", render: (sig) => (
               <div>
                 <div style={{ fontWeight: 500 }}>{sig.document?.name || sig.subject}</div>
                 <div style={{ fontSize: 11, color: colors.mutedText, marginTop: 2 }}>{sig.subject}</div>
               </div>
-              <span style={{ color: "#666" }}>{sig.createdByName}</span>
+            ) },
+            { key: "createdByName", label: "Created By", muted: true },
+            { key: "signerCount", label: "Signers", render: (sig) => (
               <div>
                 {sig.signers?.map(s => (
                   <div key={s.id} style={{ fontSize: 12, marginBottom: 2 }}>
@@ -3715,15 +3680,18 @@ function SignatureManager({ toast, hideHeader }) {
                   </div>
                 ))}
               </div>
-              <StatusBadge status={sig.status} />
-              <div>
-                {sig.status === "pending" && (
-                  <Button variant="outline" onClick={() => handleCancel(sig.id)} style={{ fontSize: 11, padding: "4px 12px", color: colors.red, borderColor: colors.red }}>Cancel</Button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+            ) },
+            { key: "status", label: "Status", render: (sig) => <StatusBadge status={sig.status} /> },
+            { key: "actions", label: "Actions", sortable: false, render: (sig) => sig.status === "pending" ? (
+              <Button variant="outline" onClick={() => handleCancel(sig.id)} style={{ fontSize: 11, padding: "4px 12px", color: colors.red, borderColor: colors.red }}>Cancel</Button>
+            ) : null },
+          ]}
+          data={sigSort.sortData(filteredSigs)}
+          sortBy={sigSort.sortBy}
+          sortDir={sigSort.sortDir}
+          onSort={sigSort.onSort}
+          emptyMessage="No signature requests"
+        />
       )}
     </>
   );
@@ -4268,42 +4236,27 @@ function AuditLogViewer() {
       {loading ? <Spinner /> : filteredLogs.length === 0 ? (
         <EmptyState title="No audit log entries" subtitle={auditSearch ? "No entries match your search." : "Actions will appear here as users interact with the system."} />
       ) : (
-        <div style={{ borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-            <thead>
-              <tr style={{ background: colors.cardBg, borderBottom: "1px solid #E8E5DE" }}>
-                {[{ key: "createdAt", label: "Timestamp" }, { key: "user", label: "User" }, { key: "action", label: "Action" }, { key: "resource", label: "Resource" }, { key: "ipAddress", label: "IP" }].map(col => (
-                  <th key={col.key} onClick={() => auditSort.onSort(col.key)} style={{ padding: "10px 14px", textAlign: "left", fontWeight: 500, fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: colors.mutedText, cursor: "pointer", userSelect: "none" }}>
-                    <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                      {col.label}
-                      {auditSort.sortBy === col.key && <span style={{ fontSize: 8 }}>{auditSort.sortDir === "asc" ? "▲" : "▼"}</span>}
-                    </span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredLogs.map((log, i) => (
-                <tr key={log.id} style={{ borderBottom: i < filteredLogs.length - 1 ? "1px solid #E8E5DE" : "none" }}>
-                  <td style={{ padding: "10px 14px", color: colors.mutedText, whiteSpace: "nowrap" }}>
-                    {new Date(log.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
-                  </td>
-                  <td style={{ padding: "10px 14px", fontWeight: 500 }}>{log.user}</td>
-                  <td style={{ padding: "10px 14px" }}>
-                    <span style={{
-                      fontSize: 10, padding: "2px 8px", borderRadius: 3,
-                      background: log.action === "login" ? `${colors.green}15` : log.action.includes("download") ? "#EEF" : `${colors.red}08`,
-                      color: log.action === "login" ? colors.green : log.action.includes("download") ? "#44A" : "#666",
-                      textTransform: "uppercase", letterSpacing: ".04em",
-                    }}>{log.action.replace(/_/g, " ")}</span>
-                  </td>
-                  <td style={{ padding: "10px 14px", color: colors.mutedText }}>{log.resource || "\u2014"}</td>
-                  <td style={{ padding: "10px 14px", color: "#CCC", fontSize: 11 }}>{log.ipAddress || "\u2014"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={[
+            { key: "createdAt", label: "Timestamp", muted: true, render: (log) => new Date(log.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) },
+            { key: "user", label: "User", bold: true },
+            { key: "action", label: "Action", render: (log) => (
+              <span style={{
+                fontSize: 10, padding: "2px 8px", borderRadius: 3,
+                background: log.action === "login" ? `${colors.green}15` : log.action.includes("download") ? "#EEF" : `${colors.red}08`,
+                color: log.action === "login" ? colors.green : log.action.includes("download") ? "#44A" : "#666",
+                textTransform: "uppercase", letterSpacing: ".04em",
+              }}>{log.action.replace(/_/g, " ")}</span>
+            ) },
+            { key: "resource", label: "Resource", muted: true, render: (log) => log.resource || "\u2014" },
+            { key: "ipAddress", label: "IP", muted: true, render: (log) => <span style={{ fontSize: 11 }}>{log.ipAddress || "\u2014"}</span> },
+          ]}
+          data={filteredLogs}
+          sortBy={auditSort.sortBy}
+          sortDir={auditSort.sortDir}
+          onSort={auditSort.onSort}
+          emptyMessage="No audit log entries"
+        />
       )}
     </>
   );
