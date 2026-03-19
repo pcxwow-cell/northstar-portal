@@ -10,6 +10,7 @@ export const colors = {
   inputBorder: "#DDD",
   cardBg: "#FAFAF8",
   surface: "#FAF9F7",
+  cream: "#FDFAF2",
   white: "#fff",
   danger: "#dc3545",
   errorBg: "#FEE",

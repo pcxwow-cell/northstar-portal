@@ -6,20 +6,15 @@ import EmptyState from "./components/EmptyState.jsx";
 import ConfirmDialog from "./components/ConfirmDialog.jsx";
 import { fetchDashboard, fetchAdminProjects, updateProject, postUpdate, fetchAdminInvestors, uploadDocument, bulkUploadK1, inviteInvestor, updateInvestor, approveInvestor, deactivateInvestor, resetInvestorPassword, assignInvestorProject, updateInvestorKPI, fetchThreads, fetchThread, createThread, replyToThread, fetchInvestorProfile, fetchGroups, createGroup, updateGroup, deleteGroup, fetchGroupDetail, addGroupMembers, removeGroupMember, fetchStaff, createStaff, updateStaff, deactivateStaff, reactivateStaff, resetStaffPassword, fetchAdminDocuments, fetchAdminDocumentDetail, fetchAdminProjectDetail, updateWaterfall, fetchSignatureRequests, createSignatureRequest, cancelSignatureRequest, fetchProspects, updateProspectStatus, fetchProspectStats, fetchCashFlows, recordCashFlow, recalculateProject, fetchAuditLog, createProject, deleteProject, deleteDocument, assignDocument, fetchEntities, createEntity, updateEntity, deleteEntity, runFinancialModel, updateCashFlow, deleteCashFlow, fetchProjectCashFlows, fetchUserFlags, updateUserFlags, fetchFeatureDefaults, fmt, fmtCurrency, fetchEmailSettings, updateEmailSettings, sendTestEmail, fetchEmailLog, fetchEmailStats, unlockInvestor, createCapTableEntry, updateCapTableEntry, deleteCapTableEntry, createWaterfallTier, updateWaterfallTier, deleteWaterfallTier, recordBulkDistribution } from "./api.js";
 
-const sans = "'DM Sans', -apple-system, sans-serif";
-const red = "#EA2028";
-const green = "#3D7A54";
-const darkText = "#231F20";
-const inputStyle = { width: "100%", padding: "10px 14px", border: "1px solid #DDD", borderRadius: 8, fontSize: 13, fontFamily: sans, boxSizing: "border-box" };
-const btnStyle = { padding: "8px 16px", background: red, color: "#fff", border: "none", borderRadius: 8, fontSize: 13, cursor: "pointer", fontFamily: sans, boxShadow: "0 1px 3px rgba(234,32,40,.3)" };
-const btnOutline = { ...btnStyle, background: "#fff", color: darkText, border: "1px solid #DDD", boxShadow: "none" };
+import { colors, fonts, inputStyle, btnStyle, btnOutline, shadows, radius, labelStyle } from "./styles/theme.js";
+import Button from "./components/Button.jsx";
 
 
 // ─── SORTABLE HEADER ───
 function SortableHeader({ columns, sortBy, sortDir, onSort }) {
   return columns.map(col => (
     <span key={col.key} onClick={() => onSort(col.key)} style={{
-      fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#767168",
+      fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: colors.mutedText,
       cursor: "pointer", userSelect: "none", display: "flex", alignItems: "center", gap: 4,
     }}>
       {col.label}
@@ -32,7 +27,7 @@ function SortableHeader({ columns, sortBy, sortDir, onSort }) {
 function SearchBox({ value, onChange, placeholder = "Search..." }) {
   return (
     <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-      style={{ padding: "8px 14px", border: "1px solid #DDD", borderRadius: 8, fontSize: 13, fontFamily: "'DM Sans', sans-serif", width: 260, boxSizing: "border-box" }} />
+      style={{ padding: "8px 14px", border: "1px solid #DDD", borderRadius: 8, fontSize: 13, fontFamily: "'DM Sans', fonts.sans-serif", width: 260, boxSizing: "border-box" }} />
   );
 }
 
@@ -72,12 +67,12 @@ function PeopleSection({ profileId, setProfileId, peopleTab, setPeopleTab, toast
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <h1 style={{ fontSize: 28, fontWeight: 300 }}>People</h1>
       </div>
-      <div style={{ display: "flex", gap: 4, marginBottom: 24, background: "#F0EDE8", borderRadius: 8, padding: 3, width: "fit-content" }}>
+      <div style={{ display: "flex", gap: 4, marginBottom: 24, background: colors.lightBorder, borderRadius: 8, padding: 3, width: "fit-content" }}>
         {subTabs.map(t => (
           <span key={t.id} onClick={() => { setPeopleTab(t.id); setProfileId(null); }} style={{
             fontSize: 13, padding: "8px 20px", cursor: "pointer",
             color: peopleTab === t.id ? "#1A1816" : "#888", fontWeight: peopleTab === t.id ? 500 : 400,
-            background: peopleTab === t.id ? "#fff" : "transparent",
+            background: peopleTab === t.id ? colors.white : "transparent",
             borderRadius: 6, boxShadow: peopleTab === t.id ? "0 1px 3px rgba(0,0,0,.08)" : "none",
             transition: "all .15s",
           }}>{t.label}</span>
@@ -106,12 +101,12 @@ function DocumentsSection({ docsTab, setDocsTab, toast }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <h1 style={{ fontSize: 28, fontWeight: 300 }}>Documents</h1>
       </div>
-      <div style={{ display: "flex", gap: 4, marginBottom: 24, background: "#F0EDE8", borderRadius: 8, padding: 3, width: "fit-content" }}>
+      <div style={{ display: "flex", gap: 4, marginBottom: 24, background: colors.lightBorder, borderRadius: 8, padding: 3, width: "fit-content" }}>
         {subTabs.map(t => (
           <span key={t.id} onClick={() => setDocsTab(t.id)} style={{
             fontSize: 13, padding: "8px 20px", cursor: "pointer",
             color: docsTab === t.id ? "#1A1816" : "#888", fontWeight: docsTab === t.id ? 500 : 400,
-            background: docsTab === t.id ? "#fff" : "transparent",
+            background: docsTab === t.id ? colors.white : "transparent",
             borderRadius: 6, boxShadow: docsTab === t.id ? "0 1px 3px rgba(0,0,0,.08)" : "none",
             transition: "all .15s",
           }}>{t.label}</span>
@@ -165,7 +160,7 @@ export default function AdminPanel({ user, onLogout }) {
 
   return (
     <AdminDataProvider>
-    <div style={{ fontFamily: sans, color: darkText, minHeight: "100vh", background: "#F8F7F4" }}>
+    <div style={{ fontFamily: fonts.sans, color: colors.darkText, minHeight: "100vh", background: "#F8F7F4" }}>
       <style>{`
         *:focus-visible { outline: 2px solid #EA2028; outline-offset: 2px; border-radius: 4px; }
         button:active { transform: scale(0.97); }
@@ -199,28 +194,28 @@ export default function AdminPanel({ user, onLogout }) {
           .admin-stat-grid { grid-template-columns: 1fr !important; }
         }
       `}</style>
-      <header className="admin-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 56, background: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
+      <header className="admin-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: 56, background: colors.white, boxShadow: "0 1px 3px rgba(0,0,0,.04)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 24, height: 24, background: red, borderRadius: 4 }} />
+          <div style={{ width: 24, height: 24, background: colors.red, borderRadius: 4 }} />
           <span style={{ fontSize: 15, fontWeight: 600, letterSpacing: ".08em" }}>NORTHSTAR</span>
-          <span style={{ fontSize: 11, padding: "2px 8px", background: "#FEE", borderRadius: 20, color: red, fontWeight: 500 }}>ADMIN</span>
+          <span style={{ fontSize: 11, padding: "2px 8px", background: "#FEE", borderRadius: 20, color: colors.red, fontWeight: 500 }}>ADMIN</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <span className="admin-user-name" style={{ fontSize: 13, color: "#666" }}>{user.name}</span>
-          <button onClick={onLogout} aria-label="Sign out of admin panel" style={{ ...btnOutline, fontSize: 12, borderRadius: 6 }}>Sign Out</button>
+          <Button onClick={onLogout} aria-label="Sign out of admin panel" variant="outline" style={{ fontSize: 12, borderRadius: 6 }}>Sign Out</Button>
         </div>
       </header>
-      <nav className="admin-nav" role="navigation" aria-label="Admin navigation" style={{ display: "flex", gap: 4, background: "#fff", borderBottom: "1px solid #ECEAE5" }}>
+      <nav className="admin-nav" role="navigation" aria-label="Admin navigation" style={{ display: "flex", gap: 4, background: colors.white, borderBottom: "1px solid #ECEAE5" }}>
         {navItems.map(n => (
           <span key={n.id} role="link" tabIndex={0} aria-current={view === n.id ? "page" : undefined} onClick={() => setView(n.id)} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setView(n.id); } }} style={{
             fontSize: 13, padding: "8px 16px", cursor: "pointer",
-            color: view === n.id ? red : "#888",
+            color: view === n.id ? colors.red : "#888",
             background: view === n.id ? "#EA20280D" : "transparent",
             borderRadius: 6,
             fontWeight: view === n.id ? 500 : 400,
             transition: "all .15s",
           }}
-            onMouseEnter={e => { if (view !== n.id) e.currentTarget.style.background = "#F0EDE8"; }}
+            onMouseEnter={e => { if (view !== n.id) e.currentTarget.style.background = colors.lightBorder; }}
             onMouseLeave={e => { if (view !== n.id) e.currentTarget.style.background = "transparent"; }}>{n.label}</span>
         ))}
       </nav>
@@ -280,8 +275,8 @@ function Dashboard({ onNavigate }) {
   if (!data) return <Spinner />;
 
   const statCards = [
-    { label: "Projects", value: data.projectCount, accent: red, nav: "projects" },
-    { label: "Investors", value: data.investorCount, accent: green, nav: "investors" },
+    { label: "Projects", value: data.projectCount, accent: colors.red, nav: "projects" },
+    { label: "Investors", value: data.investorCount, accent: colors.green, nav: "investors" },
     { label: "Documents", value: data.docCount, accent: "#D4A574", nav: "documents" },
     { label: "Unread Messages", value: data.unreadMessages, accent: "#5B8DEF", nav: "inbox" },
   ];
@@ -296,46 +291,46 @@ function Dashboard({ onNavigate }) {
       {/* Stat Cards */}
       <div className="admin-stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 32 }}>
         {statCards.map((s, i) => (
-          <div key={i} onClick={() => onNavigate(s.nav)} style={{ background: "#fff", borderRadius: 10, padding: "20px 24px", boxShadow: cardShadow, borderLeft: `3px solid ${s.accent}`, transition: "transform .15s, box-shadow .15s", cursor: "pointer" }}
-            onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,.08)"; e.currentTarget.style.background = "#FAFAF8"; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = cardShadow; e.currentTarget.style.background = "#fff"; }}>
+          <div key={i} onClick={() => onNavigate(s.nav)} style={{ background: colors.white, borderRadius: 10, padding: "20px 24px", boxShadow: cardShadow, borderLeft: `3px solid ${s.accent}`, transition: "transform .15s, box-shadow .15s", cursor: "pointer" }}
+            onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,.08)"; e.currentTarget.style.background = colors.cardBg; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = cardShadow; e.currentTarget.style.background = colors.white; }}>
             <div style={{ fontSize: 28, fontWeight: 300, marginBottom: 4 }}>{s.value}</div>
-            <div style={{ fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".08em" }}>{s.label}</div>
+            <div style={{ fontSize: 11, color: colors.mutedText, textTransform: "uppercase", letterSpacing: ".08em" }}>{s.label}</div>
           </div>
         ))}
       </div>
 
       {/* Pending Actions */}
-      <div style={{ background: "#fff", borderRadius: 12, boxShadow: cardShadow, padding: "24px 28px", marginBottom: 24 }}>
+      <div style={{ background: colors.white, borderRadius: 12, boxShadow: cardShadow, padding: "24px 28px", marginBottom: 24 }}>
         <h2 style={{ fontSize: 16, fontWeight: 500, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
           Pending Actions
           {!pendingLoading && (pendingInvestors.length + pendingSigs.length) > 0 && (
-            <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 10, background: `${red}15`, color: red, fontWeight: 600 }}>
+            <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 10, background: `${colors.red}15`, color: colors.red, fontWeight: 600 }}>
               {pendingInvestors.length + pendingSigs.length}
             </span>
           )}
         </h2>
         {pendingLoading ? (
-          <div style={{ padding: "12px 0", fontSize: 13, color: "#767168" }}>Checking for pending items...</div>
+          <div style={{ padding: "12px 0", fontSize: 13, color: colors.mutedText }}>Checking for pending items...</div>
         ) : (pendingInvestors.length === 0 && pendingSigs.length === 0) ? (
-          <div style={{ padding: "12px 0", fontSize: 13, color: "#767168" }}>No pending actions. You are all caught up.</div>
+          <div style={{ padding: "12px 0", fontSize: 13, color: colors.mutedText }}>No pending actions. You are all caught up.</div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {/* Pending Investors */}
             {pendingInvestors.length > 0 && (
-              <div style={{ border: "1px solid #F0EDE8", borderRadius: 8, overflow: "hidden" }}>
-                <div style={{ padding: "10px 16px", background: "#FAFAF8", fontSize: 12, fontWeight: 500, color: "#767168", borderBottom: "1px solid #F0EDE8" }}>
+              <div style={{ border: `1px solid ${colors.lightBorder}`, borderRadius: 8, overflow: "hidden" }}>
+                <div style={{ padding: "10px 16px", background: colors.cardBg, fontSize: 12, fontWeight: 500, color: colors.mutedText, borderBottom: `1px solid ${colors.lightBorder}` }}>
                   Investors Awaiting Approval ({pendingInvestors.length})
                 </div>
                 {pendingInvestors.map(inv => (
                   <div key={inv.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", borderBottom: "1px solid #F8F7F4", fontSize: 13 }}>
                     <div>
                       <span style={{ fontWeight: 500 }}>{inv.name}</span>
-                      <span style={{ color: "#767168", marginLeft: 8 }}>{inv.email}</span>
+                      <span style={{ color: colors.mutedText, marginLeft: 8 }}>{inv.email}</span>
                     </div>
                     <div style={{ display: "flex", gap: 6 }}>
-                      <button onClick={() => handleQuickApprove(inv.id)} style={{ ...btnStyle, padding: "4px 12px", fontSize: 11, background: green }}>Approve</button>
-                      <button onClick={() => handleQuickReject(inv.id)} style={{ ...btnOutline, padding: "4px 12px", fontSize: 11, color: red, borderColor: red }}>Reject</button>
+                      <Button onClick={() => handleQuickApprove(inv.id)} style={{ padding: "4px 12px", fontSize: 11, background: colors.green }}>Approve</Button>
+                      <Button onClick={() => handleQuickReject(inv.id)} variant="outline" style={{ padding: "4px 12px", fontSize: 11, color: colors.red, borderColor: colors.red }}>Reject</Button>
                     </div>
                   </div>
                 ))}
@@ -343,11 +338,11 @@ function Dashboard({ onNavigate }) {
             )}
             {/* Pending Signatures */}
             {pendingSigs.length > 0 && (
-              <div style={{ border: "1px solid #F0EDE8", borderRadius: 8, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ border: `1px solid ${colors.lightBorder}`, borderRadius: 8, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div style={{ fontSize: 13 }}>
                   <span style={{ fontWeight: 500 }}>{pendingSigs.length}</span> document{pendingSigs.length !== 1 ? "s" : ""} awaiting signature
                 </div>
-                <button onClick={() => onNavigate("documents")} style={{ ...btnOutline, padding: "4px 12px", fontSize: 11 }}>Review</button>
+                <Button onClick={() => onNavigate("documents")} variant="outline" style={{ padding: "4px 12px", fontSize: 11 }}>Review</Button>
               </div>
             )}
           </div>
@@ -357,18 +352,18 @@ function Dashboard({ onNavigate }) {
       {/* Quick Actions */}
       <div className="admin-stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
         {[
-          { label: "Invite Investor", icon: "+", nav: "investors", accent: green },
+          { label: "Invite Investor", icon: "+", nav: "investors", accent: colors.green },
           { label: "Upload Document", icon: "\u2191", nav: "documents", accent: "#D4A574" },
-          { label: "Post Update", icon: "\u270E", nav: "projects", accent: red },
+          { label: "Post Update", icon: "\u270E", nav: "projects", accent: colors.red },
           { label: "Record Distribution", icon: "$", nav: "projects", accent: "#5B8DEF" },
         ].map((a, i) => (
           <button key={i} onClick={() => onNavigate(a.nav)} style={{
-            background: "#fff", border: "1px solid #ECEAE5", borderRadius: 10, padding: "16px 20px",
-            cursor: "pointer", fontFamily: sans, fontSize: 13, fontWeight: 500, color: darkText,
+            background: colors.white, border: "1px solid #ECEAE5", borderRadius: 10, padding: "16px 20px",
+            cursor: "pointer", fontFamily: fonts.sans, fontSize: 13, fontWeight: 500, color: colors.darkText,
             display: "flex", alignItems: "center", gap: 10, transition: "all .15s",
           }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = a.accent; e.currentTarget.style.background = "#FAFAF8"; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = "#ECEAE5"; e.currentTarget.style.background = "#fff"; }}>
+            onMouseEnter={e => { e.currentTarget.style.borderColor = a.accent; e.currentTarget.style.background = colors.cardBg; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "#ECEAE5"; e.currentTarget.style.background = colors.white; }}>
             <span style={{ width: 28, height: 28, borderRadius: 6, background: `${a.accent}15`, color: a.accent, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 600 }}>{a.icon}</span>
             {a.label}
           </button>
@@ -376,10 +371,10 @@ function Dashboard({ onNavigate }) {
       </div>
 
       {/* Recent Activity Timeline */}
-      <div style={{ background: "#fff", borderRadius: 12, boxShadow: cardShadow, padding: "24px 28px", marginBottom: 24 }}>
+      <div style={{ background: colors.white, borderRadius: 12, boxShadow: cardShadow, padding: "24px 28px", marginBottom: 24 }}>
         <h2 style={{ fontSize: 16, fontWeight: 500, marginBottom: 16 }}>Recent Activity</h2>
         {auditLog.length === 0 ? (
-          <div style={{ fontSize: 13, color: "#767168", padding: "8px 0" }}>No recent activity recorded.</div>
+          <div style={{ fontSize: 13, color: colors.mutedText, padding: "8px 0" }}>No recent activity recorded.</div>
         ) : (
           <div style={{ position: "relative", paddingLeft: 24 }}>
             {/* Timeline line */}
@@ -387,12 +382,12 @@ function Dashboard({ onNavigate }) {
             {auditLog.map((entry, i) => (
               <div key={entry.id || i} style={{ position: "relative", paddingBottom: i < auditLog.length - 1 ? 16 : 0, fontSize: 13 }}>
                 {/* Timeline dot */}
-                <div style={{ position: "absolute", left: -20, top: 5, width: 10, height: 10, borderRadius: "50%", background: "#fff", border: `2px solid ${red}`, zIndex: 1 }} />
+                <div style={{ position: "absolute", left: -20, top: 5, width: 10, height: 10, borderRadius: "50%", background: colors.white, border: `2px solid ${colors.red}`, zIndex: 1 }} />
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
                   <div>
                     <span style={{ fontWeight: 500 }}>{entry.action || entry.type}</span>
-                    {entry.userName && <span style={{ color: "#767168" }}> by {entry.userName}</span>}
-                    {entry.resource && <span style={{ color: "#767168" }}> on {entry.resource}</span>}
+                    {entry.userName && <span style={{ color: colors.mutedText }}> by {entry.userName}</span>}
+                    {entry.resource && <span style={{ color: colors.mutedText }}> on {entry.resource}</span>}
                   </div>
                   <span style={{ fontSize: 11, color: "#AAA", whiteSpace: "nowrap", flexShrink: 0 }}>
                     {entry.timestamp ? new Date(entry.timestamp).toLocaleString() : entry.date || ""}
@@ -405,15 +400,15 @@ function Dashboard({ onNavigate }) {
       </div>
 
       {/* Recent Documents */}
-      <div style={{ background: "#fff", borderRadius: 12, boxShadow: cardShadow, padding: "24px 28px" }}>
+      <div style={{ background: colors.white, borderRadius: 12, boxShadow: cardShadow, padding: "24px 28px" }}>
         <h2 style={{ fontSize: 16, fontWeight: 500, marginBottom: 16 }}>Recent Documents</h2>
         {data.recentDocs.length === 0 ? (
-          <div style={{ fontSize: 13, color: "#767168" }}>No recent documents.</div>
+          <div style={{ fontSize: 13, color: colors.mutedText }}>No recent documents.</div>
         ) : (
           data.recentDocs.map((d, i) => (
-            <div key={d.id} style={{ padding: "10px 0", borderBottom: i < data.recentDocs.length - 1 ? "1px solid #F0EDE8" : "none", display: "flex", justifyContent: "space-between", fontSize: 13 }}>
+            <div key={d.id} style={{ padding: "10px 0", borderBottom: i < data.recentDocs.length - 1 ? `1px solid ${colors.lightBorder}` : "none", display: "flex", justifyContent: "space-between", fontSize: 13 }}>
               <span>{d.name}</span>
-              <span style={{ color: "#767168" }}>{d.project?.name || "General"} · {d.date}</span>
+              <span style={{ color: colors.mutedText }}>{d.project?.name || "General"} · {d.date}</span>
             </div>
           ))
         )}
@@ -489,7 +484,7 @@ function ProjectManager({ toast, onViewProject }) {
       {confirmAction && <ConfirmDialog {...confirmAction} open={true} onCancel={() => setConfirmAction(null)} />}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <h1 style={{ fontSize: 28, fontWeight: 300 }}>Projects</h1>
-        <button onClick={() => setShowCreate(!showCreate)} style={btnStyle}>{showCreate ? "Cancel" : "Create Project"}</button>
+        <Button onClick={() => setShowCreate(!showCreate)}>{showCreate ? "Cancel" : "Create Project"}</Button>
       </div>
 
       {/* Search & Filter */}
@@ -505,7 +500,7 @@ function ProjectManager({ toast, onViewProject }) {
 
       {/* Create Project Form */}
       {showCreate && (
-        <form onSubmit={handleCreateProject} style={{ background: "#fff", borderRadius: 12, padding: "24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", marginBottom: 24 }}>
+        <form onSubmit={handleCreateProject} style={{ background: colors.white, borderRadius: 12, padding: "24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", marginBottom: 24 }}>
           <div style={{ fontSize: 16, fontWeight: 500, marginBottom: 16 }}>New Project</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
             <div>
@@ -571,7 +566,7 @@ function ProjectManager({ toast, onViewProject }) {
             <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 4 }}>Description</label>
             <textarea value={cpForm.description} onChange={e => setCpForm(f => ({ ...f, description: e.target.value }))} rows={3} style={{ ...inputStyle, resize: "vertical" }} placeholder="Project description..." />
           </div>
-          <button type="submit" style={btnStyle}>Create Project</button>
+          <Button type="submit">Create Project</Button>
         </form>
       )}
 
@@ -588,11 +583,11 @@ function ProjectManager({ toast, onViewProject }) {
             "Panorama B6": "https://northstardevelopment.ca/public/images/panorama-1.jpg",
           };
           const thumb = thumbs[p.name] || null;
-          const statusColor = p.status === "Completed" ? green : p.status === "Under Construction" ? "#B8860B" : "#666";
+          const statusColor = p.status === "Completed" ? colors.green : p.status === "Under Construction" ? "#B8860B" : "#666";
           const statusBg = p.status === "Completed" ? "#EFE" : p.status === "Under Construction" ? "#FFF8E1" : "#F5F5F5";
 
           return (
-          <div key={p.id} onClick={() => onViewProject?.(p.id)} style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", cursor: "pointer", transition: "box-shadow .15s, transform .15s" }}
+          <div key={p.id} onClick={() => onViewProject?.(p.id)} style={{ background: colors.white, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", cursor: "pointer", transition: "box-shadow .15s, transform .15s" }}
             onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,.1)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
             onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)"; e.currentTarget.style.transform = "none"; }}>
             <div style={{ display: "flex" }}>
@@ -601,32 +596,32 @@ function ProjectManager({ toast, onViewProject }) {
                 <div style={{ width: 120, minHeight: 100, flexShrink: 0, backgroundImage: `url(${thumb})`, backgroundSize: "cover", backgroundPosition: "center" }} />
               )}
               {!thumb && (
-                <div style={{ width: 120, minHeight: 100, flexShrink: 0, background: `linear-gradient(135deg, ${red}15, ${red}05)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ fontSize: 32, fontWeight: 300, color: `${red}40` }}>{p.name?.[0] || "P"}</span>
+                <div style={{ width: 120, minHeight: 100, flexShrink: 0, background: `linear-gradient(135deg, ${colors.red}15, ${colors.red}05)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontSize: 32, fontWeight: 300, color: `${colors.red}40` }}>{p.name?.[0] || "P"}</span>
                 </div>
               )}
               <div style={{ flex: 1, padding: "16px 20px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                   <div>
                     <div style={{ fontSize: 17, fontWeight: 500 }}>{p.name}</div>
-                    <div style={{ fontSize: 12, color: "#767168", marginTop: 2 }}>{p.location}</div>
+                    <div style={{ fontSize: 12, color: colors.mutedText, marginTop: 2 }}>{p.location}</div>
                   </div>
                   <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                     <span style={{ fontSize: 10, padding: "3px 10px", borderRadius: 4, background: statusBg, color: statusColor, fontWeight: 500 }}>{p.status}</span>
-                    <button onClick={(e) => { e.stopPropagation(); setEditing(editing === p.id ? null : p.id); }} style={{ ...btnOutline, padding: "4px 12px", fontSize: 11 }}>{editing === p.id ? "Close" : "Quick Edit"}</button>
-                    <button onClick={(e) => { e.stopPropagation(); handleDeleteProject(p.id, p.name); }} style={{ ...btnOutline, padding: "4px 12px", fontSize: 11, color: red, borderColor: red }}>Delete</button>
+                    <Button onClick={(e) => { e.stopPropagation(); setEditing(editing === p.id ? null : p.id); }} variant="outline" style={{ padding: "4px 12px", fontSize: 11 }}>{editing === p.id ? "Close" : "Quick Edit"}</Button>
+                    <Button onClick={(e) => { e.stopPropagation(); handleDeleteProject(p.id, p.name); }} variant="outline" style={{ padding: "4px 12px", fontSize: 11, color: colors.red, borderColor: colors.red }}>Delete</Button>
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 24, fontSize: 12, color: "#888", flexWrap: "wrap" }}>
                   <span>{p.investorCount} investors</span>
                   <span>{p.docCount} documents</span>
-                  <span>Completion: <strong style={{ color: darkText }}>{p.completion}%</strong></span>
-                  <span>Raise: <strong style={{ color: darkText }}>{fmtCurrency(p.totalRaise)}</strong></span>
+                  <span>Completion: <strong style={{ color: colors.darkText }}>{p.completion}%</strong></span>
+                  <span>Raise: <strong style={{ color: colors.darkText }}>{fmtCurrency(p.totalRaise)}</strong></span>
                 </div>
               </div>
             </div>
             {editing === p.id && (
-              <div style={{ padding: "16px 20px", borderTop: "1px solid #F0EDE8" }} onClick={e => e.stopPropagation()}>
+              <div style={{ padding: "16px 20px", borderTop: `1px solid ${colors.lightBorder}` }} onClick={e => e.stopPropagation()}>
                 <div className="admin-form-row" style={{ display: "flex", gap: 12, marginBottom: 12 }}>
                   <select value={p.status} onChange={e => handleSave(p.id, "status", e.target.value)} style={{ ...inputStyle, width: "auto" }}>
                     <option>Pre-Development</option><option>Under Construction</option><option>Completed</option>
@@ -635,7 +630,7 @@ function ProjectManager({ toast, onViewProject }) {
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
                   <input value={updateText} onChange={e => setUpdateText(e.target.value)} placeholder="Post a construction update..." style={{ ...inputStyle, flex: 1 }} />
-                  <button onClick={() => handlePostUpdate(p.id)} style={btnStyle}>Post</button>
+                  <Button onClick={() => handlePostUpdate(p.id)}>Post</Button>
                 </div>
               </div>
             )}
@@ -657,16 +652,16 @@ function CredentialDialog({ name, email, tempPassword, onClose }) {
   }
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 12, padding: "32px", maxWidth: 440, width: "90%", boxShadow: "0 20px 60px rgba(0,0,0,.15)" }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: colors.white, borderRadius: 12, padding: "32px", maxWidth: 440, width: "90%", boxShadow: "0 20px 60px rgba(0,0,0,.15)" }}>
         <div style={{ fontSize: 18, fontWeight: 500, marginBottom: 4 }}>Investor Created</div>
-        <p style={{ fontSize: 13, color: "#767168", marginBottom: 20 }}>Save these credentials — the password cannot be retrieved later.</p>
-        <div style={{ background: "#FAFAF8", border: "1px solid #ECEAE5", borderRadius: 8, padding: "16px 20px", marginBottom: 20, fontFamily: "monospace", fontSize: 13, lineHeight: 2 }}>
+        <p style={{ fontSize: 13, color: colors.mutedText, marginBottom: 20 }}>Save these credentials — the password cannot be retrieved later.</p>
+        <div style={{ background: colors.cardBg, border: "1px solid #ECEAE5", borderRadius: 8, padding: "16px 20px", marginBottom: 20, fontFamily: "monospace", fontSize: 13, lineHeight: 2 }}>
           <div><span style={{ color: "#999" }}>Name:</span> <strong>{name}</strong></div>
           <div><span style={{ color: "#999" }}>Email:</span> <strong>{email}</strong></div>
-          <div><span style={{ color: "#999" }}>Password:</span> <strong style={{ color: "#EA2028" }}>{tempPassword}</strong></div>
+          <div><span style={{ color: "#999" }}>Password:</span> <strong style={{ color: colors.red }}>{tempPassword}</strong></div>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={handleCopy} style={{ flex: 1, padding: "10px", background: copied ? "#3D7A54" : "#EA2028", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, cursor: "pointer", fontWeight: 500 }}>
+          <button onClick={handleCopy} style={{ flex: 1, padding: "10px", background: copied ? colors.green : colors.red, color: colors.white, border: "none", borderRadius: 6, fontSize: 13, cursor: "pointer", fontWeight: 500 }}>
             {copied ? "✓ Copied!" : "Copy Credentials"}
           </button>
           <button onClick={onClose} style={{ padding: "10px 20px", background: "#F5F3EF", border: "1px solid #ECEAE5", borderRadius: 6, fontSize: 13, cursor: "pointer", color: "#666" }}>
@@ -738,7 +733,7 @@ function InvestorManager({ toast, onViewProfile, hideHeader }) {
     else { setSortBy(col); setSortDir("asc"); }
   }
 
-  const statusBadge = (s) => ({ fontSize: 11, padding: "2px 8px", borderRadius: 3, background: s === "ACTIVE" ? "#EFE" : s === "PENDING" ? "#FFF8E1" : "#FEE", color: s === "ACTIVE" ? green : s === "PENDING" ? "#B8860B" : red });
+  const statusBadge = (s) => ({ fontSize: 11, padding: "2px 8px", borderRadius: 3, background: s === "ACTIVE" ? "#EFE" : s === "PENDING" ? "#FFF8E1" : "#FEE", color: s === "ACTIVE" ? colors.green : s === "PENDING" ? "#B8860B" : colors.red });
 
   if (invLoading && investors.length === 0) return <Spinner />;
 
@@ -750,12 +745,12 @@ function InvestorManager({ toast, onViewProfile, hideHeader }) {
         <h1 style={{ fontSize: 28, fontWeight: 300 }}>Investors</h1>
       </div>}
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
-        <button onClick={() => setShowInvite(!showInvite)} style={btnStyle}>{showInvite ? "Cancel" : "Invite Investor"}</button>
+        <Button onClick={() => setShowInvite(!showInvite)}>{showInvite ? "Cancel" : "Invite Investor"}</Button>
       </div>
 
       {/* Invite form */}
       {showInvite && (
-        <form onSubmit={handleInvite} className="admin-form-row" style={{ background: "#fff", borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", marginBottom: 24, display: "flex", gap: 12, alignItems: "flex-end" }}>
+        <form onSubmit={handleInvite} className="admin-form-row" style={{ background: colors.white, borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", marginBottom: 24, display: "flex", gap: 12, alignItems: "flex-end" }}>
           <div style={{ flex: 1 }}>
             <label style={{ display: "block", fontSize: 11, color: "#888", marginBottom: 4 }}>Full Name</label>
             <input value={inviteName} onChange={e => setInviteName(e.target.value)} required style={inputStyle} placeholder="James Chen" />
@@ -764,7 +759,7 @@ function InvestorManager({ toast, onViewProfile, hideHeader }) {
             <label style={{ display: "block", fontSize: 11, color: "#888", marginBottom: 4 }}>Email</label>
             <input type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} required style={inputStyle} placeholder="investor@example.com" />
           </div>
-          <button type="submit" style={btnStyle}>Send Invite</button>
+          <Button type="submit">Send Invite</Button>
         </form>
       )}
 
@@ -784,7 +779,7 @@ function InvestorManager({ toast, onViewProfile, hideHeader }) {
       </div>
 
       {/* Column headers */}
-      <div className="admin-table-scroll" style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+      <div className="admin-table-scroll" style={{ background: colors.white, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 100px 120px 120px 140px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE" }}>
           <SortableHeader columns={[
             { key: "name", label: "Name" },
@@ -793,29 +788,29 @@ function InvestorManager({ toast, onViewProfile, hideHeader }) {
             { key: "committed", label: "Committed" },
             { key: "value", label: "Value" },
           ]} sortBy={sortBy} sortDir={sortDir} onSort={toggleSort} />
-          <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#767168" }}>Actions</span>
+          <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: colors.mutedText }}>Actions</span>
         </div>
 
         {investors.map((inv) => (
           <div key={inv.id}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 100px 120px 120px 140px", padding: "14px 20px", borderBottom: "1px solid #F0EDE8", alignItems: "center", fontSize: 13 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 100px 120px 120px 140px", padding: "14px 20px", borderBottom: `1px solid ${colors.lightBorder}`, alignItems: "center", fontSize: 13 }}>
               <span style={{ fontWeight: 500 }}>{inv.name}</span>
               <span style={{ color: "#666" }}>{inv.email}</span>
               <span><span style={statusBadge(inv.status)}>{inv.status}</span></span>
               <span>${fmt(inv.totalCommitted)}</span>
               <span>${fmt(inv.totalValue)}</span>
               <div style={{ display: "flex", gap: 6 }}>
-                <button onClick={() => onViewProfile?.(inv.id)} style={{ ...btnStyle, padding: "4px 10px", fontSize: 11 }}>View</button>
-                <button onClick={() => setEditing(editing === inv.id ? null : inv.id)} style={{ ...btnOutline, padding: "4px 10px", fontSize: 11 }}>Edit</button>
-                {inv.status === "PENDING" && <button onClick={() => handleApprove(inv.id)} style={{ ...btnStyle, padding: "4px 10px", fontSize: 11, background: green }}>Approve</button>}
-                {inv.status === "PENDING" && <button onClick={() => setConfirmAction({ title: "Reject Investor", message: `Reject investor "${inv.name}"? This will deactivate their account.`, danger: true, onConfirm: () => { setConfirmAction(null); handleDeactivate(inv.id); } })} style={{ ...btnOutline, padding: "4px 10px", fontSize: 11, color: red, borderColor: red }}>Reject</button>}
-                {inv.status === "ACTIVE" && <button onClick={() => setConfirmAction({ title: "Deactivate Investor", message: `Deactivate ${inv.name}? They will no longer be able to log in.`, danger: true, onConfirm: () => { setConfirmAction(null); handleDeactivate(inv.id); } })} style={{ ...btnOutline, padding: "4px 10px", fontSize: 11, color: red, borderColor: red }}>Deactivate</button>}
+                <Button onClick={() => onViewProfile?.(inv.id)} style={{ padding: "4px 10px", fontSize: 11 }}>View</Button>
+                <Button onClick={() => setEditing(editing === inv.id ? null : inv.id)} variant="outline" style={{ padding: "4px 10px", fontSize: 11 }}>Edit</Button>
+                {inv.status === "PENDING" && <Button onClick={() => handleApprove(inv.id)} style={{ padding: "4px 10px", fontSize: 11, background: colors.green }}>Approve</Button>}
+                {inv.status === "PENDING" && <Button onClick={() => setConfirmAction({ title: "Reject Investor", message: `Reject investor "${inv.name}"? This will deactivate their account.`, danger: true, onConfirm: () => { setConfirmAction(null); handleDeactivate(inv.id); } })} variant="outline" style={{ padding: "4px 10px", fontSize: 11, color: colors.red, borderColor: colors.red }}>Reject</Button>}
+                {inv.status === "ACTIVE" && <Button onClick={() => setConfirmAction({ title: "Deactivate Investor", message: `Deactivate ${inv.name}? They will no longer be able to log in.`, danger: true, onConfirm: () => { setConfirmAction(null); handleDeactivate(inv.id); } })} variant="outline" style={{ padding: "4px 10px", fontSize: 11, color: colors.red, borderColor: colors.red }}>Deactivate</Button>}
               </div>
             </div>
 
             {/* Expanded edit panel */}
             {editing === inv.id && (
-              <div style={{ padding: "16px 20px", borderBottom: "1px solid #F0EDE8", background: "#FAFAF8" }}>
+              <div style={{ padding: "16px 20px", borderBottom: `1px solid ${colors.lightBorder}`, background: colors.cardBg }}>
                 <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
                   <div style={{ flex: 1 }}>
                     <label style={{ fontSize: 11, color: "#888" }}>Name</label>
@@ -828,7 +823,7 @@ function InvestorManager({ toast, onViewProfile, hideHeader }) {
                   <div>
                     <label style={{ fontSize: 11, color: "#888" }}>Actions</label>
                     <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
-                      <button onClick={() => handleResetPw(inv.id)} style={{ ...btnOutline, fontSize: 11, padding: "6px 10px" }}>Reset Password</button>
+                      <Button onClick={() => handleResetPw(inv.id)} variant="outline" style={{ fontSize: 11, padding: "6px 10px" }}>Reset Password</Button>
                     </div>
                   </div>
                 </div>
@@ -836,7 +831,7 @@ function InvestorManager({ toast, onViewProfile, hideHeader }) {
                 {/* Project KPIs */}
                 <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 8, color: "#666" }}>Project KPIs / Returns</div>
                 {inv.projects.map(p => (
-                  <div key={p.projectId} style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 8, padding: "8px 12px", background: "#fff", borderRadius: 4, border: "1px solid #E8E5DE" }}>
+                  <div key={p.projectId} style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 8, padding: "8px 12px", background: colors.white, borderRadius: 4, border: "1px solid #E8E5DE" }}>
                     <span style={{ width: 100, fontWeight: 500, fontSize: 13 }}>{p.projectName}</span>
                     {editingKPI === `${inv.id}-${p.projectId}` ? (
                       <>
@@ -845,22 +840,22 @@ function InvestorManager({ toast, onViewProfile, hideHeader }) {
                         <KPIInput label="Value" defaultValue={p.currentValue} onSave={v => handleKPISave(inv.id, p.projectId, { currentValue: parseFloat(v) })} />
                         <KPIInput label="IRR %" defaultValue={p.irr} onSave={v => handleKPISave(inv.id, p.projectId, { irr: parseFloat(v) })} />
                         <KPIInput label="MOIC" defaultValue={p.moic} onSave={v => handleKPISave(inv.id, p.projectId, { moic: parseFloat(v) })} />
-                        <button onClick={() => setEditingKPI(null)} style={{ ...btnOutline, fontSize: 11, padding: "4px 8px" }}>Done</button>
+                        <Button onClick={() => setEditingKPI(null)} variant="outline" style={{ fontSize: 11, padding: "4px 8px" }}>Done</Button>
                       </>
                     ) : (
                       <>
                         <span style={{ fontSize: 12, color: "#666" }}>${fmt(p.committed)} committed · ${fmt(p.currentValue)} value · {p.irr}% IRR · {p.moic}x</span>
-                        <button onClick={() => setEditingKPI(`${inv.id}-${p.projectId}`)} style={{ ...btnOutline, fontSize: 11, padding: "4px 8px", marginLeft: "auto" }}>Edit KPIs</button>
+                        <Button onClick={() => setEditingKPI(`${inv.id}-${p.projectId}`)} variant="outline" style={{ fontSize: 11, padding: "4px 8px", marginLeft: "auto" }}>Edit KPIs</Button>
                       </>
                     )}
                   </div>
                 ))}
-                {inv.projects.length === 0 && <div style={{ fontSize: 12, color: "#767168", fontStyle: "italic" }}>No project assignments</div>}
+                {inv.projects.length === 0 && <div style={{ fontSize: 12, color: colors.mutedText, fontStyle: "italic" }}>No project assignments</div>}
               </div>
             )}
           </div>
         ))}
-        {investors.length === 0 && <div style={{ padding: 24, color: "#767168", textAlign: "center" }}>No investors found</div>}
+        {investors.length === 0 && <div style={{ padding: 24, color: colors.mutedText, textAlign: "center" }}>No investors found</div>}
       </div>
     </>
   );
@@ -1031,15 +1026,15 @@ function ProjectDetail({ projectId, onBack, toast }) {
     } catch (e) { toast(e.message, "error"); }
   }
 
-  const section = { background: "#fff", borderRadius: 12, padding: "20px 24px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" };
+  const section = { background: colors.white, borderRadius: 12, padding: "20px 24px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" };
   const tabs = ["overview", "investors", "documents", "updates", "waterfall", "cashflows", "model"];
 
   return (
     <>
-      <p style={{ fontSize: 12, color: red, cursor: "pointer", marginBottom: 24 }} onClick={onBack}>← Back to projects</p>
+      <p style={{ fontSize: 12, color: colors.red, cursor: "pointer", marginBottom: 24 }} onClick={onBack}>← Back to projects</p>
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 28, fontWeight: 300 }}>{project.name}</h1>
-        <div style={{ fontSize: 13, color: "#767168" }}>{project.location} · {project.type}</div>
+        <div style={{ fontSize: 13, color: colors.mutedText }}>{project.location} · {project.type}</div>
       </div>
 
       {/* KPI cards */}
@@ -1051,9 +1046,9 @@ function ProjectDetail({ projectId, onBack, toast }) {
           { label: "Investors", value: project.investors.length },
           { label: "Documents", value: project.documents.length },
         ].map((s, i) => (
-          <div key={i} style={{ background: "#fff", borderRadius: 10, padding: "16px 20px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+          <div key={i} style={{ background: colors.white, borderRadius: 10, padding: "16px 20px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
             <div style={{ fontSize: 22, fontWeight: 300, marginBottom: 2 }}>{s.value}</div>
-            <div style={{ fontSize: 10, color: "#767168", textTransform: "uppercase", letterSpacing: ".08em" }}>{s.label}</div>
+            <div style={{ fontSize: 10, color: colors.mutedText, textTransform: "uppercase", letterSpacing: ".08em" }}>{s.label}</div>
           </div>
         ))}
       </div>
@@ -1063,8 +1058,8 @@ function ProjectDetail({ projectId, onBack, toast }) {
         {tabs.map(t => (
           <span key={t} onClick={() => setTab(t)} style={{
             fontSize: 13, padding: "8px 16px", cursor: "pointer", textTransform: "capitalize",
-            color: tab === t ? darkText : "#888", fontWeight: tab === t ? 500 : 400,
-            background: tab === t ? "#fff" : "transparent",
+            color: tab === t ? colors.darkText : "#888", fontWeight: tab === t ? 500 : 400,
+            background: tab === t ? colors.white : "transparent",
             borderRadius: 6,
             boxShadow: tab === t ? "0 1px 3px rgba(0,0,0,.08)" : "none",
             transition: "all .15s",
@@ -1105,10 +1100,10 @@ function ProjectDetail({ projectId, onBack, toast }) {
                 <label style={{ fontSize: 11, color: "#888" }}>Units Sold</label>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
                   <input type="number" defaultValue={project.unitsSold || 0} onBlur={e => handleSaveField("unitsSold", parseInt(e.target.value))} style={{ ...inputStyle, width: 80 }} />
-                  <span style={{ fontSize: 12, color: "#767168" }}>/ {project.units || 0} total</span>
+                  <span style={{ fontSize: 12, color: colors.mutedText }}>/ {project.units || 0} total</span>
                   {project.units > 0 && (
-                    <div style={{ flex: 1, height: 6, background: "#F0EDE8", borderRadius: 20, overflow: "hidden" }}>
-                      <div style={{ width: `${Math.min(100, ((project.unitsSold || 0) / project.units) * 100)}%`, height: "100%", background: green, borderRadius: 20 }} />
+                    <div style={{ flex: 1, height: 6, background: colors.lightBorder, borderRadius: 20, overflow: "hidden" }}>
+                      <div style={{ width: `${Math.min(100, ((project.unitsSold || 0) / project.units) * 100)}%`, height: "100%", background: colors.green, borderRadius: 20 }} />
                     </div>
                   )}
                 </div>
@@ -1125,13 +1120,13 @@ function ProjectDetail({ projectId, onBack, toast }) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: "#666" }}>Organization Chart</div>
               <div style={{ display: "flex", gap: 6 }}>
-                <button onClick={() => setOrgChart(oc => [...oc, { role: "", name: "", company: "" }])} style={{ ...btnOutline, padding: "4px 10px", fontSize: 11 }}>Add Row</button>
-                <button onClick={handleSaveOrgChart} style={{ ...btnStyle, padding: "4px 10px", fontSize: 11 }}>Save</button>
+                <Button onClick={() => setOrgChart(oc => [...oc, { role: "", name: "", company: "" }])} variant="outline" style={{ padding: "4px 10px", fontSize: 11 }}>Add Row</Button>
+                <Button onClick={handleSaveOrgChart} style={{ padding: "4px 10px", fontSize: 11 }}>Save</Button>
               </div>
             </div>
             {orgChart.length > 0 ? (
               <div className="admin-table-scroll">
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 30px", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 30px", fontSize: 11, color: colors.mutedText, textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
                   <span>Role</span><span>Name</span><span>Company</span><span></span>
                 </div>
                 {orgChart.map((row, i) => (
@@ -1153,15 +1148,15 @@ function ProjectDetail({ projectId, onBack, toast }) {
         <div style={section}>
           <div style={{ fontSize: 13, fontWeight: 600, color: "#666", marginBottom: 14 }}>LP Investors ({project.investors.length})</div>
           {project.investors.length > 0 ? project.investors.map((inv) => (
-            <div key={inv.userId} style={{ padding: "12px 0", borderBottom: "1px solid #F0EDE8" }}>
+            <div key={inv.userId} style={{ padding: "12px 0", borderBottom: `1px solid ${colors.lightBorder}` }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                 <div>
                   <span style={{ fontSize: 14, fontWeight: 500 }}>{inv.name}</span>
-                  <span style={{ fontSize: 12, color: "#767168", marginLeft: 8 }}>{inv.email}</span>
+                  <span style={{ fontSize: 12, color: colors.mutedText, marginLeft: 8 }}>{inv.email}</span>
                 </div>
-                <button onClick={() => setEditingKPI(editingKPI === inv.userId ? null : inv.userId)} style={{ ...btnOutline, padding: "4px 10px", fontSize: 11 }}>
+                <Button onClick={() => setEditingKPI(editingKPI === inv.userId ? null : inv.userId)} variant="outline" style={{ padding: "4px 10px", fontSize: 11 }}>
                   {editingKPI === inv.userId ? "Done" : "Edit KPIs"}
-                </button>
+                </Button>
               </div>
               {editingKPI === inv.userId ? (
                 <div style={{ display: "flex", gap: 10 }}>
@@ -1192,9 +1187,9 @@ function ProjectDetail({ projectId, onBack, toast }) {
           {/* Add Investor from Project Detail (D.3) */}
           <div style={{ marginTop: 16 }}>
             {!showAddInvestor ? (
-              <button onClick={async () => { const invs = await fetchAdminInvestors(); setAddInvList(Array.isArray(invs) ? invs : invs.investors || []); setShowAddInvestor(true); }} style={{ ...btnOutline, fontSize: 12 }}>Add Investor</button>
+              <Button onClick={async () => { const invs = await fetchAdminInvestors(); setAddInvList(Array.isArray(invs) ? invs : invs.investors || []); setShowAddInvestor(true); }} variant="outline" style={{ fontSize: 12 }}>Add Investor</Button>
             ) : (
-              <div style={{ background: "#FAFAF8", borderRadius: 8, padding: "16px", border: "1px solid #E8E5DE" }}>
+              <div style={{ background: colors.cardBg, borderRadius: 8, padding: "16px", border: "1px solid #E8E5DE" }}>
                 <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 12 }}>Add Investor to Project</div>
                 <div style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
                   <div style={{ flex: 1 }}>
@@ -1208,14 +1203,14 @@ function ProjectDetail({ projectId, onBack, toast }) {
                     <label style={{ display: "block", fontSize: 11, color: "#888", marginBottom: 4 }}>Commitment ($)</label>
                     <input type="number" value={addInvCommitted} onChange={e => setAddInvCommitted(e.target.value)} placeholder="0" style={inputStyle} />
                   </div>
-                  <button onClick={() => setShowAddInvestor(false)} style={{ ...btnOutline, fontSize: 12 }}>Cancel</button>
-                  <button disabled={!addInvId} onClick={async () => {
+                  <Button onClick={() => setShowAddInvestor(false)} variant="outline" style={{ fontSize: 12 }}>Cancel</Button>
+                  <Button disabled={!addInvId} onClick={async () => {
                     try {
                       await assignInvestorProject(parseInt(addInvId), { projectId, committed: Number(addInvCommitted) || 0 });
                       toast("Investor added to project");
                       setShowAddInvestor(false); setAddInvId(""); setAddInvCommitted(""); load();
                     } catch (e) { toast(e.message, "error"); }
-                  }} style={{ ...btnStyle, fontSize: 12, opacity: addInvId ? 1 : 0.5 }}>Add</button>
+                  }} style={{ fontSize: 12, opacity: addInvId ? 1 : 0.5 }}>Add</Button>
                 </div>
               </div>
             )}
@@ -1230,13 +1225,13 @@ function ProjectDetail({ projectId, onBack, toast }) {
               unfunded: acc.unfunded + ((inv.committed || 0) - (inv.called || 0)),
             }), { committed: 0, called: 0, distributed: 0, unfunded: 0 });
             return (
-              <div style={{ marginTop: 20, background: "#FAFAF8", borderRadius: 8, padding: "16px 20px", border: "1px solid #E8E5DE" }}>
+              <div style={{ marginTop: 20, background: colors.cardBg, borderRadius: 8, padding: "16px 20px", border: "1px solid #E8E5DE" }}>
                 <div style={{ fontSize: 12, fontWeight: 600, color: "#666", marginBottom: 10, textTransform: "uppercase", letterSpacing: ".06em" }}>Financial Summary</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12 }}>
-                  <div><div style={{ fontSize: 18, fontWeight: 300 }}>${fmt(totals.committed)}</div><div style={{ fontSize: 10, color: "#767168" }}>Total Committed</div></div>
-                  <div><div style={{ fontSize: 18, fontWeight: 300 }}>${fmt(totals.called)}</div><div style={{ fontSize: 10, color: "#767168" }}>Total Called</div></div>
-                  <div><div style={{ fontSize: 18, fontWeight: 300 }}>${fmt(totals.distributed)}</div><div style={{ fontSize: 10, color: "#767168" }}>Total Distributed</div></div>
-                  <div><div style={{ fontSize: 18, fontWeight: 300 }}>${fmt(totals.unfunded)}</div><div style={{ fontSize: 10, color: "#767168" }}>Total Unfunded</div></div>
+                  <div><div style={{ fontSize: 18, fontWeight: 300 }}>${fmt(totals.committed)}</div><div style={{ fontSize: 10, color: colors.mutedText }}>Total Committed</div></div>
+                  <div><div style={{ fontSize: 18, fontWeight: 300 }}>${fmt(totals.called)}</div><div style={{ fontSize: 10, color: colors.mutedText }}>Total Called</div></div>
+                  <div><div style={{ fontSize: 18, fontWeight: 300 }}>${fmt(totals.distributed)}</div><div style={{ fontSize: 10, color: colors.mutedText }}>Total Distributed</div></div>
+                  <div><div style={{ fontSize: 18, fontWeight: 300 }}>${fmt(totals.unfunded)}</div><div style={{ fontSize: 10, color: colors.mutedText }}>Total Unfunded</div></div>
                 </div>
               </div>
             );
@@ -1247,7 +1242,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
             {!showDistribution ? (
               <button onClick={() => setShowDistribution(true)} style={{ ...btnOutline, fontSize: 12 }}>Record Distribution</button>
             ) : (
-              <div style={{ background: "#FAFAF8", borderRadius: 8, padding: "16px", border: "1px solid #E8E5DE" }}>
+              <div style={{ background: colors.cardBg, borderRadius: 8, padding: "16px", border: "1px solid #E8E5DE" }}>
                 <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 12 }}>Record Bulk Distribution</div>
                 <div style={{ display: "flex", gap: 12, alignItems: "flex-end", marginBottom: 12 }}>
                   <div style={{ flex: 1 }}>
@@ -1272,7 +1267,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
                   </div>
                 </div>
                 {distPreview && distPreview.length > 0 && (
-                  <div style={{ marginBottom: 12, padding: "8px 12px", background: "#fff", borderRadius: 4, border: "1px solid #E8E5DE" }}>
+                  <div style={{ marginBottom: 12, padding: "8px 12px", background: colors.white, borderRadius: 4, border: "1px solid #E8E5DE" }}>
                     <div style={{ fontSize: 11, fontWeight: 600, color: "#888", marginBottom: 6 }}>Pro-Rata Split Preview</div>
                     {distPreview.map((d, i) => (
                       <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "3px 0", borderBottom: i < distPreview.length - 1 ? "1px solid #F5F3F0" : "none" }}>
@@ -1303,7 +1298,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
             <button onClick={() => { setShowCapForm(!showCapForm); setEditingCapId(null); setCapForm({ holderName: "", holderType: "LP", committed: "", called: "", ownershipPct: "", unfunded: "" }); }} style={{ ...btnOutline, padding: "4px 10px", fontSize: 11 }}>{showCapForm ? "Cancel" : "Add Entry"}</button>
           </div>
           {showCapForm && (
-            <div style={{ background: "#FAFAF8", borderRadius: 6, padding: "12px", marginBottom: 12, border: "1px solid #E8E5DE" }}>
+            <div style={{ background: colors.cardBg, borderRadius: 6, padding: "12px", marginBottom: 12, border: "1px solid #E8E5DE" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 100px 100px 80px 80px", gap: 8, alignItems: "flex-end" }}>
                 <div><label style={{ fontSize: 10, color: "#AAA" }}>Holder Name</label><input value={capForm.holderName} onChange={e => setCapForm(f => ({ ...f, holderName: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} placeholder="Name" /></div>
                 <div><label style={{ fontSize: 10, color: "#AAA" }}>Type</label><select value={capForm.holderType} onChange={e => setCapForm(f => ({ ...f, holderType: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }}><option>LP</option><option>GP</option><option>Co-GP</option></select></div>
@@ -1326,7 +1321,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
           )}
           {project.capTable.length > 0 && (
             <div className="admin-table-scroll">
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 100px 100px 80px 80px 80px", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 100px 100px 80px 80px 80px", fontSize: 11, color: colors.mutedText, textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
                 <span>Holder</span><span>Class</span><span>Committed</span><span>Called</span><span>Unfunded</span><span>Ownership</span><span>Actions</span>
               </div>
               {project.capTable.map(e => (
@@ -1339,7 +1334,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
                   <span>{e.ownership}%</span>
                   <div style={{ display: "flex", gap: 4 }}>
                     <button onClick={() => { setEditingCapId(e.id); setCapForm({ holderName: e.holder, holderType: e.type, committed: e.committed || "", called: e.called || "", ownershipPct: e.ownership || "", unfunded: e.unfunded || "" }); setShowCapForm(true); }} style={{ ...btnOutline, padding: "2px 6px", fontSize: 10 }}>Edit</button>
-                    <button onClick={async () => { if (!confirm("Delete this cap table entry?")) return; try { await deleteCapTableEntry(projectId, e.id); toast("Entry deleted"); load(); } catch (err) { toast(err.message, "error"); } }} style={{ ...btnOutline, padding: "2px 6px", fontSize: 10, color: red, borderColor: red }}>&times;</button>
+                    <button onClick={async () => { if (!confirm("Delete this cap table entry?")) return; try { await deleteCapTableEntry(projectId, e.id); toast("Entry deleted"); load(); } catch (err) { toast(err.message, "error"); } }} style={{ ...btnOutline, padding: "2px 6px", fontSize: 10, color: colors.red, borderColor: colors.red }}>&times;</button>
                   </div>
                 </div>
               ))}
@@ -1358,7 +1353,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
                 <div style={{ fontWeight: 500 }}>{d.name}</div>
                 <div style={{ fontSize: 11, color: "#BBB" }}>{d.category} · {d.date} · {d.size}</div>
               </div>
-              <span style={{ fontSize: 12, color: d.viewedBy > 0 ? green : "#CCC" }}>{d.viewedBy} viewed</span>
+              <span style={{ fontSize: 12, color: d.viewedBy > 0 ? colors.green : "#CCC" }}>{d.viewedBy} viewed</span>
             </div>
           )) : <p style={{ color: "#BBB", fontSize: 13, fontStyle: "italic" }}>No documents</p>}
         </div>
@@ -1390,7 +1385,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
             <button onClick={() => { setShowTierForm(!showTierForm); setEditingTierId(null); setTierForm({ tierName: "", lpShare: "", gpShare: "", threshold: "" }); }} style={{ ...btnOutline, padding: "4px 10px", fontSize: 11 }}>{showTierForm ? "Cancel" : "Add Tier"}</button>
           </div>
           {showTierForm && (
-            <div style={{ background: "#FAFAF8", borderRadius: 6, padding: "12px", marginBottom: 12, border: "1px solid #E8E5DE" }}>
+            <div style={{ background: colors.cardBg, borderRadius: 6, padding: "12px", marginBottom: 12, border: "1px solid #E8E5DE" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 100px 120px", gap: 8, alignItems: "flex-end" }}>
                 <div><label style={{ fontSize: 10, color: "#AAA" }}>Tier Name</label><input value={tierForm.tierName} onChange={e => setTierForm(f => ({ ...f, tierName: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} placeholder="e.g. Preferred Return" /></div>
                 <div><label style={{ fontSize: 10, color: "#AAA" }}>LP Share</label><input value={tierForm.lpShare} onChange={e => setTierForm(f => ({ ...f, lpShare: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} placeholder="e.g. 100%" /></div>
@@ -1413,13 +1408,13 @@ function ProjectDetail({ projectId, onBack, toast }) {
             <div key={t.id} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #F5F3F0", fontSize: 13, alignItems: "center" }}>
               <div>
                 <span style={{ fontWeight: 500 }}>{t.name}</span>
-                <span style={{ color: "#767168", marginLeft: 12 }}>LP: {t.lpShare} · GP: {t.gpShare}</span>
+                <span style={{ color: colors.mutedText, marginLeft: 12 }}>LP: {t.lpShare} · GP: {t.gpShare}</span>
               </div>
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <span style={{ color: "#767168", fontSize: 12 }}>{t.threshold}</span>
-                <span style={{ padding: "2px 8px", borderRadius: 3, fontSize: 10, background: t.status === "complete" ? "#EFE" : t.status === "accruing" ? "#FFF8E1" : "#F0EDE8", color: t.status === "complete" ? green : t.status === "accruing" ? "#B8860B" : "#999" }}>{t.status}</span>
+                <span style={{ color: colors.mutedText, fontSize: 12 }}>{t.threshold}</span>
+                <span style={{ padding: "2px 8px", borderRadius: 3, fontSize: 10, background: t.status === "complete" ? "#EFE" : t.status === "accruing" ? "#FFF8E1" : colors.lightBorder, color: t.status === "complete" ? colors.green : t.status === "accruing" ? "#B8860B" : "#999" }}>{t.status}</span>
                 <button onClick={() => { setEditingTierId(t.id); setTierForm({ tierName: t.name, lpShare: t.lpShare, gpShare: t.gpShare, threshold: t.threshold }); setShowTierForm(true); }} style={{ ...btnOutline, padding: "2px 6px", fontSize: 10 }}>Edit</button>
-                <button onClick={async () => { if (!confirm(`Delete tier "${t.name}"?`)) return; try { await deleteWaterfallTier(projectId, t.id); toast("Tier deleted"); load(); } catch (e) { toast(e.message, "error"); } }} style={{ ...btnOutline, padding: "2px 6px", fontSize: 10, color: red, borderColor: red }}>&times;</button>
+                <button onClick={async () => { if (!confirm(`Delete tier "${t.name}"?`)) return; try { await deleteWaterfallTier(projectId, t.id); toast("Tier deleted"); load(); } catch (e) { toast(e.message, "error"); } }} style={{ ...btnOutline, padding: "2px 6px", fontSize: 10, color: colors.red, borderColor: colors.red }}>&times;</button>
               </div>
             </div>
           )) : (!showTierForm && <p style={{ color: "#BBB", fontSize: 13, fontStyle: "italic" }}>No distribution tiers</p>)}
@@ -1450,7 +1445,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
               {fmLoading ? "Running..." : "Run Scenario"}
             </button>
           </div>
-          <div style={{ fontSize: 12, color: "#767168", marginBottom: 20 }}>
+          <div style={{ fontSize: 12, color: colors.mutedText, marginBottom: 20 }}>
             Pre-filled: Total Investment ${fmt(project.totalRaise)} | Pref: {project.prefReturn}% | Carry: {project.carry}%
           </div>
 
@@ -1465,8 +1460,8 @@ function ProjectDetail({ projectId, onBack, toast }) {
                   { label: "Cash on Cash", value: `${fmResult.cashOnCash}%` },
                 ].map((c, i) => (
                   <div key={i} style={{ background: "#F8F7F4", borderRadius: 6, padding: "16px 20px", textAlign: "center" }}>
-                    <div style={{ fontSize: 22, fontWeight: 300, color: darkText }}>{c.value}</div>
-                    <div style={{ fontSize: 10, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em", marginTop: 4 }}>{c.label}</div>
+                    <div style={{ fontSize: 22, fontWeight: 300, color: colors.darkText }}>{c.value}</div>
+                    <div style={{ fontSize: 10, color: colors.mutedText, textTransform: "uppercase", letterSpacing: ".06em", marginTop: 4 }}>{c.label}</div>
                   </div>
                 ))}
               </div>
@@ -1480,33 +1475,33 @@ function ProjectDetail({ projectId, onBack, toast }) {
                   <div key={i} style={{ marginBottom: 12 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
                       <span style={{ fontWeight: 500 }}>{tier.name}</span>
-                      <span style={{ color: "#767168" }}>LP: ${fmt(Math.round(tier.lpAmount))} | GP: ${fmt(Math.round(tier.gpAmount))}</span>
+                      <span style={{ color: colors.mutedText }}>LP: ${fmt(Math.round(tier.lpAmount))} | GP: ${fmt(Math.round(tier.gpAmount))}</span>
                     </div>
-                    <div style={{ height: 12, background: "#F0EDE8", borderRadius: 2, overflow: "hidden", display: "flex" }}>
-                      <div style={{ width: `${lpPct}%`, background: green, height: "100%" }} />
-                      <div style={{ width: `${100 - lpPct}%`, background: red, height: "100%", opacity: 0.6 }} />
+                    <div style={{ height: 12, background: colors.lightBorder, borderRadius: 2, overflow: "hidden", display: "flex" }}>
+                      <div style={{ width: `${lpPct}%`, background: colors.green, height: "100%" }} />
+                      <div style={{ width: `${100 - lpPct}%`, background: colors.red, height: "100%", opacity: 0.6 }} />
                     </div>
                   </div>
                 );
               })}
-              <div style={{ display: "flex", gap: 16, fontSize: 11, color: "#767168", marginBottom: 24, marginTop: 8 }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, background: green, borderRadius: 2, display: "inline-block" }} /> LP</span>
-                <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, background: `${red}99`, borderRadius: 2, display: "inline-block" }} /> GP</span>
+              <div style={{ display: "flex", gap: 16, fontSize: 11, color: colors.mutedText, marginBottom: 24, marginTop: 8 }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, background: colors.green, borderRadius: 2, display: "inline-block" }} /> LP</span>
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 10, background: `${colors.red}99`, borderRadius: 2, display: "inline-block" }} /> GP</span>
               </div>
 
               {/* Year-by-year */}
               <div style={{ fontSize: 13, fontWeight: 600, color: "#666", marginBottom: 12 }}>Year-by-Year Cash Flow</div>
               <div className="admin-table-scroll">
-              <div style={{ display: "grid", gridTemplateColumns: "80px 120px 120px 120px", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "80px 120px 120px 120px", fontSize: 11, color: colors.mutedText, textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
                 <span>Year</span><span style={{ textAlign: "right" }}>Cash Flow</span><span style={{ textAlign: "right" }}>Cumulative</span><span style={{ textAlign: "right" }}>Balance</span>
               </div>
               {fmResult.yearByYear.map((y, i) => (
                 <div key={i} style={{ display: "grid", gridTemplateColumns: "80px 120px 120px 120px", padding: "8px 0", borderBottom: "1px solid #F5F3F0", fontSize: 13 }}>
                   <span>{y.year === 0 ? "Initial" : `Year ${y.year}`}</span>
-                  <span style={{ textAlign: "right", color: y.cashFlow < 0 ? red : green, fontWeight: 500 }}>
+                  <span style={{ textAlign: "right", color: y.cashFlow < 0 ? colors.red : colors.green, fontWeight: 500 }}>
                     {y.cashFlow < 0 ? `-$${fmt(Math.abs(Math.round(y.cashFlow)))}` : `$${fmt(Math.round(y.cashFlow))}`}
                   </span>
-                  <span style={{ textAlign: "right", color: y.cumulativeCashFlow < 0 ? red : green }}>
+                  <span style={{ textAlign: "right", color: y.cumulativeCashFlow < 0 ? colors.red : colors.green }}>
                     {y.cumulativeCashFlow < 0 ? `-$${fmt(Math.abs(Math.round(y.cumulativeCashFlow)))}` : `$${fmt(Math.round(y.cumulativeCashFlow))}`}
                   </span>
                   <span style={{ textAlign: "right", color: "#666" }}>${fmt(Math.round(y.balance))}</span>
@@ -1519,14 +1514,14 @@ function ProjectDetail({ projectId, onBack, toast }) {
                 <>
                   <div style={{ fontSize: 13, fontWeight: 600, color: "#666", marginBottom: 12, marginTop: 24 }}>Sensitivity Analysis</div>
                   <div className="admin-table-scroll">
-                  <div style={{ display: "grid", gridTemplateColumns: "80px 120px 120px 100px 80px", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "80px 120px 120px 100px 80px", fontSize: 11, color: colors.mutedText, textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
                     <span>Scenario</span><span style={{ textAlign: "right" }}>Exit Value</span><span style={{ textAlign: "right" }}>LP Return</span><span style={{ textAlign: "right" }}>LP IRR</span><span style={{ textAlign: "right" }}>LP MOIC</span>
                   </div>
                   {fmResult.sensitivity.map((s, i) => (
                     <div key={i} style={{ display: "grid", gridTemplateColumns: "80px 120px 120px 100px 80px", padding: "8px 0", borderBottom: "1px solid #F5F3F0", fontSize: 13, background: s.label === "+0%" ? "#F8F7F4" : "transparent" }}>
                       <span style={{ fontWeight: 500 }}>{s.label}</span>
                       <span style={{ textAlign: "right" }}>${fmt(s.exitValue)}</span>
-                      <span style={{ textAlign: "right", color: green }}>${fmt(Math.round(s.lpReturn))}</span>
+                      <span style={{ textAlign: "right", color: colors.green }}>${fmt(Math.round(s.lpReturn))}</span>
                       <span style={{ textAlign: "right" }}>{s.lpIRR != null ? `${(s.lpIRR * 100).toFixed(1)}%` : "--"}</span>
                       <span style={{ textAlign: "right" }}>{s.lpMOIC}x</span>
                     </div>
@@ -1655,18 +1650,18 @@ function DocumentManager({ toast, hideHeader }) {
     return (
       <>
         {confirmAction && <ConfirmDialog {...confirmAction} open={true} onCancel={() => setConfirmAction(null)} />}
-        <p style={{ fontSize: 12, color: red, cursor: "pointer", marginBottom: 24 }} onClick={() => { setSelectedDoc(null); setDocDetail(null); }}>← Back to documents</p>
+        <p style={{ fontSize: 12, color: colors.red, cursor: "pointer", marginBottom: 24 }} onClick={() => { setSelectedDoc(null); setDocDetail(null); }}>← Back to documents</p>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
           <div>
             <h2 style={{ fontSize: 22, fontWeight: 400, marginBottom: 6 }}>{docDetail.name}</h2>
-            <div style={{ fontSize: 12, color: "#767168" }}>
+            <div style={{ fontSize: 12, color: colors.mutedText }}>
               {docDetail.project?.name || "General"} · {docDetail.category} · {docDetail.date} · {docDetail.size}
-              <span style={{ marginLeft: 8, padding: "2px 8px", borderRadius: 3, fontSize: 10, background: docDetail.status === "published" ? "#EFE" : "#FFF8E1", color: docDetail.status === "published" ? green : "#B8860B" }}>{docDetail.status}</span>
+              <span style={{ marginLeft: 8, padding: "2px 8px", borderRadius: 3, fontSize: 10, background: docDetail.status === "published" ? "#EFE" : "#FFF8E1", color: docDetail.status === "published" ? colors.green : "#B8860B" }}>{docDetail.status}</span>
             </div>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={openSignModal} style={{ ...btnStyle, fontSize: 12 }}>Request Signature</button>
-            <button onClick={() => setConfirmAction({ title: "Delete Document", message: `Delete "${docDetail.name}"? This cannot be undone.`, danger: true, onConfirm: async () => { setConfirmAction(null); try { await deleteDocument(docDetail.id); toast("Document deleted"); setSelectedDoc(null); setDocDetail(null); loadDocs(); } catch (e) { toast(e.message, "error"); } } })} style={{ ...btnOutline, fontSize: 12, color: red, borderColor: red }}>Delete</button>
+            <button onClick={() => setConfirmAction({ title: "Delete Document", message: `Delete "${docDetail.name}"? This cannot be undone.`, danger: true, onConfirm: async () => { setConfirmAction(null); try { await deleteDocument(docDetail.id); toast("Document deleted"); setSelectedDoc(null); setDocDetail(null); loadDocs(); } catch (e) { toast(e.message, "error"); } } })} style={{ ...btnOutline, fontSize: 12, color: colors.red, borderColor: colors.red }}>Delete</button>
           </div>
         </div>
 
@@ -1674,7 +1669,7 @@ function DocumentManager({ toast, hideHeader }) {
         {showSignModal && (
           <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,.4)", display: "flex", alignItems: "center", justifyContent: "center" }}
             onClick={() => setShowSignModal(false)}>
-            <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 12, padding: "28px 24px", maxWidth: 480, width: "90%", maxHeight: "70vh", overflow: "auto", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+            <div onClick={e => e.stopPropagation()} style={{ background: colors.white, borderRadius: 12, padding: "28px 24px", maxWidth: 480, width: "90%", maxHeight: "70vh", overflow: "auto", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
               <h3 style={{ fontSize: 18, fontWeight: 400, marginBottom: 20 }}>Request Signature</h3>
               <p style={{ fontSize: 13, color: "#666", marginBottom: 16 }}>Select investors to sign <strong>{docDetail.name}</strong></p>
               <div style={{ marginBottom: 16 }}>
@@ -1685,14 +1680,14 @@ function DocumentManager({ toast, hideHeader }) {
                 <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Signers</label>
                 <div style={{ border: "1px solid #DDD", borderRadius: 4, maxHeight: 200, overflow: "auto" }}>
                   {sigInvestors.map(inv => (
-                    <label key={inv.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderBottom: "1px solid #F0EDE8", cursor: "pointer", fontSize: 13 }}>
+                    <label key={inv.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderBottom: `1px solid ${colors.lightBorder}`, cursor: "pointer", fontSize: 13 }}>
                       <input type="checkbox" checked={sigSelectedIds.includes(inv.id)}
                         onChange={e => setSigSelectedIds(prev => e.target.checked ? [...prev, inv.id] : prev.filter(id => id !== inv.id))} />
                       <span style={{ fontWeight: 500 }}>{inv.name}</span>
-                      <span style={{ color: "#767168" }}>{inv.email}</span>
+                      <span style={{ color: colors.mutedText }}>{inv.email}</span>
                     </label>
                   ))}
-                  {sigInvestors.length === 0 && <div style={{ padding: 14, color: "#767168", fontSize: 12 }}>Loading investors...</div>}
+                  {sigInvestors.length === 0 && <div style={{ padding: 14, color: colors.mutedText, fontSize: 12 }}>Loading investors...</div>}
                 </div>
               </div>
               <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
@@ -1706,40 +1701,40 @@ function DocumentManager({ toast, hideHeader }) {
         )}
 
         {/* Access audit table */}
-        <div className="admin-table-scroll" style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 120px 120px 120px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em" }}>
+        <div className="admin-table-scroll" style={{ background: colors.white, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 120px 120px 120px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: colors.mutedText, textTransform: "uppercase", letterSpacing: ".06em" }}>
             <span>Investor</span><span>Email</span><span>Viewed</span><span>Downloaded</span><span>Acknowledged</span>
           </div>
           {docDetail.accessList.length > 0 ? docDetail.accessList.map((a, i) => (
-            <div key={a.id} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 120px 120px 120px", padding: "12px 20px", borderBottom: i < docDetail.accessList.length - 1 ? "1px solid #F0EDE8" : "none", fontSize: 13, alignItems: "center" }}>
+            <div key={a.id} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 120px 120px 120px", padding: "12px 20px", borderBottom: i < docDetail.accessList.length - 1 ? `1px solid ${colors.lightBorder}` : "none", fontSize: 13, alignItems: "center" }}>
               <span style={{ fontWeight: 500 }}>
                 {a.name}
-                {a.directAssignment && <span style={{ fontSize: 10, color: red, marginLeft: 6 }}>Direct</span>}
+                {a.directAssignment && <span style={{ fontSize: 10, color: colors.red, marginLeft: 6 }}>Direct</span>}
               </span>
               <span style={{ color: "#666" }}>{a.email}</span>
-              <span style={{ color: a.viewedAt ? green : "#CCC" }}>{a.viewedAt ? new Date(a.viewedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}</span>
-              <span style={{ color: a.downloadedAt ? green : "#CCC" }}>{a.downloadedAt ? new Date(a.downloadedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}</span>
-              <span style={{ color: a.acknowledgedAt ? green : "#CCC" }}>{a.acknowledgedAt ? new Date(a.acknowledgedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}</span>
+              <span style={{ color: a.viewedAt ? colors.green : "#CCC" }}>{a.viewedAt ? new Date(a.viewedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}</span>
+              <span style={{ color: a.downloadedAt ? colors.green : "#CCC" }}>{a.downloadedAt ? new Date(a.downloadedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}</span>
+              <span style={{ color: a.acknowledgedAt ? colors.green : "#CCC" }}>{a.acknowledgedAt ? new Date(a.acknowledgedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}</span>
             </div>
           )) : (
-            <div style={{ padding: 20, color: "#767168", textAlign: "center", fontSize: 13 }}>No investor access records</div>
+            <div style={{ padding: 20, color: colors.mutedText, textAlign: "center", fontSize: 13 }}>No investor access records</div>
           )}
         </div>
 
         {/* Signer Status Section (B.5 + B.7) */}
         {docDetail.signatureRequests && docDetail.signatureRequests.length > 0 && (
-          <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", marginTop: 20 }}>
+          <div style={{ background: colors.white, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", marginTop: 20 }}>
             <div style={{ padding: "14px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 13, fontWeight: 600, color: "#666" }}>Signature Status</div>
             {docDetail.signatureRequests.map(req => (
               <div key={req.id}>
-                <div style={{ padding: "10px 20px", fontSize: 12, color: "#767168", background: "#FAFAF8", borderBottom: "1px solid #F0EDE8" }}>
+                <div style={{ padding: "10px 20px", fontSize: 12, color: colors.mutedText, background: colors.cardBg, borderBottom: `1px solid ${colors.lightBorder}` }}>
                   Request: {req.subject || "Signature Request"} — {req.status || "active"}
                 </div>
                 {(req.signers || []).map(signer => (
-                  <div key={signer.id || signer.userId} style={{ display: "grid", gridTemplateColumns: "1fr 100px 160px 120px", padding: "10px 20px", borderBottom: "1px solid #F0EDE8", fontSize: 13, alignItems: "center" }}>
+                  <div key={signer.id || signer.userId} style={{ display: "grid", gridTemplateColumns: "1fr 100px 160px 120px", padding: "10px 20px", borderBottom: `1px solid ${colors.lightBorder}`, fontSize: 13, alignItems: "center" }}>
                     <span style={{ fontWeight: 500 }}>{signer.name || signer.investorName || "Unknown"}</span>
-                    <span><span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 3, background: signer.status === "signed" ? "#EFE" : signer.status === "declined" ? "#FEE" : "#FFF8E1", color: signer.status === "signed" ? green : signer.status === "declined" ? red : "#B8860B" }}>{signer.status || "pending"}</span></span>
-                    <span style={{ fontSize: 12, color: "#767168" }}>{signer.signedAt ? new Date(signer.signedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }) : "\u2014"}</span>
+                    <span><span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 3, background: signer.status === "signed" ? "#EFE" : signer.status === "declined" ? "#FEE" : "#FFF8E1", color: signer.status === "signed" ? colors.green : signer.status === "declined" ? colors.red : "#B8860B" }}>{signer.status || "pending"}</span></span>
+                    <span style={{ fontSize: 12, color: colors.mutedText }}>{signer.signedAt ? new Date(signer.signedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }) : "\u2014"}</span>
                     {(signer.status === "pending" || !signer.status) && (
                       <button onClick={async () => {
                         try {
@@ -1767,18 +1762,18 @@ function DocumentManager({ toast, hideHeader }) {
               setShowAssignInvestors(true);
             }} style={btnOutline}>Assign to Investors</button>
           ) : (
-            <div style={{ background: "#fff", borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+            <div style={{ background: colors.white, borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
               <h3 style={{ fontSize: 16, fontWeight: 400, marginBottom: 16 }}>Assign Investors</h3>
               <div style={{ border: "1px solid #DDD", borderRadius: 4, maxHeight: 260, overflow: "auto", marginBottom: 16 }}>
                 {assignInvestors.map(inv => (
-                  <label key={inv.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderBottom: "1px solid #F0EDE8", cursor: "pointer", fontSize: 13 }}>
+                  <label key={inv.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderBottom: `1px solid ${colors.lightBorder}`, cursor: "pointer", fontSize: 13 }}>
                     <input type="checkbox" checked={assignSelectedIds.includes(inv.id)}
                       onChange={e => setAssignSelectedIds(prev => e.target.checked ? [...prev, inv.id] : prev.filter(id => id !== inv.id))} />
                     <span style={{ fontWeight: 500 }}>{inv.name}</span>
-                    <span style={{ color: "#767168" }}>{inv.email}</span>
+                    <span style={{ color: colors.mutedText }}>{inv.email}</span>
                   </label>
                 ))}
-                {assignInvestors.length === 0 && <div style={{ padding: 14, color: "#767168", fontSize: 12 }}>No investors found</div>}
+                {assignInvestors.length === 0 && <div style={{ padding: 14, color: colors.mutedText, fontSize: 12 }}>No investors found</div>}
               </div>
               <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
                 <button onClick={() => setShowAssignInvestors(false)} style={btnOutline}>Cancel</button>
@@ -1807,9 +1802,9 @@ function DocumentManager({ toast, hideHeader }) {
   if (showUpload) {
     return (
       <>
-        <p style={{ fontSize: 12, color: red, cursor: "pointer", marginBottom: 24 }} onClick={() => setShowUpload(false)}>← Back to documents</p>
+        <p style={{ fontSize: 12, color: colors.red, cursor: "pointer", marginBottom: 24 }} onClick={() => setShowUpload(false)}>← Back to documents</p>
         <h2 style={{ fontSize: 22, fontWeight: 400, marginBottom: 24 }}>Upload Document</h2>
-        <form onSubmit={handleUpload} style={{ background: "#fff", borderRadius: 12, padding: "28px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", maxWidth: 520 }}>
+        <form onSubmit={handleUpload} style={{ background: colors.white, borderRadius: 12, padding: "28px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", maxWidth: 520 }}>
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Document Name</label>
             <input value={uploadName} onChange={e => setUploadName(e.target.value)} placeholder="Q3 2025 — Porthaven Quarterly Report" style={inputStyle} required />
@@ -1850,11 +1845,11 @@ function DocumentManager({ toast, hideHeader }) {
       {!hideHeader && <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 300 }}>Documents</h1>
-          <p style={{ fontSize: 13, color: "#767168", marginTop: 4 }}>{docs.length} documents</p>
+          <p style={{ fontSize: 13, color: colors.mutedText, marginTop: 4 }}>{docs.length} documents</p>
         </div>
       </div>}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <p style={{ fontSize: 13, color: "#767168" }}>{hideHeader ? `${docs.length} documents` : ""}</p>
+        <p style={{ fontSize: 13, color: colors.mutedText }}>{hideHeader ? `${docs.length} documents` : ""}</p>
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={() => { setShowBulkK1(!showBulkK1); setShowUpload(false); }} style={btnOutline}>{showBulkK1 ? "Cancel" : "Bulk K-1 Upload"}</button>
           <button onClick={() => { setShowUpload(true); setShowBulkK1(false); }} style={btnStyle}>Upload Document</button>
@@ -1863,9 +1858,9 @@ function DocumentManager({ toast, hideHeader }) {
 
       {/* Bulk K-1 Upload */}
       {showBulkK1 && (
-        <div style={{ background: "#fff", borderRadius: 12, padding: "24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", marginBottom: 24 }}>
+        <div style={{ background: colors.white, borderRadius: 12, padding: "24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", marginBottom: 24 }}>
           <div style={{ fontSize: 16, fontWeight: 500, marginBottom: 16 }}>Bulk K-1 Upload</div>
-          <p style={{ fontSize: 12, color: "#767168", marginBottom: 16 }}>Upload multiple K-1 documents at once. Files are auto-matched to investors by name in the filename (e.g., "K1_JamesChen_2025.pdf").</p>
+          <p style={{ fontSize: 12, color: colors.mutedText, marginBottom: 16 }}>Upload multiple K-1 documents at once. Files are auto-matched to investors by name in the filename (e.g., "K1_JamesChen_2025.pdf").</p>
           <div className="admin-form-row" style={{ display: "flex", gap: 12, alignItems: "flex-end", marginBottom: 16 }}>
             <div style={{ flex: 1 }}>
               <label style={{ display: "block", fontSize: 11, color: "#888", marginBottom: 4 }}>Select K-1 Files</label>
@@ -1900,13 +1895,13 @@ function DocumentManager({ toast, hideHeader }) {
             }} style={btnStyle}>{bulkUploading ? "Uploading..." : "Upload All"}</button>
           </div>
           {bulkK1Results && (
-            <div style={{ borderTop: "1px solid #F0EDE8", paddingTop: 16 }}>
+            <div style={{ borderTop: `1px solid ${colors.lightBorder}`, paddingTop: 16 }}>
               <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>Results: {bulkK1Results.matched} matched, {bulkK1Results.unmatched} unmatched</div>
               {bulkK1Results.results.map((r, i) => (
                 <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #F8F7F4", fontSize: 12, gap: 8 }}>
                   <span>{r.filename}</span>
                   {r.status === "matched" ? (
-                    <span style={{ color: green, fontWeight: 500 }}>Matched &rarr; {r.matched.name}</span>
+                    <span style={{ color: colors.green, fontWeight: 500 }}>Matched &rarr; {r.matched.name}</span>
                   ) : (
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <select value={bulkK1Assigns[r.documentId || i] || ""} onChange={e => setBulkK1Assigns(prev => ({ ...prev, [r.documentId || i]: e.target.value }))} style={{ ...inputStyle, width: 180, padding: "4px 8px", fontSize: 11 }}>
@@ -1946,7 +1941,7 @@ function DocumentManager({ toast, hideHeader }) {
 
       {/* Document table */}
       {loading ? <Spinner /> : (
-        <div className="admin-table-scroll" style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+        <div className="admin-table-scroll" style={{ background: colors.white, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
           <div style={{ display: "grid", gridTemplateColumns: "2fr 100px 100px 80px 80px 80px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE" }}>
             <SortableHeader columns={[
               { key: "name", label: "Document" },
@@ -1960,23 +1955,23 @@ function DocumentManager({ toast, hideHeader }) {
           {docSort.sortData(docs).map((d, i) => (
             <div key={d.id} onClick={() => openDoc(d)} style={{
               display: "grid", gridTemplateColumns: "2fr 100px 100px 80px 80px 80px",
-              padding: "14px 20px", borderBottom: i < docs.length - 1 ? "1px solid #F0EDE8" : "none",
+              padding: "14px 20px", borderBottom: i < docs.length - 1 ? `1px solid ${colors.lightBorder}` : "none",
               cursor: "pointer", fontSize: 13, alignItems: "center",
             }}
-              onMouseEnter={e => e.currentTarget.style.background = "#FAFAF8"}
-              onMouseLeave={e => e.currentTarget.style.background = "#fff"}>
+              onMouseEnter={e => e.currentTarget.style.background = colors.cardBg}
+              onMouseLeave={e => e.currentTarget.style.background = colors.white}>
               <div>
-                <div style={{ fontWeight: 500, display: "flex", alignItems: "center", gap: 6 }}>{d.name}{d.date && (Date.now() - new Date(d.date).getTime()) < 7 * 86400000 && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 2, background: `${red}18`, color: red, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em" }}>NEW</span>}</div>
+                <div style={{ fontWeight: 500, display: "flex", alignItems: "center", gap: 6 }}>{d.name}{d.date && (Date.now() - new Date(d.date).getTime()) < 7 * 86400000 && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 2, background: `${colors.red}18`, color: colors.red, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em" }}>NEW</span>}</div>
                 <div style={{ fontSize: 11, color: "#BBB" }}>{d.date} · {d.size}</div>
               </div>
               <span style={{ fontSize: 12, color: "#666" }}>{d.project}</span>
-              <span style={{ fontSize: 11, padding: "2px 8px", background: "#F0EDE8", borderRadius: 3 }}>{d.category}</span>
+              <span style={{ fontSize: 11, padding: "2px 8px", background: colors.lightBorder, borderRadius: 3 }}>{d.category}</span>
               <span>{d.totalInvestors}</span>
-              <span style={{ color: d.viewed > 0 ? green : "#CCC" }}>{d.viewed}</span>
-              <span style={{ color: d.downloaded > 0 ? green : "#CCC" }}>{d.downloaded}</span>
+              <span style={{ color: d.viewed > 0 ? colors.green : "#CCC" }}>{d.viewed}</span>
+              <span style={{ color: d.downloaded > 0 ? colors.green : "#CCC" }}>{d.downloaded}</span>
             </div>
           ))}
-          {docs.length === 0 && <div style={{ padding: 24, color: "#767168", textAlign: "center" }}>No documents found</div>}
+          {docs.length === 0 && <div style={{ padding: 24, color: colors.mutedText, textAlign: "center" }}>No documents found</div>}
         </div>
       )}
     </>
@@ -2023,26 +2018,26 @@ function InvestorProfile({ investorId, onBack, toast }) {
     try { await deleteEntity(entityId); toast("Entity deleted"); loadEntities(); } catch (err) { toast(err.message, "error"); }
   }
 
-  if (!profile) return <p style={{ color: "#767168" }}>Loading...</p>;
+  if (!profile) return <p style={{ color: colors.mutedText }}>Loading...</p>;
 
-  const section = { background: "#fff", borderRadius: 12, padding: "20px 24px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" };
+  const section = { background: colors.white, borderRadius: 12, padding: "20px 24px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" };
   const sectionTitle = { fontSize: 13, fontWeight: 600, color: "#666", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 14 };
 
   return (
     <>
-      <p style={{ fontSize: 12, color: red, cursor: "pointer", marginBottom: 24 }} onClick={onBack}>← Back to investors</p>
+      <p style={{ fontSize: 12, color: colors.red, cursor: "pointer", marginBottom: 24 }} onClick={onBack}>← Back to investors</p>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#F0EDE8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 600, color: "#666" }}>
+          <div style={{ width: 48, height: 48, borderRadius: "50%", background: colors.lightBorder, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 600, color: "#666" }}>
             {profile.initials || profile.name.split(" ").map(n => n[0]).join("")}
           </div>
           <div>
             <h1 style={{ fontSize: 24, fontWeight: 400 }}>{profile.name}</h1>
-            <div style={{ fontSize: 13, color: "#767168" }}>{profile.email} · {profile.role === "INVESTOR" ? "Limited Partner" : profile.role} · Joined {profile.joined}</div>
+            <div style={{ fontSize: 13, color: colors.mutedText }}>{profile.email} · {profile.role === "INVESTOR" ? "Limited Partner" : profile.role} · Joined {profile.joined}</div>
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ padding: "4px 12px", borderRadius: 4, fontSize: 12, fontWeight: 500, background: profile.status === "ACTIVE" ? "#EFE" : profile.status === "PENDING" ? "#FFF8E1" : "#FEE", color: profile.status === "ACTIVE" ? green : profile.status === "PENDING" ? "#B8860B" : red }}>{profile.status}</span>
+          <span style={{ padding: "4px 12px", borderRadius: 4, fontSize: 12, fontWeight: 500, background: profile.status === "ACTIVE" ? "#EFE" : profile.status === "PENDING" ? "#FFF8E1" : "#FEE", color: profile.status === "ACTIVE" ? colors.green : profile.status === "PENDING" ? "#B8860B" : colors.red }}>{profile.status}</span>
           {(profile.status === "LOCKED" || profile.locked) && (
             <button onClick={async () => {
               try { await unlockInvestor(investorId); toast("Account unlocked"); const updated = await fetchInvestorProfile(investorId); setProfile(updated); } catch (e) { toast(e.message, "error"); }
@@ -2056,7 +2051,7 @@ function InvestorProfile({ investorId, onBack, toast }) {
         <div style={sectionTitle}>Groups</div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {profile.groups.length > 0 ? profile.groups.map(g => (
-            <span key={g.id} style={{ padding: "4px 12px", borderRadius: 16, fontSize: 12, background: g.color ? `${g.color}20` : "#F0EDE8", color: g.color || "#666", border: `1px solid ${g.color ? `${g.color}40` : "#E0DDD8"}` }}>{g.name}</span>
+            <span key={g.id} style={{ padding: "4px 12px", borderRadius: 16, fontSize: 12, background: g.color ? `${g.color}20` : colors.lightBorder, color: g.color || "#666", border: `1px solid ${g.color ? `${g.color}40` : "#E0DDD8"}` }}>{g.name}</span>
           )) : <span style={{ fontSize: 12, color: "#BBB", fontStyle: "italic" }}>No groups assigned</span>}
         </div>
       </div>
@@ -2068,30 +2063,30 @@ function InvestorProfile({ investorId, onBack, toast }) {
           <button onClick={() => setShowEntityForm(!showEntityForm)} style={{ ...btnOutline, padding: "4px 10px", fontSize: 11 }}>{showEntityForm ? "Cancel" : "Add Entity"}</button>
         </div>
         {showEntityForm && (
-          <form onSubmit={handleCreateEntity} style={{ padding: "12px", background: "#FAFAF8", borderRadius: 4, marginBottom: 12 }}>
+          <form onSubmit={handleCreateEntity} style={{ padding: "12px", background: colors.cardBg, borderRadius: 4, marginBottom: 12 }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
               <div>
-                <label style={{ fontSize: 10, color: "#767168" }}>Name</label>
+                <label style={{ fontSize: 10, color: colors.mutedText }}>Name</label>
                 <input value={entityForm.name} onChange={e => setEntityForm(f => ({ ...f, name: e.target.value }))} required style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} placeholder="Entity name" />
               </div>
               <div>
-                <label style={{ fontSize: 10, color: "#767168" }}>Type</label>
+                <label style={{ fontSize: 10, color: colors.mutedText }}>Type</label>
                 <select value={entityForm.type} onChange={e => setEntityForm(f => ({ ...f, type: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }}>
                   <option>Individual</option><option>LLC</option><option>Trust</option><option>IRA</option><option>Corporation</option><option>Partnership</option>
                 </select>
               </div>
               <div>
-                <label style={{ fontSize: 10, color: "#767168" }}>Tax ID</label>
+                <label style={{ fontSize: 10, color: colors.mutedText }}>Tax ID</label>
                 <input value={entityForm.taxId} onChange={e => setEntityForm(f => ({ ...f, taxId: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} placeholder="EIN/SSN" />
               </div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr auto", gap: 8, alignItems: "flex-end" }}>
               <div>
-                <label style={{ fontSize: 10, color: "#767168" }}>Address</label>
+                <label style={{ fontSize: 10, color: colors.mutedText }}>Address</label>
                 <input value={entityForm.address} onChange={e => setEntityForm(f => ({ ...f, address: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} placeholder="123 Main St" />
               </div>
               <div>
-                <label style={{ fontSize: 10, color: "#767168" }}>State/Province</label>
+                <label style={{ fontSize: 10, color: colors.mutedText }}>State/Province</label>
                 <input value={entityForm.state} onChange={e => setEntityForm(f => ({ ...f, state: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} placeholder="e.g. BC" />
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 6, paddingBottom: 4 }}>
@@ -2104,7 +2099,7 @@ function InvestorProfile({ investorId, onBack, toast }) {
         )}
         <div className="admin-table-scroll">
         {entities.length > 0 ? (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 110px 60px 70px 40px 40px", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 110px 60px 70px 40px 40px", fontSize: 11, color: colors.mutedText, textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
             <span>Entity Name</span><span>Type</span><span>Tax ID</span><span>State</span><span>Default</span><span></span><span></span>
           </div>
         ) : null}
@@ -2115,10 +2110,10 @@ function InvestorProfile({ investorId, onBack, toast }) {
               {e.address && <div style={{ fontSize: 11, color: "#999" }}>{e.address}</div>}
             </div>
             <span style={{ color: "#666" }}>{e.type}</span>
-            <span style={{ color: "#767168", fontSize: 11 }}>{e.taxId || "\u2014"}</span>
-            <span style={{ color: "#767168" }}>{e.state || "\u2014"}</span>
-            <span>{e.isDefault ? <span style={{ fontSize: 10, padding: "2px 6px", background: "#EFE", color: green, borderRadius: 3 }}>Default</span> : ""}</span>
-            <span onClick={() => { setEditingEntity(e); setEntityForm({ name: e.name, type: e.type, taxId: e.taxId || "", address: e.address || "", state: e.state || "", isDefault: e.isDefault }); setShowEntityForm(true); }} style={{ fontSize: 11, color: red, cursor: "pointer" }}>Edit</span>
+            <span style={{ color: colors.mutedText, fontSize: 11 }}>{e.taxId || "\u2014"}</span>
+            <span style={{ color: colors.mutedText }}>{e.state || "\u2014"}</span>
+            <span>{e.isDefault ? <span style={{ fontSize: 10, padding: "2px 6px", background: "#EFE", color: colors.green, borderRadius: 3 }}>Default</span> : ""}</span>
+            <span onClick={() => { setEditingEntity(e); setEntityForm({ name: e.name, type: e.type, taxId: e.taxId || "", address: e.address || "", state: e.state || "", isDefault: e.isDefault }); setShowEntityForm(true); }} style={{ fontSize: 11, color: colors.red, cursor: "pointer" }}>Edit</span>
             <span onClick={() => handleDeleteEntity(e.id)} style={{ fontSize: 14, color: "#CCC", cursor: "pointer" }}>&times;</span>
           </div>
         ))}
@@ -2130,16 +2125,16 @@ function InvestorProfile({ investorId, onBack, toast }) {
       <div style={section}>
         <div style={sectionTitle}>Project Investments</div>
         {profile.projects.length > 0 ? profile.projects.map(p => (
-          <div key={p.projectId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid #F0EDE8" }}>
+          <div key={p.projectId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: `1px solid ${colors.lightBorder}` }}>
             <div>
               <div style={{ fontSize: 14, fontWeight: 500 }}>{p.projectName}</div>
-              <div style={{ fontSize: 11, color: "#767168" }}>{p.projectStatus}</div>
+              <div style={{ fontSize: 11, color: colors.mutedText }}>{p.projectStatus}</div>
             </div>
             <div style={{ display: "flex", gap: 24, fontSize: 13, color: "#666", alignItems: "center" }}>
               <span>${fmt(p.committed)} committed</span>
               <span>${fmt(p.currentValue)} value</span>
-              <span>{p.irr}% IRR <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 2, background: "#EFE", color: green, marginLeft: 2, verticalAlign: "middle" }}>calculated</span></span>
-              <span>{p.moic}x MOIC <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 2, background: "#EFE", color: green, marginLeft: 2, verticalAlign: "middle" }}>calculated</span></span>
+              <span>{p.irr}% IRR <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 2, background: "#EFE", color: colors.green, marginLeft: 2, verticalAlign: "middle" }}>calculated</span></span>
+              <span>{p.moic}x MOIC <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 2, background: "#EFE", color: colors.green, marginLeft: 2, verticalAlign: "middle" }}>calculated</span></span>
             </div>
           </div>
         )) : <span style={{ fontSize: 12, color: "#BBB", fontStyle: "italic" }}>No project assignments</span>}
@@ -2153,7 +2148,7 @@ function InvestorProfile({ investorId, onBack, toast }) {
               setShowAssignProject(true);
             }} style={{ ...btnOutline, fontSize: 12 }}>Assign to Project</button>
           ) : (
-            <div style={{ background: "#FAFAF8", borderRadius: 8, padding: "16px", border: "1px solid #E8E5DE", marginTop: 8 }}>
+            <div style={{ background: colors.cardBg, borderRadius: 8, padding: "16px", border: "1px solid #E8E5DE", marginTop: 8 }}>
               <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 12 }}>Assign to Project</div>
               <div style={{ marginBottom: 12 }}>
                 <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Project</label>
@@ -2214,7 +2209,7 @@ function InvestorProfile({ investorId, onBack, toast }) {
         {[...profile.documents.assigned, ...profile.documents.projectDocs, ...profile.documents.generalDocs].slice(0, 10).map((d, i) => (
           <div key={`${d.id}-${i}`} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #F5F3F0", fontSize: 13 }}>
             <span>{d.name}</span>
-            <span style={{ color: "#767168", fontSize: 12 }}>{d.category} · {d.date}</span>
+            <span style={{ color: colors.mutedText, fontSize: 12 }}>{d.category} · {d.date}</span>
           </div>
         ))}
       </div>
@@ -2225,10 +2220,10 @@ function InvestorProfile({ investorId, onBack, toast }) {
         {profile.recentThreads.length > 0 ? profile.recentThreads.map(t => (
           <div key={t.id} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #F5F3F0", fontSize: 13 }}>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              {t.unread && <span style={{ width: 6, height: 6, borderRadius: "50%", background: red }} />}
+              {t.unread && <span style={{ width: 6, height: 6, borderRadius: "50%", background: colors.red }} />}
               <span>{t.subject}</span>
             </div>
-            <span style={{ color: "#767168", fontSize: 11 }}>{new Date(t.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })} · {t.targetType}</span>
+            <span style={{ color: colors.mutedText, fontSize: 11 }}>{new Date(t.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })} · {t.targetType}</span>
           </div>
         )) : <span style={{ fontSize: 12, color: "#BBB", fontStyle: "italic" }}>No messages</span>}
       </div>
@@ -2259,7 +2254,7 @@ function ActivityTimeline({ userId }) {
     return "•";
   };
 
-  const section = { background: "#fff", borderRadius: 12, padding: "20px 24px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" };
+  const section = { background: colors.white, borderRadius: 12, padding: "20px 24px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" };
   const sectionTitle = { fontSize: 13, fontWeight: 600, color: "#666", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 14 };
 
   return (
@@ -2278,7 +2273,7 @@ function ActivityTimeline({ userId }) {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <div>
                   <span style={{ fontWeight: 500 }}>{a.action.replace(/_/g, " ")}</span>
-                  {a.resource && <span style={{ color: "#767168", marginLeft: 6 }}>{a.resource}</span>}
+                  {a.resource && <span style={{ color: colors.mutedText, marginLeft: 6 }}>{a.resource}</span>}
                 </div>
                 <span style={{ fontSize: 11, color: "#BBB", whiteSpace: "nowrap", marginLeft: 12 }}>
                   {new Date(a.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
@@ -2306,7 +2301,7 @@ function ProjectUpdatesTab({ project, updateText, setUpdateText, handlePostUpdat
     const positive = d > 0;
     const display = isCurrency ? `${positive ? "+" : ""}${fmtCurrency(d)}` : `${positive ? "+" : ""}${d}`;
     return (
-      <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 3, marginRight: 6, background: positive ? "#EFE" : "#FEE", color: positive ? green : red }}>
+      <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 3, marginRight: 6, background: positive ? "#EFE" : "#FEE", color: positive ? colors.green : colors.red }}>
         {positive ? "\u2191" : "\u2193"} {label}: {display}
       </span>
     );
@@ -2318,14 +2313,14 @@ function ProjectUpdatesTab({ project, updateText, setUpdateText, handlePostUpdat
         <input value={updateText} onChange={e => setUpdateText(e.target.value)} placeholder="Post a construction update..." style={{ ...inputStyle, flex: 1 }} />
         <button onClick={handlePostUpdate} style={btnStyle}>Post</button>
         {updates.length >= 2 && (
-          <button onClick={() => setCompareMode(!compareMode)} style={{ ...btnOutline, background: compareMode ? "#FEE" : "#fff", color: compareMode ? red : darkText }}>
+          <button onClick={() => setCompareMode(!compareMode)} style={{ ...btnOutline, background: compareMode ? "#FEE" : colors.white, color: compareMode ? colors.red : colors.darkText }}>
             {compareMode ? "Exit Compare" : "Compare"}
           </button>
         )}
       </div>
 
       {compareMode && updates.length >= 2 ? (
-        <div style={{ background: "#fff", borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", marginBottom: 16 }}>
+        <div style={{ background: colors.white, borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", marginBottom: 16 }}>
           <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
             <div style={{ flex: 1 }}>
               <label style={{ fontSize: 11, color: "#888" }}>Earlier Update</label>
@@ -2378,8 +2373,8 @@ function ProjectUpdatesTab({ project, updateText, setUpdateText, handlePostUpdat
           {updates.length > 0 ? updates.map((u, i) => (
             <div key={u.id} style={{ padding: "12px 0", borderBottom: i < updates.length - 1 ? "1px solid #F5F3F0" : "none" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                <div style={{ fontSize: 11, color: "#767168" }}>{u.date}</div>
-                {u.completionPct != null && <span style={{ fontSize: 10, color: "#767168", padding: "2px 6px", border: "1px solid #E8E5DE", borderRadius: 3 }}>{u.completionPct}% complete</span>}
+                <div style={{ fontSize: 11, color: colors.mutedText }}>{u.date}</div>
+                {u.completionPct != null && <span style={{ fontSize: 10, color: colors.mutedText, padding: "2px 6px", border: "1px solid #E8E5DE", borderRadius: 3 }}>{u.completionPct}% complete</span>}
               </div>
               <div style={{ fontSize: 13, color: "#444", lineHeight: 1.6 }}>{u.text}</div>
               {/* Show delta vs previous */}
@@ -2402,7 +2397,7 @@ function ProjectUpdatesTab({ project, updateText, setUpdateText, handlePostUpdat
                 return (
                   <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
                     {deltas.map((d, j) => (
-                      <span key={j} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 3, background: d.positive ? "#EFE" : "#FEE", color: d.positive ? green : red }}>
+                      <span key={j} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 3, background: d.positive ? "#EFE" : "#FEE", color: d.positive ? colors.green : colors.red }}>
                         {d.positive ? "\u2191" : "\u2193"} {d.label}: {d.value}
                       </span>
                     ))}
@@ -2462,18 +2457,18 @@ function ProjectCashFlowsTab({ project, projectId, cashFlowsList, cfInvestors, s
   return (
     <div style={section}>
       {/* Summary */}
-      <div style={{ display: "flex", gap: 24, marginBottom: 16, padding: "12px 16px", background: "#FAFAF8", borderRadius: 4, border: "1px solid #E8E5DE" }}>
+      <div style={{ display: "flex", gap: 24, marginBottom: 16, padding: "12px 16px", background: colors.cardBg, borderRadius: 4, border: "1px solid #E8E5DE" }}>
         <div>
-          <div style={{ fontSize: 10, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em" }}>Capital Called</div>
-          <div style={{ fontSize: 16, fontWeight: 500, color: red }}>${fmt(totalContributed)}</div>
+          <div style={{ fontSize: 10, color: colors.mutedText, textTransform: "uppercase", letterSpacing: ".06em" }}>Capital Called</div>
+          <div style={{ fontSize: 16, fontWeight: 500, color: colors.red }}>${fmt(totalContributed)}</div>
         </div>
         <div>
-          <div style={{ fontSize: 10, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em" }}>Distributed</div>
-          <div style={{ fontSize: 16, fontWeight: 500, color: green }}>${fmt(totalDistributed)}</div>
+          <div style={{ fontSize: 10, color: colors.mutedText, textTransform: "uppercase", letterSpacing: ".06em" }}>Distributed</div>
+          <div style={{ fontSize: 16, fontWeight: 500, color: colors.green }}>${fmt(totalDistributed)}</div>
         </div>
         <div>
-          <div style={{ fontSize: 10, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em" }}>Net</div>
-          <div style={{ fontSize: 16, fontWeight: 500, color: netCF >= 0 ? green : red }}>{netCF >= 0 ? "+" : "-"}${fmt(Math.abs(netCF))}</div>
+          <div style={{ fontSize: 10, color: colors.mutedText, textTransform: "uppercase", letterSpacing: ".06em" }}>Net</div>
+          <div style={{ fontSize: 16, fontWeight: 500, color: netCF >= 0 ? colors.green : colors.red }}>{netCF >= 0 ? "+" : "-"}${fmt(Math.abs(netCF))}</div>
         </div>
       </div>
 
@@ -2488,7 +2483,7 @@ function ProjectCashFlowsTab({ project, projectId, cashFlowsList, cfInvestors, s
       </div>
       {cashFlowsList.length > 0 ? (
         <div className="admin-table-scroll">
-          <div style={{ display: "grid", gridTemplateColumns: "100px 1fr 1fr 100px 100px 80px", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "100px 1fr 1fr 100px 100px 80px", fontSize: 11, color: colors.mutedText, textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
             <span>Date</span><span>Investor</span><span>Description</span><span style={{ textAlign: "right" }}>Amount</span><span style={{ textAlign: "right" }}>Type</span><span style={{ textAlign: "right" }}>Actions</span>
           </div>
           {cashFlowsList.map((cf, i) => (
@@ -2505,22 +2500,22 @@ function ProjectCashFlowsTab({ project, projectId, cashFlowsList, cfInvestors, s
                   <option value="income">Income</option>
                 </select>
                 <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
-                  <button type="submit" style={{ fontSize: 10, padding: "3px 6px", background: green, color: "#fff", border: "none", borderRadius: 3, cursor: "pointer" }}>Save</button>
-                  <button type="button" onClick={() => setEditingCf(null)} style={{ fontSize: 10, padding: "3px 6px", background: "#fff", color: "#767168", border: "1px solid #DDD", borderRadius: 3, cursor: "pointer" }}>X</button>
+                  <button type="submit" style={{ fontSize: 10, padding: "3px 6px", background: colors.green, color: colors.white, border: "none", borderRadius: 3, cursor: "pointer" }}>Save</button>
+                  <button type="button" onClick={() => setEditingCf(null)} style={{ fontSize: 10, padding: "3px 6px", background: colors.white, color: colors.mutedText, border: "1px solid #DDD", borderRadius: 3, cursor: "pointer" }}>X</button>
                 </div>
               </form>
             ) : (
               <div key={cf.id || i} style={{ display: "grid", gridTemplateColumns: "100px 1fr 1fr 100px 100px 80px", padding: "10px 0", borderBottom: "1px solid #F5F3F0", fontSize: 13 }}>
-                <span style={{ color: "#767168", fontSize: 12 }}>{new Date(cf.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}</span>
+                <span style={{ color: colors.mutedText, fontSize: 12 }}>{new Date(cf.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}</span>
                 <span style={{ fontWeight: 500 }}>{cf.investorName || `User ${cf.userId}`}</span>
                 <span style={{ color: "#666" }}>{cf.description || cf.type}</span>
-                <span style={{ textAlign: "right", fontWeight: 500, color: cf.amount < 0 ? red : green }}>
+                <span style={{ textAlign: "right", fontWeight: 500, color: cf.amount < 0 ? colors.red : colors.green }}>
                   {cf.amount < 0 ? `-$${fmt(Math.abs(cf.amount))}` : `+$${fmt(cf.amount)}`}
                 </span>
-                <span style={{ textAlign: "right", fontSize: 11, color: "#767168", textTransform: "capitalize" }}>{(cf.type || "").replace(/_/g, " ")}</span>
+                <span style={{ textAlign: "right", fontSize: 11, color: colors.mutedText, textTransform: "capitalize" }}>{(cf.type || "").replace(/_/g, " ")}</span>
                 <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
                   <span onClick={() => startEdit(cf)} style={{ fontSize: 11, color: "#666", cursor: "pointer" }}>Edit</span>
-                  <span onClick={() => handleDelete(cf.id)} style={{ fontSize: 11, color: red, cursor: "pointer" }}>Del</span>
+                  <span onClick={() => handleDelete(cf.id)} style={{ fontSize: 11, color: colors.red, cursor: "pointer" }}>Del</span>
                 </div>
               </div>
             )
@@ -2531,7 +2526,7 @@ function ProjectCashFlowsTab({ project, projectId, cashFlowsList, cfInvestors, s
       {/* Record Cash Flow Modal */}
       {showCfModal && (
         <div onClick={() => setShowCfModal(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 8, padding: 32, width: 420, boxShadow: "0 8px 32px rgba(0,0,0,.15)" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: colors.white, borderRadius: 8, padding: 32, width: 420, boxShadow: "0 8px 32px rgba(0,0,0,.15)" }}>
             <h3 style={{ fontSize: 18, fontWeight: 500, marginBottom: 20 }}>Record Cash Flow</h3>
             <form onSubmit={handleRecordCashFlow}>
               <div style={{ marginBottom: 12 }}>
@@ -2630,7 +2625,7 @@ function InvestorCashFlowsSection({ investorId, investorName, projects, toast })
   const totalContributed = cashFlows.filter(cf => cf.amount < 0).reduce((s, cf) => s + Math.abs(cf.amount), 0);
   const totalDistributed = cashFlows.filter(cf => cf.amount > 0).reduce((s, cf) => s + cf.amount, 0);
 
-  const section = { background: "#fff", borderRadius: 12, padding: "20px 24px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" };
+  const section = { background: colors.white, borderRadius: 12, padding: "20px 24px", marginBottom: 16, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" };
   const sectionTitle = { fontSize: 13, fontWeight: 600, color: "#666", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 14 };
 
   if (loading) return <div style={section}><div style={sectionTitle}>Cash Flows</div><p style={{ color: "#BBB", fontSize: 13 }}>Loading...</p></div>;
@@ -2639,14 +2634,14 @@ function InvestorCashFlowsSection({ investorId, investorName, projects, toast })
     <div style={section}>
       <div style={sectionTitle}>Cash Flows ({cashFlows.length} records)</div>
       {cashFlows.length > 0 && (
-        <div style={{ display: "flex", gap: 24, marginBottom: 16, padding: "10px 14px", background: "#FAFAF8", borderRadius: 4, border: "1px solid #E8E5DE" }}>
-          <div><div style={{ fontSize: 10, color: "#767168", textTransform: "uppercase" }}>Total Contributed</div><div style={{ fontSize: 15, fontWeight: 500, color: red }}>${fmt(totalContributed)}</div></div>
-          <div><div style={{ fontSize: 10, color: "#767168", textTransform: "uppercase" }}>Total Distributed</div><div style={{ fontSize: 15, fontWeight: 500, color: green }}>${fmt(totalDistributed)}</div></div>
+        <div style={{ display: "flex", gap: 24, marginBottom: 16, padding: "10px 14px", background: colors.cardBg, borderRadius: 4, border: "1px solid #E8E5DE" }}>
+          <div><div style={{ fontSize: 10, color: colors.mutedText, textTransform: "uppercase" }}>Total Contributed</div><div style={{ fontSize: 15, fontWeight: 500, color: colors.red }}>${fmt(totalContributed)}</div></div>
+          <div><div style={{ fontSize: 10, color: colors.mutedText, textTransform: "uppercase" }}>Total Distributed</div><div style={{ fontSize: 15, fontWeight: 500, color: colors.green }}>${fmt(totalDistributed)}</div></div>
         </div>
       )}
       {cashFlows.length > 0 ? (
         <div className="admin-table-scroll">
-          <div style={{ display: "grid", gridTemplateColumns: "90px 1fr 1fr 100px 90px 70px", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "90px 1fr 1fr 100px 90px 70px", fontSize: 11, color: colors.mutedText, textTransform: "uppercase", letterSpacing: ".06em", padding: "8px 0", borderBottom: "1px solid #E8E5DE" }}>
             <span>Date</span><span>Project</span><span>Description</span><span style={{ textAlign: "right" }}>Amount</span><span style={{ textAlign: "right" }}>Type</span><span style={{ textAlign: "right" }}>Actions</span>
           </div>
           {cashFlows.map(cf => (
@@ -2660,20 +2655,20 @@ function InvestorCashFlowsSection({ investorId, investorName, projects, toast })
                   <option value="capital_call">Capital Call</option><option value="distribution">Distribution</option><option value="return_of_capital">Return of Capital</option><option value="income">Income</option>
                 </select>
                 <div style={{ display: "flex", gap: 3, justifyContent: "flex-end" }}>
-                  <button type="submit" style={{ fontSize: 9, padding: "3px 5px", background: green, color: "#fff", border: "none", borderRadius: 3, cursor: "pointer" }}>OK</button>
-                  <button type="button" onClick={() => setEditingId(null)} style={{ fontSize: 9, padding: "3px 5px", background: "#fff", color: "#767168", border: "1px solid #DDD", borderRadius: 3, cursor: "pointer" }}>X</button>
+                  <button type="submit" style={{ fontSize: 9, padding: "3px 5px", background: colors.green, color: colors.white, border: "none", borderRadius: 3, cursor: "pointer" }}>OK</button>
+                  <button type="button" onClick={() => setEditingId(null)} style={{ fontSize: 9, padding: "3px 5px", background: colors.white, color: colors.mutedText, border: "1px solid #DDD", borderRadius: 3, cursor: "pointer" }}>X</button>
                 </div>
               </form>
             ) : (
               <div key={cf.id} style={{ display: "grid", gridTemplateColumns: "90px 1fr 1fr 100px 90px 70px", padding: "8px 0", borderBottom: "1px solid #F5F3F0", fontSize: 12 }}>
-                <span style={{ color: "#767168", fontSize: 11 }}>{new Date(cf.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}</span>
+                <span style={{ color: colors.mutedText, fontSize: 11 }}>{new Date(cf.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}</span>
                 <span style={{ fontWeight: 500 }}>{cf.projectName}</span>
                 <span style={{ color: "#666" }}>{cf.description || cf.type}</span>
-                <span style={{ textAlign: "right", fontWeight: 500, color: cf.amount < 0 ? red : green }}>{cf.amount < 0 ? `-$${fmt(Math.abs(cf.amount))}` : `+$${fmt(cf.amount)}`}</span>
-                <span style={{ textAlign: "right", fontSize: 10, color: "#767168", textTransform: "capitalize" }}>{(cf.type || "").replace(/_/g, " ")}</span>
+                <span style={{ textAlign: "right", fontWeight: 500, color: cf.amount < 0 ? colors.red : colors.green }}>{cf.amount < 0 ? `-$${fmt(Math.abs(cf.amount))}` : `+$${fmt(cf.amount)}`}</span>
+                <span style={{ textAlign: "right", fontSize: 10, color: colors.mutedText, textTransform: "capitalize" }}>{(cf.type || "").replace(/_/g, " ")}</span>
                 <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
                   <span onClick={() => startEdit(cf)} style={{ fontSize: 11, color: "#666", cursor: "pointer" }}>Edit</span>
-                  <span onClick={() => handleDelete(cf.id)} style={{ fontSize: 11, color: red, cursor: "pointer" }}>Del</span>
+                  <span onClick={() => handleDelete(cf.id)} style={{ fontSize: 11, color: colors.red, cursor: "pointer" }}>Del</span>
                 </div>
               </div>
             )
@@ -2689,7 +2684,7 @@ function GroupManager({ toast, hideHeader }) {
   const { investors } = useAdminData();
   const [groups, setGroups] = useState([]);
   const [newName, setNewName] = useState("");
-  const [newColor, setNewColor] = useState("#EA2028");
+  const [newColor, setNewColor] = useState(colors.red);
   const [newParentId, setNewParentId] = useState("");
   const [newTier, setNewTier] = useState("primary");
   const [selectedGroup, setSelectedGroup] = useState(null);
@@ -2708,7 +2703,7 @@ function GroupManager({ toast, hideHeader }) {
   };
 
   const tierLabels = { primary: "Primary LP", "sub-lp": "Sub-LP", "fund-of-funds": "Fund of Funds" };
-  const tierColors = { primary: "#3D7A54", "sub-lp": "#8B7128", "fund-of-funds": "#4466AA" };
+  const tierColors = { primary: colors.green, "sub-lp": "#8B7128", "fund-of-funds": "#4466AA" };
 
   async function handleCreate(e) {
     e.preventDefault();
@@ -2773,14 +2768,14 @@ function GroupManager({ toast, hideHeader }) {
       <div style={{ display: "flex", gap: 20 }}>
         {/* Group list */}
         <div style={{ width: 300, flexShrink: 0 }}>
-          <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
-            {groups.length === 0 ? <div style={{ padding: 20, color: "#767168", textAlign: "center", fontSize: 13 }}>No groups yet</div> : (() => {
+          <div style={{ background: colors.white, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+            {groups.length === 0 ? <div style={{ padding: 20, color: colors.mutedText, textAlign: "center", fontSize: 13 }}>No groups yet</div> : (() => {
               const renderGroup = (g, indent = 0) => {
                 const children = childGroupsOf(g.id);
                 return [
                   <div key={g.id} onClick={() => openGroup(g.id)} style={{
-                    padding: "12px 16px", paddingLeft: 16 + indent * 20, borderBottom: "1px solid #F0EDE8",
-                    cursor: "pointer", background: selectedGroup === g.id ? "#F8F7F4" : "#fff",
+                    padding: "12px 16px", paddingLeft: 16 + indent * 20, borderBottom: `1px solid ${colors.lightBorder}`,
+                    cursor: "pointer", background: selectedGroup === g.id ? "#F8F7F4" : colors.white,
                     display: "flex", justifyContent: "space-between", alignItems: "center",
                   }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -2790,7 +2785,7 @@ function GroupManager({ toast, hideHeader }) {
                       <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 3, background: `${tierColors[g.tier] || "#999"}15`, color: tierColors[g.tier] || "#999" }}>{tierLabels[g.tier] || g.tier}</span>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ fontSize: 11, color: "#767168" }}>{totalMembers(g)}</span>
+                      <span style={{ fontSize: 11, color: colors.mutedText }}>{totalMembers(g)}</span>
                       <span onClick={(e) => { e.stopPropagation(); handleDelete(g.id); }} style={{ fontSize: 14, color: "#CCC", cursor: "pointer" }}>&times;</span>
                     </div>
                   </div>,
@@ -2805,20 +2800,20 @@ function GroupManager({ toast, hideHeader }) {
         {/* Group detail */}
         <div style={{ flex: 1 }}>
           {groupDetail ? (
-            <div style={{ background: "#fff", borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+            <div style={{ background: colors.white, borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
                 <div style={{ width: 14, height: 14, borderRadius: "50%", background: groupDetail.color || "#CCC" }} />
                 <h2 style={{ fontSize: 18, fontWeight: 500 }}>{groupDetail.name}</h2>
                 <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 3, background: `${tierColors[groupDetail.tier] || "#999"}15`, color: tierColors[groupDetail.tier] || "#999" }}>{tierLabels[groupDetail.tier] || groupDetail.tier}</span>
-                <span style={{ fontSize: 12, color: "#767168" }}>{groupDetail.members.length} members</span>
+                <span style={{ fontSize: 12, color: colors.mutedText }}>{groupDetail.members.length} members</span>
               </div>
               {groupDetail.parent && (
-                <div style={{ fontSize: 12, color: "#767168", marginBottom: 12 }}>Parent: <strong onClick={() => openGroup(groupDetail.parent.id)} style={{ cursor: "pointer", color: red }}>{groupDetail.parent.name}</strong></div>
+                <div style={{ fontSize: 12, color: colors.mutedText, marginBottom: 12 }}>Parent: <strong onClick={() => openGroup(groupDetail.parent.id)} style={{ cursor: "pointer", color: colors.red }}>{groupDetail.parent.name}</strong></div>
               )}
               {groupDetail.children && groupDetail.children.length > 0 && (
-                <div style={{ fontSize: 12, color: "#767168", marginBottom: 16 }}>
+                <div style={{ fontSize: 12, color: colors.mutedText, marginBottom: 16 }}>
                   Sub-groups: {groupDetail.children.map((c, i) => (
-                    <span key={c.id}><strong onClick={() => openGroup(c.id)} style={{ cursor: "pointer", color: red }}>{c.name}</strong> ({c.memberCount}){i < groupDetail.children.length - 1 ? ", " : ""}</span>
+                    <span key={c.id}><strong onClick={() => openGroup(c.id)} style={{ cursor: "pointer", color: colors.red }}>{c.name}</strong> ({c.memberCount}){i < groupDetail.children.length - 1 ? ", " : ""}</span>
                   ))}
                 </div>
               )}
@@ -2827,13 +2822,13 @@ function GroupManager({ toast, hideHeader }) {
               <div style={{ position: "relative", marginBottom: 16 }}>
                 <input value={addSearch} onChange={e => setAddSearch(e.target.value)} placeholder="Search investors to add..." style={inputStyle} />
                 {addResults.length > 0 && (
-                  <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1px solid #E8E5DE", borderTop: "none", borderRadius: "0 0 4px 4px", zIndex: 10, maxHeight: 180, overflow: "auto", boxShadow: "0 4px 12px rgba(0,0,0,.08)" }}>
+                  <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: colors.white, border: "1px solid #E8E5DE", borderTop: "none", borderRadius: "0 0 4px 4px", zIndex: 10, maxHeight: 180, overflow: "auto", boxShadow: "0 4px 12px rgba(0,0,0,.08)" }}>
                     {addResults.slice(0, 6).map(inv => (
-                      <div key={inv.id} onClick={() => { handleAddMember(inv.id); setAddSearch(""); }} style={{ padding: "10px 14px", cursor: "pointer", fontSize: 13, borderBottom: "1px solid #F0EDE8" }}
+                      <div key={inv.id} onClick={() => { handleAddMember(inv.id); setAddSearch(""); }} style={{ padding: "10px 14px", cursor: "pointer", fontSize: 13, borderBottom: `1px solid ${colors.lightBorder}` }}
                         onMouseEnter={e => e.currentTarget.style.background = "#F8F7F4"}
-                        onMouseLeave={e => e.currentTarget.style.background = "#fff"}>
+                        onMouseLeave={e => e.currentTarget.style.background = colors.white}>
                         <span style={{ fontWeight: 500 }}>{inv.name}</span>
-                        <span style={{ color: "#767168", marginLeft: 8, fontSize: 12 }}>{inv.email}</span>
+                        <span style={{ color: colors.mutedText, marginLeft: 8, fontSize: 12 }}>{inv.email}</span>
                       </div>
                     ))}
                   </div>
@@ -2845,15 +2840,15 @@ function GroupManager({ toast, hideHeader }) {
                 <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: i < groupDetail.members.length - 1 ? "1px solid #F5F3F0" : "none" }}>
                   <div>
                     <span style={{ fontSize: 14, fontWeight: 500 }}>{m.name}</span>
-                    <span style={{ fontSize: 12, color: "#767168", marginLeft: 10 }}>{m.email}</span>
+                    <span style={{ fontSize: 12, color: colors.mutedText, marginLeft: 10 }}>{m.email}</span>
                   </div>
-                  <span onClick={() => handleRemoveMember(m.id)} style={{ fontSize: 12, color: red, cursor: "pointer" }}>Remove</span>
+                  <span onClick={() => handleRemoveMember(m.id)} style={{ fontSize: 12, color: colors.red, cursor: "pointer" }}>Remove</span>
                 </div>
               ))}
               {groupDetail.members.length === 0 && <div style={{ color: "#BBB", fontSize: 13, fontStyle: "italic" }}>No members — search above to add investors</div>}
             </div>
           ) : (
-            <div style={{ padding: 40, textAlign: "center", color: "#767168" }}>Select a group to manage members</div>
+            <div style={{ padding: 40, textAlign: "center", color: colors.mutedText }}>Select a group to manage members</div>
           )}
         </div>
       </div>
@@ -2868,14 +2863,14 @@ function Toggle({ checked, onChange, label }) {
     <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: 13 }}>
       <div onClick={() => onChange(!checked)} style={{
         width: 36, height: 20, borderRadius: 10, position: "relative", transition: "background .2s",
-        background: checked ? red : "#DDD", cursor: "pointer",
+        background: checked ? colors.red : "#DDD", cursor: "pointer",
       }}>
         <div style={{
-          width: 16, height: 16, borderRadius: "50%", background: "#fff", position: "absolute", top: 2,
+          width: 16, height: 16, borderRadius: "50%", background: colors.white, position: "absolute", top: 2,
           left: checked ? 18 : 2, transition: "left .2s", boxShadow: "0 1px 3px rgba(0,0,0,.2)",
         }} />
       </div>
-      <span style={{ color: checked ? darkText : "#999" }}>{label}</span>
+      <span style={{ color: checked ? colors.darkText : "#999" }}>{label}</span>
     </label>
   );
 }
@@ -3026,7 +3021,7 @@ function StaffManager({ toast, hideHeader }) {
       </div>
 
       {showAdd && (
-        <form onSubmit={handleAdd} className="admin-form-row" style={{ background: "#fff", borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", marginBottom: 24, display: "flex", gap: 12, alignItems: "flex-end" }}>
+        <form onSubmit={handleAdd} className="admin-form-row" style={{ background: colors.white, borderRadius: 12, padding: "20px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", marginBottom: 24, display: "flex", gap: 12, alignItems: "flex-end" }}>
           <div style={{ flex: 1 }}>
             <label style={{ fontSize: 11, color: "#888" }}>Full Name</label>
             <input value={name} onChange={e => setName(e.target.value)} required style={inputStyle} placeholder="Jane Smith" />
@@ -3048,18 +3043,18 @@ function StaffManager({ toast, hideHeader }) {
 
       <div className="admin-perm-grid" style={{ display: "grid", gridTemplateColumns: selectedStaff ? "1fr 1fr" : "1fr", gap: 24 }}>
         {/* Staff list */}
-        <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
-          <div style={{ padding: "12px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: "#767168", textTransform: "uppercase", letterSpacing: ".06em" }}>
+        <div style={{ background: colors.white, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+          <div style={{ padding: "12px 20px", borderBottom: "1px solid #E8E5DE", fontSize: 11, color: colors.mutedText, textTransform: "uppercase", letterSpacing: ".06em" }}>
             {staff.length} Staff Members — click to manage permissions
           </div>
           {staff.map(s => (
             <div key={s.id} onClick={() => openPermissions(s)} style={{
-              padding: "14px 20px", borderBottom: "1px solid #F0EDE8", cursor: "pointer", transition: "background .15s",
-              background: selectedStaff?.id === s.id ? "#FFF5F5" : "#fff",
-              borderLeft: selectedStaff?.id === s.id ? `3px solid ${red}` : "3px solid transparent",
+              padding: "14px 20px", borderBottom: `1px solid ${colors.lightBorder}`, cursor: "pointer", transition: "background .15s",
+              background: selectedStaff?.id === s.id ? "#FFF5F5" : colors.white,
+              borderLeft: selectedStaff?.id === s.id ? `3px solid ${colors.red}` : "3px solid transparent",
             }}
-              onMouseEnter={e => { if (selectedStaff?.id !== s.id) e.currentTarget.style.background = "#FAFAF8"; }}
-              onMouseLeave={e => { if (selectedStaff?.id !== s.id) e.currentTarget.style.background = "#fff"; }}>
+              onMouseEnter={e => { if (selectedStaff?.id !== s.id) e.currentTarget.style.background = colors.cardBg; }}
+              onMouseLeave={e => { if (selectedStaff?.id !== s.id) e.currentTarget.style.background = colors.white; }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <div style={{ fontWeight: 500, fontSize: 14 }}>{s.name}</div>
@@ -3072,21 +3067,21 @@ function StaffManager({ toast, hideHeader }) {
                   </select>
                   <button onClick={e => { e.stopPropagation(); handleResetPassword(s); }} title="Reset password" style={{ ...btnOutline, padding: "3px 8px", fontSize: 10 }}>Reset PW</button>
                   {s.status === "ACTIVE" ? (
-                    <button onClick={e => { e.stopPropagation(); handleDeactivate(s); }} title="Deactivate" style={{ ...btnOutline, padding: "3px 8px", fontSize: 10, color: red, borderColor: red }}>Deactivate</button>
+                    <button onClick={e => { e.stopPropagation(); handleDeactivate(s); }} title="Deactivate" style={{ ...btnOutline, padding: "3px 8px", fontSize: 10, color: colors.red, borderColor: colors.red }}>Deactivate</button>
                   ) : (
-                    <button onClick={e => { e.stopPropagation(); handleReactivate(s); }} title="Reactivate" style={{ ...btnOutline, padding: "3px 8px", fontSize: 10, color: green, borderColor: green }}>Reactivate</button>
+                    <button onClick={e => { e.stopPropagation(); handleReactivate(s); }} title="Reactivate" style={{ ...btnOutline, padding: "3px 8px", fontSize: 10, color: colors.green, borderColor: colors.green }}>Reactivate</button>
                   )}
-                  <span style={{ padding: "2px 8px", borderRadius: 3, fontSize: 10, background: s.status === "ACTIVE" ? "#EFE" : "#FEE", color: s.status === "ACTIVE" ? green : red }}>{s.status}</span>
+                  <span style={{ padding: "2px 8px", borderRadius: 3, fontSize: 10, background: s.status === "ACTIVE" ? "#EFE" : "#FEE", color: s.status === "ACTIVE" ? colors.green : colors.red }}>{s.status}</span>
                 </div>
               </div>
             </div>
           ))}
-          {staff.length === 0 && <div style={{ padding: 24, color: "#767168", textAlign: "center" }}>No staff members</div>}
+          {staff.length === 0 && <div style={{ padding: 24, color: colors.mutedText, textAlign: "center" }}>No staff members</div>}
         </div>
 
         {/* Permissions panel */}
         {selectedStaff && (
-          <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+          <div style={{ background: colors.white, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
             <div style={{ padding: "16px 20px", borderBottom: "1px solid #E8E5DE", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <div style={{ fontSize: 15, fontWeight: 500 }}>Permissions: {selectedStaff.name}</div>
@@ -3096,16 +3091,16 @@ function StaffManager({ toast, hideHeader }) {
             </div>
 
             {/* Quick presets */}
-            <div style={{ padding: "14px 20px", borderBottom: "1px solid #F0EDE8", background: "#FAFAF8" }}>
+            <div style={{ padding: "14px 20px", borderBottom: `1px solid ${colors.lightBorder}`, background: colors.cardBg }}>
               <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 10 }}>Quick Presets</div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {Object.keys(PRESETS).map(p => (
                   <button key={p} onClick={() => applyPreset(p)} style={{
                     ...btnOutline, padding: "5px 12px", fontSize: 11, borderRadius: 16,
-                    background: "#fff", borderColor: "#DDD",
+                    background: colors.white, borderColor: "#DDD",
                   }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = red; e.currentTarget.style.color = red; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = "#DDD"; e.currentTarget.style.color = darkText; }}>
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = colors.red; e.currentTarget.style.color = colors.red; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = "#DDD"; e.currentTarget.style.color = colors.darkText; }}>
                     {p}
                   </button>
                 ))}
@@ -3115,7 +3110,7 @@ function StaffManager({ toast, hideHeader }) {
             {loadingFlags ? <Spinner /> : (
               <div style={{ maxHeight: 480, overflowY: "auto" }}>
                 {Object.entries(PERMISSION_GROUPS).map(([groupName, group]) => (
-                  <div key={groupName} style={{ padding: "14px 20px", borderBottom: "1px solid #F0EDE8" }}>
+                  <div key={groupName} style={{ padding: "14px 20px", borderBottom: `1px solid ${colors.lightBorder}` }}>
                     <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>{groupName}</div>
                     <div style={{ fontSize: 11, color: "#999", marginBottom: 12 }}>{group.description}</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -3134,7 +3129,7 @@ function StaffManager({ toast, hideHeader }) {
       {/* Credential dialog */}
       {credentialDialog && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={() => setCredentialDialog(null)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 12, padding: "28px 32px", maxWidth: 440, width: "90%", boxShadow: "0 8px 32px rgba(0,0,0,.15)" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: colors.white, borderRadius: 12, padding: "28px 32px", maxWidth: 440, width: "90%", boxShadow: "0 8px 32px rgba(0,0,0,.15)" }}>
             <h3 style={{ margin: "0 0 8px", fontSize: 18, fontWeight: 500 }}>
               {credentialDialog.action === "created" ? "Staff Member Created" : "Password Reset"}
             </h3>
@@ -3143,7 +3138,7 @@ function StaffManager({ toast, hideHeader }) {
                 ? `${credentialDialog.name} has been added and a welcome email has been sent.`
                 : `Password has been reset for ${credentialDialog.name} and an email has been sent.`}
             </p>
-            <div style={{ background: "#FAFAF8", border: "1px solid #ECEAE5", borderRadius: 8, padding: "16px 20px", marginBottom: 16, fontFamily: "monospace", fontSize: 13 }}>
+            <div style={{ background: colors.cardBg, border: "1px solid #ECEAE5", borderRadius: 8, padding: "16px 20px", marginBottom: 16, fontFamily: "monospace", fontSize: 13 }}>
               <div style={{ marginBottom: 6 }}>Email: <strong>{credentialDialog.email}</strong></div>
               <div>Password: <strong>{credentialDialog.tempPassword}</strong></div>
             </div>
@@ -3303,7 +3298,7 @@ function StatementManager({ toast }) {
     } catch (e) { toast(e.message, "error"); }
   }
 
-  const statusColors = { DRAFT: { bg: "#FFF8E1", text: "#B8860B" }, APPROVED: { bg: "#E8F5E9", text: green }, SENT: { bg: "#E3F2FD", text: "#1565C0" }, REJECTED: { bg: "#FFEBEE", text: red } };
+  const statusColors = { DRAFT: { bg: "#FFF8E1", text: "#B8860B" }, APPROVED: { bg: "#E8F5E9", text: colors.green }, SENT: { bg: "#E3F2FD", text: "#1565C0" }, REJECTED: { bg: "#FFEBEE", text: colors.red } };
   const drafts = statements.filter(s => s.status === "DRAFT").length;
   const approved = statements.filter(s => s.status === "APPROVED").length;
   const sent = statements.filter(s => s.status === "SENT").length;
@@ -3329,7 +3324,7 @@ function StatementManager({ toast }) {
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div>
             <h1 style={{ fontSize: 28, fontWeight: 300 }}>Statements</h1>
-            <p style={{ fontSize: 13, color: "#767168", marginTop: 4 }}>Generate, review, and send capital account statements</p>
+            <p style={{ fontSize: 13, color: colors.mutedText, marginTop: 4 }}>Generate, review, and send capital account statements</p>
           </div>
           {drafts > 0 && (
             <span style={{ background: "#FFF8E1", color: "#B8860B", fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 12, marginLeft: 8 }}>
@@ -3344,7 +3339,7 @@ function StatementManager({ toast }) {
 
       {/* Generate form with period inputs */}
       {showGenerateForm && (
-        <div style={{ background: "#fff", borderRadius: 12, padding: 24, boxShadow: cardShadow, marginBottom: 24 }}>
+        <div style={{ background: colors.white, borderRadius: 12, padding: 24, boxShadow: cardShadow, marginBottom: 24 }}>
           <h3 style={{ fontSize: 16, fontWeight: 400, marginBottom: 20 }}>Generate Statements</h3>
           <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
             <div style={{ flex: 1 }}>
@@ -3373,10 +3368,10 @@ function StatementManager({ toast }) {
       <div className="admin-stat-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 24 }}>
         {[
           { label: "Drafts", count: drafts, color: "#B8860B", action: drafts > 0 ? "Approve All" : null, onClick: handleBulkApprove },
-          { label: "Approved", count: approved, color: green, action: approved > 0 ? "Send All" : null, onClick: handleBulkSend },
+          { label: "Approved", count: approved, color: colors.green, action: approved > 0 ? "Send All" : null, onClick: handleBulkSend },
           { label: "Sent", count: sent, color: "#1565C0", action: null },
         ].map((c, i) => (
-          <div key={i} style={{ background: "#fff", borderRadius: 12, padding: "20px 24px", boxShadow: cardShadow }}>
+          <div key={i} style={{ background: colors.white, borderRadius: 12, padding: "20px 24px", boxShadow: cardShadow }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <div style={{ fontSize: 28, fontWeight: 300, color: c.color }}>{c.count}</div>
@@ -3390,11 +3385,11 @@ function StatementManager({ toast }) {
 
       {/* Filter tabs + search */}
       <div style={{ display: "flex", gap: 12, marginBottom: 16, alignItems: "center" }}>
-        <div style={{ display: "flex", gap: 0, background: "#fff", borderRadius: 8, overflow: "hidden", border: "1px solid #E8E5DE", flex: 1 }}>
+        <div style={{ display: "flex", gap: 0, background: colors.white, borderRadius: 8, overflow: "hidden", border: "1px solid #E8E5DE", flex: 1 }}>
           {["all", "DRAFT", "APPROVED", "SENT"].map(f => (
             <button key={f} onClick={() => setFilter(f)} style={{
-              padding: "8px 20px", fontSize: 12, border: "none", cursor: "pointer", fontFamily: sans, flex: 1,
-              background: filter === f ? red : "#fff", color: filter === f ? "#fff" : "#666",
+              padding: "8px 20px", fontSize: 12, border: "none", cursor: "pointer", fontFamily: fonts.sans, flex: 1,
+              background: filter === f ? colors.red : colors.white, color: filter === f ? colors.white : "#666",
               transition: "background .15s, color .15s",
             }}>{f === "all" ? "All" : f.charAt(0) + f.slice(1).toLowerCase()}</button>
           ))}
@@ -3406,7 +3401,7 @@ function StatementManager({ toast }) {
       {rejectingId && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}
           onClick={() => { setRejectingId(null); setRejectReason(""); }}>
-          <div style={{ background: "#fff", borderRadius: 12, padding: 28, width: 420, maxWidth: "90vw", boxShadow: "0 8px 32px rgba(0,0,0,.15)" }}
+          <div style={{ background: colors.white, borderRadius: 12, padding: 28, width: 420, maxWidth: "90vw", boxShadow: "0 8px 32px rgba(0,0,0,.15)" }}
             onClick={e => e.stopPropagation()}>
             <h3 style={{ fontSize: 16, fontWeight: 500, marginBottom: 16 }}>Reject Statement</h3>
             <label style={labelStyle}>Reason for rejection</label>
@@ -3416,7 +3411,7 @@ function StatementManager({ toast }) {
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
               <button onClick={() => { setRejectingId(null); setRejectReason(""); }} style={btnOutline}>Cancel</button>
               <button onClick={() => handleReject(rejectingId, rejectReason)}
-                style={{ ...btnStyle, background: red }}>
+                style={{ ...btnStyle, background: colors.red }}>
                 Reject Statement
               </button>
             </div>
@@ -3426,7 +3421,7 @@ function StatementManager({ toast }) {
 
       {/* Statement detail panel */}
       {selectedId && (
-        <div style={{ background: "#fff", borderRadius: 12, boxShadow: cardShadow, marginBottom: 24, overflow: "hidden" }}>
+        <div style={{ background: colors.white, borderRadius: 12, boxShadow: cardShadow, marginBottom: 24, overflow: "hidden" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 24px", borderBottom: "1px solid #E8E5DE" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <button onClick={closeDetail} style={{ ...btnOutline, padding: "4px 10px", fontSize: 11 }}>Back</button>
@@ -3443,7 +3438,7 @@ function StatementManager({ toast }) {
               <div style={{ display: "flex", gap: 8 }}>
                 {detail.status === "DRAFT" && (
                   <>
-                    <button onClick={() => handleApprove(detail.id)} style={{ ...btnOutline, padding: "6px 14px", fontSize: 11, color: green, borderColor: green }}>Approve</button>
+                    <button onClick={() => handleApprove(detail.id)} style={{ ...btnOutline, padding: "6px 14px", fontSize: 11, color: colors.green, borderColor: colors.green }}>Approve</button>
                     <button onClick={() => { setRejectingId(detail.id); }} style={{ ...btnOutline, padding: "6px 14px", fontSize: 11, color: "#999" }}>Reject</button>
                   </>
                 )}
@@ -3458,15 +3453,15 @@ function StatementManager({ toast }) {
           </div>
 
           {detailLoading ? (
-            <div style={{ padding: 40, textAlign: "center", color: "#767168" }}>Loading statement...</div>
+            <div style={{ padding: 40, textAlign: "center", color: colors.mutedText }}>Loading statement...</div>
           ) : detail ? (
             <>
               {/* Detail header info */}
-              <div style={{ padding: "16px 24px", borderBottom: "1px solid #F0EDE8", display: "flex", gap: 32, flexWrap: "wrap" }}>
+              <div style={{ padding: "16px 24px", borderBottom: `1px solid ${colors.lightBorder}`, display: "flex", gap: 32, flexWrap: "wrap" }}>
                 <div>
                   <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: ".05em" }}>Investor</div>
                   <div style={{ fontSize: 14, fontWeight: 500, marginTop: 2 }}>{detail.investorName}</div>
-                  <div style={{ fontSize: 12, color: "#767168" }}>{detail.investorEmail}</div>
+                  <div style={{ fontSize: 12, color: colors.mutedText }}>{detail.investorEmail}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: ".05em" }}>Project</div>
@@ -3483,7 +3478,7 @@ function StatementManager({ toast }) {
                 {detail.approvedByName && (
                   <div>
                     <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: ".05em" }}>Approved</div>
-                    <div style={{ fontSize: 13, marginTop: 2, color: green }}>{detail.approvedByName} on {new Date(detail.approvedAt).toLocaleDateString()}</div>
+                    <div style={{ fontSize: 13, marginTop: 2, color: colors.green }}>{detail.approvedByName} on {new Date(detail.approvedAt).toLocaleDateString()}</div>
                   </div>
                 )}
                 {detail.sentAt && (
@@ -3495,7 +3490,7 @@ function StatementManager({ toast }) {
                 {detail.rejectReason && (
                   <div>
                     <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: ".05em" }}>Rejection Reason</div>
-                    <div style={{ fontSize: 13, marginTop: 2, color: red }}>{detail.rejectReason}</div>
+                    <div style={{ fontSize: 13, marginTop: 2, color: colors.red }}>{detail.rejectReason}</div>
                   </div>
                 )}
               </div>
@@ -3504,9 +3499,9 @@ function StatementManager({ toast }) {
               <div style={{ display: "flex", gap: 0, borderBottom: "1px solid #E8E5DE" }}>
                 {[{ key: "preview", label: "HTML Preview" }, { key: "data", label: "Statement Data" }].map(t => (
                   <button key={t.key} onClick={() => setDetailTab(t.key)} style={{
-                    padding: "10px 20px", fontSize: 12, border: "none", cursor: "pointer", fontFamily: sans,
-                    background: detailTab === t.key ? "#F8F7F4" : "#fff", color: detailTab === t.key ? red : "#666",
-                    borderBottom: detailTab === t.key ? `2px solid ${red}` : "2px solid transparent",
+                    padding: "10px 20px", fontSize: 12, border: "none", cursor: "pointer", fontFamily: fonts.sans,
+                    background: detailTab === t.key ? "#F8F7F4" : colors.white, color: detailTab === t.key ? colors.red : "#666",
+                    borderBottom: detailTab === t.key ? `2px solid ${colors.red}` : "2px solid transparent",
                     transition: "all .15s",
                   }}>{t.label}</button>
                 ))}
@@ -3516,12 +3511,12 @@ function StatementManager({ toast }) {
               {detailTab === "preview" && (
                 <div style={{ padding: 24 }}>
                   {detail.html ? (
-                    <div style={{ border: "1px solid #E8E5DE", borderRadius: 8, overflow: "hidden", background: "#fff" }}>
+                    <div style={{ border: "1px solid #E8E5DE", borderRadius: 8, overflow: "hidden", background: colors.white }}>
                       <div dangerouslySetInnerHTML={{ __html: detail.html }}
                         style={{ padding: 24, maxHeight: 600, overflowY: "auto", fontSize: 13, lineHeight: 1.6 }} />
                     </div>
                   ) : (
-                    <div style={{ textAlign: "center", padding: 40, color: "#767168", fontSize: 13 }}>No HTML preview available for this statement.</div>
+                    <div style={{ textAlign: "center", padding: 40, color: colors.mutedText, fontSize: 13 }}>No HTML preview available for this statement.</div>
                   )}
                 </div>
               )}
@@ -3534,11 +3529,11 @@ function StatementManager({ toast }) {
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
                         {/* Investor Info */}
                         {d.investor && (
-                          <div style={{ background: "#FAFAF8", borderRadius: 8, padding: 16, border: "1px solid #F0EDE8" }}>
+                          <div style={{ background: colors.cardBg, borderRadius: 8, padding: 16, border: `1px solid ${colors.lightBorder}` }}>
                             <div style={{ fontSize: 12, fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 10 }}>Investor Info</div>
                             {Object.entries(d.investor).map(([k, v]) => (
-                              <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, borderBottom: "1px solid #F0EDE8" }}>
-                                <span style={{ color: "#767168" }}>{k}</span>
+                              <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, borderBottom: `1px solid ${colors.lightBorder}` }}>
+                                <span style={{ color: colors.mutedText }}>{k}</span>
                                 <span style={{ fontWeight: 500 }}>{String(v)}</span>
                               </div>
                             ))}
@@ -3546,11 +3541,11 @@ function StatementManager({ toast }) {
                         )}
                         {/* Project Info */}
                         {d.project && (
-                          <div style={{ background: "#FAFAF8", borderRadius: 8, padding: 16, border: "1px solid #F0EDE8" }}>
+                          <div style={{ background: colors.cardBg, borderRadius: 8, padding: 16, border: `1px solid ${colors.lightBorder}` }}>
                             <div style={{ fontSize: 12, fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 10 }}>Project Info</div>
                             {Object.entries(d.project).map(([k, v]) => (
-                              <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, borderBottom: "1px solid #F0EDE8" }}>
-                                <span style={{ color: "#767168" }}>{k}</span>
+                              <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, borderBottom: `1px solid ${colors.lightBorder}` }}>
+                                <span style={{ color: colors.mutedText }}>{k}</span>
                                 <span style={{ fontWeight: 500 }}>{typeof v === "number" ? fc(v) : String(v)}</span>
                               </div>
                             ))}
@@ -3558,11 +3553,11 @@ function StatementManager({ toast }) {
                         )}
                         {/* Account Summary */}
                         {d.accountSummary && (
-                          <div style={{ background: "#FAFAF8", borderRadius: 8, padding: 16, border: "1px solid #F0EDE8" }}>
+                          <div style={{ background: colors.cardBg, borderRadius: 8, padding: 16, border: `1px solid ${colors.lightBorder}` }}>
                             <div style={{ fontSize: 12, fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 10 }}>Account Summary</div>
                             {Object.entries(d.accountSummary).map(([k, v]) => (
-                              <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, borderBottom: "1px solid #F0EDE8" }}>
-                                <span style={{ color: "#767168" }}>{k}</span>
+                              <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, borderBottom: `1px solid ${colors.lightBorder}` }}>
+                                <span style={{ color: colors.mutedText }}>{k}</span>
                                 <span style={{ fontWeight: 500 }}>{typeof v === "number" ? fc(v) : String(v)}</span>
                               </div>
                             ))}
@@ -3570,11 +3565,11 @@ function StatementManager({ toast }) {
                         )}
                         {/* Transaction History */}
                         {d.transactions && Array.isArray(d.transactions) && d.transactions.length > 0 && (
-                          <div style={{ background: "#FAFAF8", borderRadius: 8, padding: 16, border: "1px solid #F0EDE8" }}>
+                          <div style={{ background: colors.cardBg, borderRadius: 8, padding: 16, border: `1px solid ${colors.lightBorder}` }}>
                             <div style={{ fontSize: 12, fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 10 }}>Transaction History</div>
                             {d.transactions.map((tx, ti) => (
-                              <div key={ti} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, borderBottom: "1px solid #F0EDE8" }}>
-                                <span style={{ color: "#767168" }}>{tx.date || tx.type || `#${ti + 1}`}</span>
+                              <div key={ti} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, borderBottom: `1px solid ${colors.lightBorder}` }}>
+                                <span style={{ color: colors.mutedText }}>{tx.date || tx.type || `#${ti + 1}`}</span>
                                 <span style={{ fontWeight: 500 }}>{tx.description || tx.type || ""} {tx.amount != null ? fc(tx.amount) : ""}</span>
                               </div>
                             ))}
@@ -3582,7 +3577,7 @@ function StatementManager({ toast }) {
                         )}
                         {/* Fallback: show raw keys not covered above */}
                         {Object.entries(d).filter(([k]) => !["investor", "project", "accountSummary", "transactions"].includes(k)).map(([k, v]) => (
-                          <div key={k} style={{ background: "#FAFAF8", borderRadius: 8, padding: 16, border: "1px solid #F0EDE8" }}>
+                          <div key={k} style={{ background: colors.cardBg, borderRadius: 8, padding: 16, border: `1px solid ${colors.lightBorder}` }}>
                             <div style={{ fontSize: 12, fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 10 }}>{k}</div>
                             <pre style={{ fontSize: 12, whiteSpace: "pre-wrap", wordBreak: "break-word", margin: 0, color: "#444" }}>{typeof v === "object" ? JSON.stringify(v, null, 2) : String(v)}</pre>
                           </div>
@@ -3590,19 +3585,19 @@ function StatementManager({ toast }) {
                       </div>
                     );
                   })() : (
-                    <div style={{ textAlign: "center", padding: 40, color: "#767168", fontSize: 13 }}>No parsed data available for this statement.</div>
+                    <div style={{ textAlign: "center", padding: 40, color: colors.mutedText, fontSize: 13 }}>No parsed data available for this statement.</div>
                   )}
                 </div>
               )}
             </>
           ) : (
-            <div style={{ padding: 40, textAlign: "center", color: "#767168" }}>Failed to load statement detail.</div>
+            <div style={{ padding: 40, textAlign: "center", color: colors.mutedText }}>Failed to load statement detail.</div>
           )}
         </div>
       )}
 
       {/* Statement list table */}
-      <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: cardShadow }}>
+      <div style={{ background: colors.white, borderRadius: 12, overflow: "hidden", boxShadow: cardShadow }}>
         {filteredStatements.length === 0 ? (
           <EmptyState title="No statements" subtitle={stmtSearch ? "No statements match your search" : "Click 'Generate All' to create draft statements for all investors"} />
         ) : (
@@ -3617,20 +3612,20 @@ function StatementManager({ toast }) {
                 { key: "nav", label: "NAV" },
                 { key: "status", label: "Status" },
               ]} sortBy={stmtSort.sortBy} sortDir={stmtSort.sortDir} onSort={stmtSort.onSort} />
-              <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#767168" }}>Date</span>
-              <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#767168" }}>Actions</span>
+              <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: colors.mutedText }}>Date</span>
+              <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: colors.mutedText }}>Actions</span>
             </div>
             {/* Table rows */}
             {stmtSort.sortData(filteredStatements).map((s, i) => (
               <div key={s.id} onClick={() => loadDetail(s.id)} style={{
                 display: "grid", gridTemplateColumns: "2fr 1.5fr 1fr 1fr 1fr 1fr 100px 160px",
-                padding: "12px 20px", borderBottom: i < filteredStatements.length - 1 ? "1px solid #F0EDE8" : "none",
+                padding: "12px 20px", borderBottom: i < filteredStatements.length - 1 ? `1px solid ${colors.lightBorder}` : "none",
                 alignItems: "center", cursor: "pointer", fontSize: 13,
-                background: selectedId === s.id ? "#FBF9F6" : "#fff",
+                background: selectedId === s.id ? "#FBF9F6" : colors.white,
                 transition: "background .1s",
               }}
-                onMouseEnter={e => { if (selectedId !== s.id) e.currentTarget.style.background = "#FAFAF8"; }}
-                onMouseLeave={e => { if (selectedId !== s.id) e.currentTarget.style.background = "#fff"; }}>
+                onMouseEnter={e => { if (selectedId !== s.id) e.currentTarget.style.background = colors.cardBg; }}
+                onMouseLeave={e => { if (selectedId !== s.id) e.currentTarget.style.background = colors.white; }}>
                 <div>
                   <div style={{ fontWeight: 500, fontSize: 13 }}>{s.investorName || "Unknown"}</div>
                   <div style={{ fontSize: 11, color: "#999", marginTop: 1 }}>{s.investorEmail || ""}</div>
@@ -3646,13 +3641,13 @@ function StatementManager({ toast }) {
                     color: statusColors[s.status]?.text || "#666",
                   }}>{s.status}</span>
                   {s.status === "APPROVED" && s.approvedByName && (
-                    <div style={{ fontSize: 10, color: green, marginTop: 2 }}>by {s.approvedByName}</div>
+                    <div style={{ fontSize: 10, color: colors.green, marginTop: 2 }}>by {s.approvedByName}</div>
                   )}
                 </div>
                 <span style={{ fontSize: 12, color: "#888" }}>{new Date(s.createdAt).toLocaleDateString()}</span>
                 <div style={{ display: "flex", gap: 6 }} onClick={e => e.stopPropagation()}>
                   {s.status === "DRAFT" && (
-                    <button onClick={() => handleApprove(s.id)} style={{ ...btnOutline, padding: "4px 10px", fontSize: 10, color: green, borderColor: green }}>Approve</button>
+                    <button onClick={() => handleApprove(s.id)} style={{ ...btnOutline, padding: "4px 10px", fontSize: 10, color: colors.green, borderColor: colors.green }}>Approve</button>
                   )}
                   {s.status === "APPROVED" && (
                     <>
@@ -3673,7 +3668,7 @@ function StatementManager({ toast }) {
         {!showCapCallForm ? (
           <button onClick={() => setShowCapCallForm(true)} style={btnOutline}>Generate Capital Call</button>
         ) : (
-          <div style={{ background: "#fff", borderRadius: 12, padding: "24px", boxShadow: cardShadow }}>
+          <div style={{ background: colors.white, borderRadius: 12, padding: "24px", boxShadow: cardShadow }}>
             <h3 style={{ fontSize: 16, fontWeight: 400, marginBottom: 20 }}>Generate Capital Call</h3>
             <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
               <div style={{ flex: 1 }}>
@@ -3731,7 +3726,7 @@ function StatementManager({ toast }) {
         {!showQtrReportForm ? (
           <button onClick={() => setShowQtrReportForm(true)} style={btnOutline}>Generate Quarterly Report</button>
         ) : (
-          <div style={{ background: "#fff", borderRadius: 12, padding: "24px", boxShadow: cardShadow }}>
+          <div style={{ background: colors.white, borderRadius: 12, padding: "24px", boxShadow: cardShadow }}>
             <h3 style={{ fontSize: 16, fontWeight: 400, marginBottom: 20 }}>Generate Quarterly Report</h3>
             <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
               <div style={{ flex: 1 }}>
@@ -3801,7 +3796,7 @@ function SignatureManager({ toast, hideHeader }) {
     catch (e) { toast(e.message, "error"); }
   }
 
-  const statusColor = (s) => s === "signed" ? green : s === "pending" ? "#B8860B" : s === "cancelled" ? "#999" : red;
+  const statusColor = (s) => s === "signed" ? colors.green : s === "pending" ? "#B8860B" : s === "cancelled" ? "#999" : colors.red;
   const statusBg = (s) => s === "signed" ? "#EFE" : s === "pending" ? "#FFF8E1" : s === "cancelled" ? "#F5F5F5" : "#FEE";
 
   const filteredSigs = sigs.filter(sig => {
@@ -3815,18 +3810,18 @@ function SignatureManager({ toast, hideHeader }) {
       {!hideHeader && <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 300 }}>Signatures</h1>
-          <p style={{ fontSize: 13, color: "#767168", marginTop: 4 }}>{sigs.length} signature requests</p>
+          <p style={{ fontSize: 13, color: colors.mutedText, marginTop: 4 }}>{sigs.length} signature requests</p>
         </div>
       </div>}
       <div style={{ marginBottom: 20 }}>
         <SearchBox value={sigSearch} onChange={setSigSearch} placeholder="Search signatures..." />
       </div>
-      {loading ? <p style={{ color: "#767168" }}>Loading...</p> : filteredSigs.length === 0 ? (
-        <div style={{ background: "#fff", borderRadius: 12, padding: 40, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", textAlign: "center", color: "#767168", fontSize: 13 }}>
+      {loading ? <p style={{ color: colors.mutedText }}>Loading...</p> : filteredSigs.length === 0 ? (
+        <div style={{ background: colors.white, borderRadius: 12, padding: 40, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", textAlign: "center", color: colors.mutedText, fontSize: 13 }}>
           {sigSearch ? "No matching signature requests." : "No signature requests yet. Use the Documents section to request signatures."}
         </div>
       ) : (
-        <div className="admin-table-scroll" style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+        <div className="admin-table-scroll" style={{ background: colors.white, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 120px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE" }}>
             <SortableHeader columns={[
               { key: "subject", label: "Document" },
@@ -3834,13 +3829,13 @@ function SignatureManager({ toast, hideHeader }) {
               { key: "signerCount", label: "Signers" },
               { key: "status", label: "Status" },
             ]} sortBy={sigSort.sortBy} sortDir={sigSort.sortDir} onSort={sigSort.onSort} />
-            <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#767168" }}>Actions</span>
+            <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: colors.mutedText }}>Actions</span>
           </div>
           {sigSort.sortData(filteredSigs).map((sig, i) => (
-            <div key={sig.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 120px", padding: "14px 20px", borderBottom: i < filteredSigs.length - 1 ? "1px solid #F0EDE8" : "none", fontSize: 13, alignItems: "center" }}>
+            <div key={sig.id} style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 120px", padding: "14px 20px", borderBottom: i < filteredSigs.length - 1 ? `1px solid ${colors.lightBorder}` : "none", fontSize: 13, alignItems: "center" }}>
               <div>
                 <div style={{ fontWeight: 500 }}>{sig.document?.name || sig.subject}</div>
-                <div style={{ fontSize: 11, color: "#767168", marginTop: 2 }}>{sig.subject}</div>
+                <div style={{ fontSize: 11, color: colors.mutedText, marginTop: 2 }}>{sig.subject}</div>
               </div>
               <span style={{ color: "#666" }}>{sig.createdByName}</span>
               <div>
@@ -3853,7 +3848,7 @@ function SignatureManager({ toast, hideHeader }) {
               <span style={{ padding: "2px 10px", borderRadius: 3, fontSize: 11, background: statusBg(sig.status), color: statusColor(sig.status), display: "inline-block", width: "fit-content" }}>{sig.status}</span>
               <div>
                 {sig.status === "pending" && (
-                  <button onClick={() => handleCancel(sig.id)} style={{ ...btnOutline, fontSize: 11, padding: "4px 12px", color: red, borderColor: red }}>Cancel</button>
+                  <button onClick={() => handleCancel(sig.id)} style={{ ...btnOutline, fontSize: 11, padding: "4px 12px", color: colors.red, borderColor: colors.red }}>Cancel</button>
                 )}
               </div>
             </div>
@@ -3903,15 +3898,15 @@ function ProspectManager({ toast }) {
   }
 
   const statusColors = {
-    new: "#2563EB", contacted: "#8B7128", qualified: green, converted: "#7C3AED", declined: "#999",
+    new: "#2563EB", contacted: "#8B7128", qualified: colors.green, converted: "#7C3AED", declined: "#999",
   };
 
-  if (loading && !prospects.length) return <div style={{ padding: 40, color: "#767168", textAlign: "center" }}>Loading prospects...</div>;
+  if (loading && !prospects.length) return <div style={{ padding: 40, color: colors.mutedText, textAlign: "center" }}>Loading prospects...</div>;
 
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 400, color: darkText }}>Prospect Leads</h2>
+        <h2 style={{ fontSize: 20, fontWeight: 400, color: colors.darkText }}>Prospect Leads</h2>
       </div>
 
       {/* Stats Badges */}
@@ -3921,23 +3916,23 @@ function ProspectManager({ toast }) {
             { key: "all", label: "All", count: stats.total },
             { key: "new", label: "New", count: stats.new, color: "#2563EB" },
             { key: "contacted", label: "Contacted", count: stats.contacted, color: "#8B7128" },
-            { key: "qualified", label: "Qualified", count: stats.qualified, color: green },
+            { key: "qualified", label: "Qualified", count: stats.qualified, color: colors.green },
             { key: "converted", label: "Converted", count: stats.converted, color: "#7C3AED" },
-            { key: "declined", label: "Declined", count: stats.declined, color: "#767168" },
+            { key: "declined", label: "Declined", count: stats.declined, color: colors.mutedText },
           ].map(s => (
             <button key={s.key} onClick={() => setFilterStatus(s.key)} style={{
-              padding: "6px 14px", borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: sans,
+              padding: "6px 14px", borderRadius: 4, fontSize: 12, cursor: "pointer", fontFamily: fonts.sans,
               display: "flex", alignItems: "center", gap: 6,
-              background: filterStatus === s.key ? (s.color || darkText) : "#fff",
-              color: filterStatus === s.key ? "#fff" : (s.color || darkText),
+              background: filterStatus === s.key ? (s.color || colors.darkText) : colors.white,
+              color: filterStatus === s.key ? colors.white : (s.color || colors.darkText),
               border: `1px solid ${filterStatus === s.key ? "transparent" : "#DDD"}`,
               fontWeight: filterStatus === s.key ? 500 : 400,
             }}>
               {s.label}
               <span style={{
                 padding: "1px 6px", borderRadius: 8, fontSize: 10,
-                background: filterStatus === s.key ? "rgba(255,255,255,.25)" : `${s.color || darkText}15`,
-                color: filterStatus === s.key ? "#fff" : (s.color || darkText),
+                background: filterStatus === s.key ? "rgba(255,255,255,.25)" : `${s.color || colors.darkText}15`,
+                color: filterStatus === s.key ? colors.white : (s.color || colors.darkText),
               }}>{s.count}</span>
             </button>
           ))}
@@ -3957,10 +3952,10 @@ function ProspectManager({ toast }) {
           return (p.name || "").toLowerCase().includes(q) || (p.email || "").toLowerCase().includes(q) || (p.investmentRange || "").toLowerCase().includes(q) || (p.interestedProject?.name || "").toLowerCase().includes(q) || (p.status || "").toLowerCase().includes(q);
         }).map(p => ({ ...p, projectName: p.interestedProject?.name || "General" })));
         return (
-      <div style={{ borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", background: "#fff" }}>
+      <div style={{ borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)", background: colors.white }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
-            <tr style={{ background: "#FAFAF8", borderBottom: "1px solid #E8E5DE" }}>
+            <tr style={{ background: colors.cardBg, borderBottom: "1px solid #E8E5DE" }}>
               {[{ key: "name", label: "Name" }, { key: "email", label: "Email" }, { key: "investmentRange", label: "Interest Range" }, { key: "projectName", label: "Project" }, { key: "status", label: "Status" }, { key: "createdAt", label: "Date" }].map(col => (
                 <th key={col.key} onClick={() => prospectSort.onSort(col.key)} style={{ padding: "10px 16px", textAlign: "left", fontWeight: 500, color: "#888", fontSize: 11, textTransform: "uppercase", letterSpacing: ".04em", cursor: "pointer", userSelect: "none" }}>
                   <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -3973,15 +3968,15 @@ function ProspectManager({ toast }) {
           </thead>
           <tbody>
             {filteredProspects.length === 0 && (
-              <tr><td colSpan={6} style={{ padding: 40, textAlign: "center", color: "#767168" }}>No prospects found</td></tr>
+              <tr><td colSpan={6} style={{ padding: 40, textAlign: "center", color: colors.mutedText }}>No prospects found</td></tr>
             )}
             {filteredProspects.map(p => (
               <>
                 <tr key={p.id} onClick={() => setExpandedId(expandedId === p.id ? null : p.id)} style={{
                   borderBottom: "1px solid #F0EDEA", cursor: "pointer", transition: "background .1s",
-                }} onMouseEnter={e => e.currentTarget.style.background = "#FAFAF8"}
+                }} onMouseEnter={e => e.currentTarget.style.background = colors.cardBg}
                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                  <td style={{ padding: "12px 16px", fontWeight: 500, color: darkText }}>{p.name}</td>
+                  <td style={{ padding: "12px 16px", fontWeight: 500, color: colors.darkText }}>{p.name}</td>
                   <td style={{ padding: "12px 16px", color: "#666" }}>{p.email}</td>
                   <td style={{ padding: "12px 16px", color: "#666" }}>{p.investmentRange || "—"}</td>
                   <td style={{ padding: "12px 16px", color: "#666" }}>{p.interestedProject?.name || "General"}</td>
@@ -3993,26 +3988,26 @@ function ProspectManager({ toast }) {
                       fontWeight: 500, textTransform: "capitalize",
                     }}>{p.status}</span>
                   </td>
-                  <td style={{ padding: "12px 16px", color: "#767168", fontSize: 12 }}>{new Date(p.createdAt).toLocaleDateString()}</td>
+                  <td style={{ padding: "12px 16px", color: colors.mutedText, fontSize: 12 }}>{new Date(p.createdAt).toLocaleDateString()}</td>
                 </tr>
                 {expandedId === p.id && (
                   <tr key={`${p.id}-detail`}>
-                    <td colSpan={6} style={{ padding: "16px 24px", background: "#FAFAF8", borderBottom: "1px solid #E8E5DE" }}>
+                    <td colSpan={6} style={{ padding: "16px 24px", background: colors.cardBg, borderBottom: "1px solid #E8E5DE" }}>
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 16 }}>
-                        <div><span style={{ fontSize: 11, color: "#AAA", display: "block", marginBottom: 4 }}>Phone</span><span style={{ fontSize: 13, color: darkText }}>{p.phone || "Not provided"}</span></div>
-                        <div><span style={{ fontSize: 11, color: "#AAA", display: "block", marginBottom: 4 }}>Entity Type</span><span style={{ fontSize: 13, color: darkText }}>{p.entityType || "Not specified"}</span></div>
-                        <div><span style={{ fontSize: 11, color: "#AAA", display: "block", marginBottom: 4 }}>Accreditation</span><span style={{ fontSize: 13, color: darkText }}>{p.accreditationStatus || "Not specified"}</span></div>
+                        <div><span style={{ fontSize: 11, color: "#AAA", display: "block", marginBottom: 4 }}>Phone</span><span style={{ fontSize: 13, color: colors.darkText }}>{p.phone || "Not provided"}</span></div>
+                        <div><span style={{ fontSize: 11, color: "#AAA", display: "block", marginBottom: 4 }}>Entity Type</span><span style={{ fontSize: 13, color: colors.darkText }}>{p.entityType || "Not specified"}</span></div>
+                        <div><span style={{ fontSize: 11, color: "#AAA", display: "block", marginBottom: 4 }}>Accreditation</span><span style={{ fontSize: 13, color: colors.darkText }}>{p.accreditationStatus || "Not specified"}</span></div>
                       </div>
                       {p.message && (
                         <div style={{ marginBottom: 16 }}>
                           <span style={{ fontSize: 11, color: "#AAA", display: "block", marginBottom: 4 }}>Message</span>
-                          <p style={{ fontSize: 13, color: "#555", lineHeight: 1.6, background: "#fff", padding: "12px 16px", borderRadius: 4, border: "1px solid #E8E5DE" }}>{p.message}</p>
+                          <p style={{ fontSize: 13, color: "#555", lineHeight: 1.6, background: colors.white, padding: "12px 16px", borderRadius: 4, border: "1px solid #E8E5DE" }}>{p.message}</p>
                         </div>
                       )}
                       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                         <span style={{ fontSize: 12, color: "#888" }}>Update status:</span>
                         <select value={p.status} onChange={e => handleStatusChange(p.id, e.target.value)} style={{
-                          padding: "6px 12px", border: "1px solid #DDD", borderRadius: 4, fontSize: 12, fontFamily: sans,
+                          padding: "6px 12px", border: "1px solid #DDD", borderRadius: 4, fontSize: 12, fontFamily: fonts.sans,
                         }}>
                           {["new", "contacted", "qualified", "converted", "declined"].map(s => (
                             <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
@@ -4128,34 +4123,34 @@ function AdminInbox({ user, toast }) {
   if (threadDetail) {
     return (
       <>
-        <p style={{ fontSize: 12, color: red, cursor: "pointer", marginBottom: 24 }} onClick={() => { setSelectedThread(null); setThreadDetail(null); setReply(""); }}>← Back to inbox</p>
+        <p style={{ fontSize: 12, color: colors.red, cursor: "pointer", marginBottom: 24 }} onClick={() => { setSelectedThread(null); setThreadDetail(null); setReply(""); }}>← Back to inbox</p>
         <div style={{ marginBottom: 24 }}>
           <h2 style={{ fontSize: 22, fontWeight: 400, marginBottom: 6 }}>{threadDetail.subject}</h2>
-          <div style={{ fontSize: 12, color: "#767168" }}>
+          <div style={{ fontSize: 12, color: colors.mutedText }}>
             {threadDetail.messages.length} messages · Started by {threadDetail.creator.name}
             {threadDetail.project && <span> · {threadDetail.project}</span>}
-            <span style={{ marginLeft: 8, padding: "2px 8px", background: "#F0EDE8", borderRadius: 3, fontSize: 10 }}>{threadDetail.targetType}</span>
+            <span style={{ marginLeft: 8, padding: "2px 8px", background: colors.lightBorder, borderRadius: 3, fontSize: 10 }}>{threadDetail.targetType}</span>
           </div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
           {threadDetail.messages.map((m) => {
             const isInvestor = m.sender.role === "INVESTOR";
             return (
-              <div key={m.id} style={{ background: "#fff", border: `1px solid ${isInvestor ? "#ECEAE5" : "#DDE8DD"}`, borderRadius: 12, padding: "16px 20px", boxShadow: "0 1px 4px rgba(0,0,0,.03)", marginLeft: isInvestor ? 0 : 40, marginRight: isInvestor ? 40 : 0 }}>
+              <div key={m.id} style={{ background: colors.white, border: `1px solid ${isInvestor ? "#ECEAE5" : "#DDE8DD"}`, borderRadius: 12, padding: "16px 20px", boxShadow: "0 1px 4px rgba(0,0,0,.03)", marginLeft: isInvestor ? 0 : 40, marginRight: isInvestor ? 40 : 0 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <div style={{ width: 26, height: 26, borderRadius: "50%", background: isInvestor ? "#F0EDE8" : `${green}22`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 600, color: isInvestor ? "#666" : green }}>
+                    <div style={{ width: 26, height: 26, borderRadius: "50%", background: isInvestor ? colors.lightBorder : `${colors.green}22`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 600, color: isInvestor ? "#666" : colors.green }}>
                       {m.sender.initials || m.sender.name.split(" ").map(n => n[0]).join("")}
                     </div>
                     <span style={{ fontSize: 13, fontWeight: 500 }}>{m.sender.name}</span>
-                    <span style={{ fontSize: 11, color: "#767168" }}>{isInvestor ? "Investor" : "Staff"}</span>
+                    <span style={{ fontSize: 11, color: colors.mutedText }}>{isInvestor ? "Investor" : "Staff"}</span>
                   </div>
                   <span style={{ fontSize: 11, color: "#BBB" }}>{new Date(m.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}</span>
                 </div>
                 <div style={{ fontSize: 13, color: "#444", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{m.body}</div>
                 {/* Read receipts (C.2) */}
                 {m.readReceipts && m.readReceipts.length > 0 && (
-                  <div style={{ marginTop: 8, paddingTop: 6, borderTop: "1px solid #F0EDE8" }}>
+                  <div style={{ marginTop: 8, paddingTop: 6, borderTop: `1px solid ${colors.lightBorder}` }}>
                     {m.readReceipts.map((rr, ri) => (
                       <div key={ri} style={{ fontSize: 10, color: "#AAA", marginBottom: 2 }}>
                         Read by {rr.name || "Unknown"} — {new Date(rr.readAt || rr.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}
@@ -4169,7 +4164,7 @@ function AdminInbox({ user, toast }) {
         </div>
         {/* Thread-level read receipts (C.2) */}
         {threadDetail.readReceipts && threadDetail.readReceipts.length > 0 && (
-          <div style={{ background: "#fff", borderRadius: 8, padding: "10px 16px", marginBottom: 12, boxShadow: "0 1px 4px rgba(0,0,0,.03)" }}>
+          <div style={{ background: colors.white, borderRadius: 8, padding: "10px 16px", marginBottom: 12, boxShadow: "0 1px 4px rgba(0,0,0,.03)" }}>
             <div style={{ fontSize: 10, fontWeight: 600, color: "#AAA", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 4 }}>Read Receipts</div>
             {threadDetail.readReceipts.map((rr, ri) => (
               <div key={ri} style={{ fontSize: 11, color: "#888", marginBottom: 2 }}>
@@ -4178,7 +4173,7 @@ function AdminInbox({ user, toast }) {
             ))}
           </div>
         )}
-        <div style={{ background: "#fff", borderRadius: 10, padding: "16px 20px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+        <div style={{ background: colors.white, borderRadius: 10, padding: "16px 20px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
           <textarea value={reply} onChange={e => setReply(e.target.value)} placeholder="Write a reply..." rows={3}
             style={{ ...inputStyle, border: "none", padding: 0, resize: "vertical" }} />
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
@@ -4195,9 +4190,9 @@ function AdminInbox({ user, toast }) {
   if (composing) {
     return (
       <>
-        <p style={{ fontSize: 12, color: red, cursor: "pointer", marginBottom: 24 }} onClick={() => setComposing(false)}>← Back to inbox</p>
+        <p style={{ fontSize: 12, color: colors.red, cursor: "pointer", marginBottom: 24 }} onClick={() => setComposing(false)}>← Back to inbox</p>
         <h2 style={{ fontSize: 22, fontWeight: 400, marginBottom: 24 }}>New Message</h2>
-        <form onSubmit={handleCompose} style={{ background: "#fff", borderRadius: 12, padding: "28px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+        <form onSubmit={handleCompose} style={{ background: colors.white, borderRadius: 12, padding: "28px 24px", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
           {/* Target type */}
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: "block", fontSize: 12, color: "#888", fontWeight: 500, marginBottom: 6 }}>Send To</label>
@@ -4205,7 +4200,7 @@ function AdminInbox({ user, toast }) {
               {[{ val: "ALL", label: "All Investors" }, { val: "PROJECT", label: "Project" }, { val: "INDIVIDUAL", label: "Specific Investors" }].map(t => (
                 <button key={t.val} type="button" onClick={() => { setTargetType(t.val); setRecipients([]); }} style={{
                   ...btnOutline, fontSize: 12, padding: "6px 14px",
-                  background: targetType === t.val ? red : "#fff", color: targetType === t.val ? "#fff" : darkText, borderColor: targetType === t.val ? red : "#DDD",
+                  background: targetType === t.val ? colors.red : colors.white, color: targetType === t.val ? colors.white : colors.darkText, borderColor: targetType === t.val ? colors.red : "#DDD",
                 }}>{t.label}</button>
               ))}
             </div>
@@ -4227,9 +4222,9 @@ function AdminInbox({ user, toast }) {
               {/* Chips for selected recipients */}
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: recipients.length ? 10 : 0 }}>
                 {recipients.map(r => (
-                  <span key={r.id} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", background: `${red}10`, border: `1px solid ${red}30`, borderRadius: 16, fontSize: 12 }}>
+                  <span key={r.id} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", background: `${colors.red}10`, border: `1px solid ${colors.red}30`, borderRadius: 16, fontSize: 12 }}>
                     {r.name}
-                    <span onClick={() => removeRecipient(r.id)} style={{ cursor: "pointer", color: red, fontWeight: 700, fontSize: 14, lineHeight: 1 }}>&times;</span>
+                    <span onClick={() => removeRecipient(r.id)} style={{ cursor: "pointer", color: colors.red, fontWeight: 700, fontSize: 14, lineHeight: 1 }}>&times;</span>
                   </span>
                 ))}
               </div>
@@ -4239,13 +4234,13 @@ function AdminInbox({ user, toast }) {
                   style={inputStyle} />
                 {/* Dropdown results */}
                 {searchResults.length > 0 && (
-                  <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1px solid #E8E5DE", borderTop: "none", borderRadius: "0 0 4px 4px", zIndex: 10, maxHeight: 200, overflow: "auto", boxShadow: "0 4px 12px rgba(0,0,0,.08)" }}>
+                  <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: colors.white, border: "1px solid #E8E5DE", borderTop: "none", borderRadius: "0 0 4px 4px", zIndex: 10, maxHeight: 200, overflow: "auto", boxShadow: "0 4px 12px rgba(0,0,0,.08)" }}>
                     {searchResults.slice(0, 8).map(inv => (
-                      <div key={inv.id} onClick={() => addRecipient(inv)} style={{ padding: "10px 14px", cursor: "pointer", borderBottom: "1px solid #F0EDE8", fontSize: 13 }}
+                      <div key={inv.id} onClick={() => addRecipient(inv)} style={{ padding: "10px 14px", cursor: "pointer", borderBottom: `1px solid ${colors.lightBorder}`, fontSize: 13 }}
                         onMouseEnter={e => e.currentTarget.style.background = "#F8F7F4"}
-                        onMouseLeave={e => e.currentTarget.style.background = "#fff"}>
+                        onMouseLeave={e => e.currentTarget.style.background = colors.white}>
                         <div style={{ fontWeight: 500 }}>{inv.name}</div>
-                        <div style={{ fontSize: 11, color: "#767168" }}>
+                        <div style={{ fontSize: 11, color: colors.mutedText }}>
                           {inv.email}
                           {inv.projects?.length > 0 && <span> · {inv.projects.map(p => p.projectName).join(", ")}</span>}
                         </div>
@@ -4256,7 +4251,7 @@ function AdminInbox({ user, toast }) {
               </div>
               {/* Browse button */}
               <div style={{ marginTop: 8 }}>
-                <span onClick={() => setShowBrowse(!showBrowse)} style={{ fontSize: 12, color: red, cursor: "pointer" }}>
+                <span onClick={() => setShowBrowse(!showBrowse)} style={{ fontSize: 12, color: colors.red, cursor: "pointer" }}>
                   {showBrowse ? "Hide investor list" : "Browse all investors →"}
                 </span>
               </div>
@@ -4264,16 +4259,16 @@ function AdminInbox({ user, toast }) {
               {showBrowse && (
                 <div style={{ marginTop: 12, border: "1px solid #E8E5DE", borderRadius: 4, maxHeight: 250, overflow: "auto" }}>
                   {investors.filter(inv => !recipients.some(r => r.id === inv.id)).map((inv, i) => (
-                    <div key={inv.id} onClick={() => addRecipient(inv)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", borderBottom: "1px solid #F0EDE8", cursor: "pointer", fontSize: 13 }}
+                    <div key={inv.id} onClick={() => addRecipient(inv)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", borderBottom: `1px solid ${colors.lightBorder}`, cursor: "pointer", fontSize: 13 }}
                       onMouseEnter={e => e.currentTarget.style.background = "#F8F7F4"}
-                      onMouseLeave={e => e.currentTarget.style.background = "#fff"}>
+                      onMouseLeave={e => e.currentTarget.style.background = colors.white}>
                       <div>
                         <span style={{ fontWeight: 500 }}>{inv.name}</span>
-                        <span style={{ color: "#767168", marginLeft: 8, fontSize: 12 }}>{inv.email}</span>
+                        <span style={{ color: colors.mutedText, marginLeft: 8, fontSize: 12 }}>{inv.email}</span>
                       </div>
                       <div style={{ display: "flex", gap: 6 }}>
                         {inv.projects?.map(p => (
-                          <span key={p.projectId} style={{ fontSize: 10, padding: "2px 6px", background: "#F0EDE8", borderRadius: 3 }}>{p.projectName}</span>
+                          <span key={p.projectId} style={{ fontSize: 10, padding: "2px 6px", background: colors.lightBorder, borderRadius: 3 }}>{p.projectName}</span>
                         ))}
                       </div>
                     </div>
@@ -4307,7 +4302,7 @@ function AdminInbox({ user, toast }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 300 }}>Inbox</h1>
-          <p style={{ fontSize: 13, color: "#767168", marginTop: 4 }}>{unreadCount} unread · {threads.length} conversations</p>
+          <p style={{ fontSize: 13, color: colors.mutedText, marginTop: 4 }}>{unreadCount} unread · {threads.length} conversations</p>
         </div>
         <button onClick={() => setComposing(true)} style={btnStyle}>New Message</button>
       </div>
@@ -4317,24 +4312,24 @@ function AdminInbox({ user, toast }) {
         {[{ val: "all", label: "All" }, { val: "unread", label: "Unread" }, { val: "from-investors", label: "From Investors" }].map(f => (
           <button key={f.val} onClick={() => setFilter(f.val)} style={{
             ...btnOutline, fontSize: 12, padding: "5px 14px",
-            background: filter === f.val ? "#F0EDE8" : "#fff", fontWeight: filter === f.val ? 500 : 400,
+            background: filter === f.val ? colors.lightBorder : colors.white, fontWeight: filter === f.val ? 500 : 400,
           }}>{f.label}{f.val === "unread" && unreadCount > 0 ? ` (${unreadCount})` : ""}</button>
         ))}
       </div>
 
-      {loading ? <p style={{ color: "#767168" }}>Loading...</p> : (
-        <div style={{ background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
+      {loading ? <p style={{ color: colors.mutedText }}>Loading...</p> : (
+        <div style={{ background: colors.white, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
           {filtered.length === 0 ? (
-            <div style={{ padding: 40, textAlign: "center", color: "#767168" }}>No messages</div>
+            <div style={{ padding: 40, textAlign: "center", color: colors.mutedText }}>No messages</div>
           ) : filtered.map((t, i) => (
             <div key={t.id} onClick={() => openThread(t)} style={{
-              padding: "16px 20px", borderBottom: i < filtered.length - 1 ? "1px solid #F0EDE8" : "none",
-              cursor: "pointer", display: "flex", gap: 12, background: t.unread ? `${red}06` : "transparent",
-              borderLeft: t.unread ? `3px solid ${red}` : "3px solid transparent",
+              padding: "16px 20px", borderBottom: i < filtered.length - 1 ? `1px solid ${colors.lightBorder}` : "none",
+              cursor: "pointer", display: "flex", gap: 12, background: t.unread ? `${colors.red}06` : "transparent",
+              borderLeft: t.unread ? `3px solid ${colors.red}` : "3px solid transparent",
             }}
-              onMouseEnter={e => e.currentTarget.style.background = "#FAFAF8"}
-              onMouseLeave={e => e.currentTarget.style.background = t.unread ? `${red}06` : "transparent"}>
-              <div style={{ width: 7, height: 7, borderRadius: "50%", background: t.unread ? red : "transparent", marginTop: 7, flexShrink: 0 }} />
+              onMouseEnter={e => e.currentTarget.style.background = colors.cardBg}
+              onMouseLeave={e => e.currentTarget.style.background = t.unread ? `${colors.red}06` : "transparent"}>
+              <div style={{ width: 7, height: 7, borderRadius: "50%", background: t.unread ? colors.red : "transparent", marginTop: 7, flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
                   <span style={{ fontSize: 14, fontWeight: t.unread ? 600 : 400 }}>{t.subject}</span>
@@ -4342,9 +4337,9 @@ function AdminInbox({ user, toast }) {
                     {t.lastMessage ? new Date(t.lastMessage.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}
                   </span>
                 </div>
-                <div style={{ fontSize: 12, color: "#767168" }}>
+                <div style={{ fontSize: 12, color: colors.mutedText }}>
                   {t.creator.name}
-                  {t.creator.role === "INVESTOR" && <span style={{ marginLeft: 6, padding: "1px 6px", background: "#F0EDE8", borderRadius: 3, fontSize: 10 }}>Investor</span>}
+                  {t.creator.role === "INVESTOR" && <span style={{ marginLeft: 6, padding: "1px 6px", background: colors.lightBorder, borderRadius: 3, fontSize: 10 }}>Investor</span>}
                   {t.messageCount > 1 && <span> · {t.messageCount} msgs</span>}
                   {t.project && <span> · {t.project}</span>}
                   <span style={{ marginLeft: 6, fontSize: 10, color: "#CCC" }}>{t.targetType}</span>
@@ -4392,7 +4387,7 @@ function AuditLogViewer() {
   return (
     <>
       <h1 style={{ fontSize: 28, fontWeight: 300, marginBottom: 24 }}>Audit Log</h1>
-      <p style={{ fontSize: 13, color: "#767168", marginBottom: 24 }}>Compliance log of key system actions. Last 100 entries shown.</p>
+      <p style={{ fontSize: 13, color: colors.mutedText, marginBottom: 24 }}>Compliance log of key system actions. Last 100 entries shown.</p>
 
       {/* Search */}
       <div style={{ marginBottom: 20 }}>
@@ -4404,9 +4399,9 @@ function AuditLogViewer() {
         {actionTypes.map(a => (
           <span key={a} onClick={() => setActionFilter(a)} style={{
             fontSize: 11, padding: "4px 10px", borderRadius: 3, cursor: "pointer",
-            border: `1px solid ${actionFilter === a ? red + "55" : "#DDD"}`,
-            color: actionFilter === a ? red : "#999",
-            background: actionFilter === a ? `${red}08` : "#fff",
+            border: `1px solid ${actionFilter === a ? colors.red + "55" : "#DDD"}`,
+            color: actionFilter === a ? colors.red : "#999",
+            background: actionFilter === a ? `${colors.red}08` : colors.white,
           }}>{a.replace(/_/g, " ")}</span>
         ))}
       </div>
@@ -4418,9 +4413,9 @@ function AuditLogViewer() {
         <div style={{ borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
             <thead>
-              <tr style={{ background: "#FAFAF8", borderBottom: "1px solid #E8E5DE" }}>
+              <tr style={{ background: colors.cardBg, borderBottom: "1px solid #E8E5DE" }}>
                 {[{ key: "createdAt", label: "Timestamp" }, { key: "user", label: "User" }, { key: "action", label: "Action" }, { key: "resource", label: "Resource" }, { key: "ipAddress", label: "IP" }].map(col => (
-                  <th key={col.key} onClick={() => auditSort.onSort(col.key)} style={{ padding: "10px 14px", textAlign: "left", fontWeight: 500, fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#767168", cursor: "pointer", userSelect: "none" }}>
+                  <th key={col.key} onClick={() => auditSort.onSort(col.key)} style={{ padding: "10px 14px", textAlign: "left", fontWeight: 500, fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: colors.mutedText, cursor: "pointer", userSelect: "none" }}>
                     <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
                       {col.label}
                       {auditSort.sortBy === col.key && <span style={{ fontSize: 8 }}>{auditSort.sortDir === "asc" ? "▲" : "▼"}</span>}
@@ -4432,19 +4427,19 @@ function AuditLogViewer() {
             <tbody>
               {filteredLogs.map((log, i) => (
                 <tr key={log.id} style={{ borderBottom: i < filteredLogs.length - 1 ? "1px solid #E8E5DE" : "none" }}>
-                  <td style={{ padding: "10px 14px", color: "#767168", whiteSpace: "nowrap" }}>
+                  <td style={{ padding: "10px 14px", color: colors.mutedText, whiteSpace: "nowrap" }}>
                     {new Date(log.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
                   </td>
                   <td style={{ padding: "10px 14px", fontWeight: 500 }}>{log.user}</td>
                   <td style={{ padding: "10px 14px" }}>
                     <span style={{
                       fontSize: 10, padding: "2px 8px", borderRadius: 3,
-                      background: log.action === "login" ? `${green}15` : log.action.includes("download") ? "#EEF" : `${red}08`,
-                      color: log.action === "login" ? green : log.action.includes("download") ? "#44A" : "#666",
+                      background: log.action === "login" ? `${colors.green}15` : log.action.includes("download") ? "#EEF" : `${colors.red}08`,
+                      color: log.action === "login" ? colors.green : log.action.includes("download") ? "#44A" : "#666",
                       textTransform: "uppercase", letterSpacing: ".04em",
                     }}>{log.action.replace(/_/g, " ")}</span>
                   </td>
-                  <td style={{ padding: "10px 14px", color: "#767168" }}>{log.resource || "\u2014"}</td>
+                  <td style={{ padding: "10px 14px", color: colors.mutedText }}>{log.resource || "\u2014"}</td>
                   <td style={{ padding: "10px 14px", color: "#CCC", fontSize: 11 }}>{log.ipAddress || "\u2014"}</td>
                 </tr>
               ))}
@@ -4467,9 +4462,9 @@ function EmailSettingsManager({ toast }) {
   const [testing, setTesting] = useState(false);
   const [logFilter, setLogFilter] = useState({ type: "", status: "" });
 
-  const cardStyle = { background: "#fff", borderRadius: 12, padding: 24, marginBottom: 20, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" };
-  const sectionTitle = { fontSize: 16, fontWeight: 600, marginBottom: 16, color: darkText };
-  const fieldLabel = { fontSize: 12, fontWeight: 500, color: "#767168", marginBottom: 4, display: "block" };
+  const cardStyle = { background: colors.white, borderRadius: 12, padding: 24, marginBottom: 20, boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" };
+  const sectionTitle = { fontSize: 16, fontWeight: 600, marginBottom: 16, color: colors.darkText };
+  const fieldLabel = { fontSize: 12, fontWeight: 500, color: colors.mutedText, marginBottom: 4, display: "block" };
   const fieldGroup = { marginBottom: 14 };
 
   async function loadAll() {
@@ -4558,7 +4553,7 @@ function EmailSettingsManager({ toast }) {
     { key: "companyName", label: "Company Name", placeholder: "Northstar Capital Group" },
     { key: "companyAddress", label: "Company Address", placeholder: "123 Main St, Suite 100" },
     { key: "portalUrl", label: "Portal URL", placeholder: "https://portal.example.com" },
-    { key: "brandColor", label: "Brand Color", placeholder: "#EA2028" },
+    { key: "brandColor", label: "Brand Color", placeholder: colors.red },
   ];
 
   const subjectFields = [
@@ -4571,7 +4566,7 @@ function EmailSettingsManager({ toast }) {
     { key: "subjectPasswordReset", label: "Password Reset", placeholder: "Reset your password" },
   ];
 
-  const statusColors = { sent: green, failed: red, skipped: "#B08C00" };
+  const statusColors = { sent: colors.green, failed: colors.red, skipped: "#B08C00" };
 
   return (
     <>
@@ -4582,15 +4577,15 @@ function EmailSettingsManager({ toast }) {
         <div style={sectionTitle}>Email Provider</div>
         <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
           <div style={{ fontSize: 13 }}>
-            <span style={{ color: "#767168" }}>Provider: </span>
+            <span style={{ color: colors.mutedText }}>Provider: </span>
             <span style={{ fontWeight: 500 }}>{settings._provider || "Not configured"}</span>
           </div>
           <div style={{ fontSize: 13 }}>
-            <span style={{ color: "#767168" }}>API Key: </span>
+            <span style={{ color: colors.mutedText }}>API Key: </span>
             <span style={{
               fontSize: 11, padding: "2px 8px", borderRadius: 3,
-              background: settings._providerConfigured ? `${green}15` : `${red}08`,
-              color: settings._providerConfigured ? green : red,
+              background: settings._providerConfigured ? `${colors.green}15` : `${colors.red}08`,
+              color: settings._providerConfigured ? colors.green : colors.red,
             }}>
               {settings._providerConfigured ? "Configured" : "Not configured"}
             </span>
@@ -4604,7 +4599,7 @@ function EmailSettingsManager({ toast }) {
       {/* Section B: Global Notification Toggles */}
       <div style={cardStyle}>
         <div style={sectionTitle}>Notification Toggles</div>
-        <p style={{ fontSize: 12, color: "#767168", marginBottom: 16 }}>Enable or disable specific email notification types globally.</p>
+        <p style={{ fontSize: 12, color: colors.mutedText, marginBottom: 16 }}>Enable or disable specific email notification types globally.</p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 14 }}>
           {toggleItems.map(t => (
             <Toggle key={t.key} checked={!!settings[t.key]} onChange={(v) => handleToggle(t.key, v)} label={t.label} />
@@ -4638,7 +4633,7 @@ function EmailSettingsManager({ toast }) {
       {/* Section D: Subject Line Overrides */}
       <div style={cardStyle}>
         <div style={sectionTitle}>Subject Line Overrides</div>
-        <p style={{ fontSize: 12, color: "#767168", marginBottom: 16 }}>Customize subject lines for each email type. Leave blank to use defaults.</p>
+        <p style={{ fontSize: 12, color: colors.mutedText, marginBottom: 16 }}>Customize subject lines for each email type. Leave blank to use defaults.</p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 14 }}>
           {subjectFields.map(f => (
             <div key={f.key} style={fieldGroup}>
@@ -4666,13 +4661,13 @@ function EmailSettingsManager({ toast }) {
         {/* Stats bar */}
         <div style={{ display: "flex", gap: 16, marginBottom: 16, flexWrap: "wrap" }}>
           {[
-            { label: "Sent", value: stats.sent, color: green },
-            { label: "Failed", value: stats.failed, color: red },
+            { label: "Sent", value: stats.sent, color: colors.green },
+            { label: "Failed", value: stats.failed, color: colors.red },
             { label: "Skipped", value: stats.skipped, color: "#B08C00" },
           ].map(s => (
             <div key={s.label} style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: s.color, display: "inline-block" }} />
-              <span style={{ color: "#767168" }}>{s.label}:</span>
+              <span style={{ color: colors.mutedText }}>{s.label}:</span>
               <span style={{ fontWeight: 600 }}>{s.value}</span>
             </div>
           ))}
@@ -4709,16 +4704,16 @@ function EmailSettingsManager({ toast }) {
           <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid #E8E5DE" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
               <thead>
-                <tr style={{ background: "#FAFAF8", borderBottom: "1px solid #E8E5DE" }}>
+                <tr style={{ background: colors.cardBg, borderBottom: "1px solid #E8E5DE" }}>
                   {["Date", "Recipient", "Type", "Subject", "Status"].map(h => (
-                    <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontWeight: 500, fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: "#767168" }}>{h}</th>
+                    <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontWeight: 500, fontSize: 10, textTransform: "uppercase", letterSpacing: ".06em", color: colors.mutedText }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {emailLog.map((entry, i) => (
                   <tr key={entry.id || i} style={{ borderBottom: i < emailLog.length - 1 ? "1px solid #E8E5DE" : "none" }}>
-                    <td style={{ padding: "10px 14px", color: "#767168", whiteSpace: "nowrap" }}>
+                    <td style={{ padding: "10px 14px", color: colors.mutedText, whiteSpace: "nowrap" }}>
                       {entry.createdAt ? new Date(entry.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "\u2014"}
                     </td>
                     <td style={{ padding: "10px 14px", fontWeight: 500 }}>{entry.recipient || "\u2014"}</td>
@@ -4729,7 +4724,7 @@ function EmailSettingsManager({ toast }) {
                         textTransform: "uppercase", letterSpacing: ".04em",
                       }}>{(entry.type || "").replace(/_/g, " ")}</span>
                     </td>
-                    <td style={{ padding: "10px 14px", color: "#767168", maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.subject || "\u2014"}</td>
+                    <td style={{ padding: "10px 14px", color: colors.mutedText, maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{entry.subject || "\u2014"}</td>
                     <td style={{ padding: "10px 14px" }}>
                       <span style={{
                         fontSize: 10, padding: "2px 8px", borderRadius: 3,

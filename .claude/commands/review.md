@@ -29,9 +29,13 @@ For each commit Sonnet made:
 - Did it break any patterns (missing props, wrong imports)?
 - Is demo mode still working? (check api.js for regressions)
 
-### Step 4: Update FRONTEND-PLAN.md
+### Step 4: Update docs
 
-Update the "Completed" table at the top with each verified commit. Update the "Status" line. Note any issues found.
+**FRONTEND-PLAN.md** — Update the "Completed" table with each verified commit. Update the "Status" line. Note any issues found.
+
+**ROADMAP.md** — Update the "Current State" section to reflect actual progress. If monolith sizes changed, update the numbers. If phases completed, note them.
+
+**BACKLOG.md** — If extraction progress changes what's "done" vs "not started", update the relevant items. Keep the "Current Priority" section accurate.
 
 ### Step 5: Generate the next build instructions
 
