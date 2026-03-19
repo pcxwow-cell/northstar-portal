@@ -11,6 +11,7 @@ import Button from "./components/Button.jsx";
 import Card from "./components/Card.jsx";
 import FormInput from "./components/FormInput.jsx";
 import Modal from "./components/Modal.jsx";
+import StatCard from "./components/StatCard.jsx";
 
 
 // ─── SORTABLE HEADER ───
@@ -294,13 +295,7 @@ function Dashboard({ onNavigate }) {
       {/* Stat Cards */}
       <div className="admin-stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 32 }}>
         {statCards.map((s, i) => (
-          <Card key={i} accent={s.accent} style={{ transition: "transform .15s, box-shadow .15s", cursor: "pointer" }}
-            onClick={() => onNavigate(s.nav)}
-            onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,.08)"; e.currentTarget.style.background = colors.cardBg; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = cardShadow; e.currentTarget.style.background = colors.white; }}>
-            <div style={{ fontSize: 28, fontWeight: 300, marginBottom: 4 }}>{s.value}</div>
-            <div style={{ fontSize: 11, color: colors.mutedText, textTransform: "uppercase", letterSpacing: ".08em" }}>{s.label}</div>
-          </Card>
+          <StatCard key={i} label={s.label} value={s.value} accent={s.accent} onClick={() => onNavigate(s.nav)} />
         ))}
       </div>
 
@@ -1048,10 +1043,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
           { label: "Investors", value: project.investors.length },
           { label: "Documents", value: project.documents.length },
         ].map((s, i) => (
-          <Card key={i} padding="16px 20px">
-            <div style={{ fontSize: 22, fontWeight: 300, marginBottom: 2 }}>{s.value}</div>
-            <div style={{ fontSize: 10, color: colors.mutedText, textTransform: "uppercase", letterSpacing: ".08em" }}>{s.label}</div>
-          </Card>
+          <StatCard key={i} label={s.label} value={s.value} />
         ))}
       </div>
 
@@ -1461,10 +1453,7 @@ function ProjectDetail({ projectId, onBack, toast }) {
                   { label: "Equity Multiple", value: `${fmResult.equityMultiple}x` },
                   { label: "Cash on Cash", value: `${fmResult.cashOnCash}%` },
                 ].map((c, i) => (
-                  <div key={i} style={{ background: "#F8F7F4", borderRadius: 6, padding: "16px 20px", textAlign: "center" }}>
-                    <div style={{ fontSize: 22, fontWeight: 300, color: colors.darkText }}>{c.value}</div>
-                    <div style={{ fontSize: 10, color: colors.mutedText, textTransform: "uppercase", letterSpacing: ".06em", marginTop: 4 }}>{c.label}</div>
-                  </div>
+                  <StatCard key={i} label={c.label} value={c.value} />
                 ))}
               </div>
 
@@ -3348,14 +3337,13 @@ function StatementManager({ toast }) {
           { label: "Approved", count: approved, color: colors.green, action: approved > 0 ? "Send All" : null, onClick: handleBulkSend },
           { label: "Sent", count: sent, color: "#1565C0", action: null },
         ].map((c, i) => (
-          <div key={i} style={{ background: colors.white, borderRadius: 12, padding: "20px 24px", boxShadow: cardShadow }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <div style={{ fontSize: 28, fontWeight: 300, color: c.color }}>{c.count}</div>
-                <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>{c.label}</div>
+          <div key={i} style={{ position: "relative" }}>
+            <StatCard label={c.label} value={c.count} />
+            {c.action && (
+              <div style={{ position: "absolute", top: 16, right: 16 }}>
+                <Button variant="outline" onClick={c.onClick} style={{ padding: "6px 14px", fontSize: 11, color: c.color, borderColor: c.color }}>{c.action}</Button>
               </div>
-              {c.action && <Button variant="outline" onClick={c.onClick} style={{ padding: "6px 14px", fontSize: 11, color: c.color, borderColor: c.color }}>{c.action}</Button>}
-            </div>
+            )}
           </div>
         ))}
       </div>
