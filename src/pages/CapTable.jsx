@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { colors, fonts, inputStyle } from "../styles/theme.js";
-import { useTheme } from "../App.jsx";
+import { useTheme } from "../context/ThemeContext.jsx";
 import { calculateWaterfallApi, fmt, fmtCurrency } from "../api.js";
 import Button from "../components/Button.jsx";
 import Card from "../components/Card.jsx";

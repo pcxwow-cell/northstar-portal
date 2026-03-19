@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { runFinancialModel, fmt } from "../api.js";
 import { colors, fonts } from "../styles/theme.js";
-import { useTheme } from "../App.jsx";
+import { useTheme } from "../context/ThemeContext.jsx";
 import Button from "../components/Button.jsx";
 import Card from "../components/Card.jsx";
 import SectionHeader from "../components/SectionHeader.jsx";

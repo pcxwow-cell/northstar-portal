@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { colors, fonts } from "../styles/theme.js";
-import { useTheme } from "../App.jsx";
+import { useTheme } from "../context/ThemeContext.jsx";
 import { fetchThreads, fetchThread, createThread, replyToThread } from "../api.js";
 import Button from "../components/Button.jsx";
 import Card from "../components/Card.jsx";

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { colors, fonts } from "../styles/theme.js";
-import { useTheme } from "../App.jsx";
+import { useTheme } from "../context/ThemeContext.jsx";
 import { fmt } from "../api.js";
 import Card from "../components/Card.jsx";
 import StatCard from "../components/StatCard.jsx";

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useToast } from "../context/ToastContext.jsx";
 import { fetchNotifications } from "../api.js";
 import { colors } from "../styles/theme.js";
-import { useTheme } from "../App.jsx";
+import { useTheme } from "../context/ThemeContext.jsx";
 import Spinner from "../components/Spinner.jsx";
 import EmptyState from "../components/EmptyState.jsx";
 import SectionHeader from "../components/SectionHeader.jsx";

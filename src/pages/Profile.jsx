@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { colors, fonts, inputStyle as themeInputStyle } from "../styles/theme.js";
-import { useTheme } from "../App.jsx";
+import { useTheme } from "../context/ThemeContext.jsx";
 import { updateProfile, fetchNotificationPreferences, updateNotificationPreferences, fetchEntities, createEntity, updateEntity, deleteEntity, changePassword, fetchLoginHistory, setupMFA, verifyMFASetup, disableMFA, getMFAStatus, regenerateBackupCodes } from "../api.js";
 import Button from "../components/Button.jsx";
 import Card from "../components/Card.jsx";

@@ -1,5 +1,5 @@
 import { colors } from "../styles/theme.js";
-import { useTheme } from "../App.jsx";
+import { useTheme } from "../context/ThemeContext.jsx";
 
 const red = colors.red;
 const green = colors.green;

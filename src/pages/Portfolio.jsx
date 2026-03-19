@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { colors, fonts } from "../styles/theme.js";
-import { useTheme } from "../App.jsx";
+import { useTheme } from "../context/ThemeContext.jsx";
 import { fetchCapitalAccount, fetchCashFlows, downloadDocument, fmt, fmtCurrency } from "../api.js";
 import Card from "../components/Card.jsx";
 import Spinner from "../components/Spinner.jsx";
