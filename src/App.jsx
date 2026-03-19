@@ -13,6 +13,7 @@ import Spinner from "./components/Spinner.jsx";
 import EmptyState from "./components/EmptyState.jsx";
 import ConfirmDialog from "./components/ConfirmDialog.jsx";
 import Tabs from "./components/Tabs.jsx";
+import DataTable from "./components/DataTable.jsx";
 
 // Lazy load heavy components — they get their own chunks
 const AdminPanel = lazy(() => import("./Admin.jsx"));
@@ -85,73 +86,6 @@ function SectionHeader({ title, right }) {
   );
 }
 
-function Table({ columns, rows, onRowClick, sortable, sortKey: externalSortKey, sortDir: externalSortDir, onSort }) {
-  const { bg, surface, line, t1, t2, t3, hover } = useTheme();
-  const [internalSortKey, setInternalSortKey] = useState(null);
-  const [internalSortDir, setInternalSortDir] = useState("asc");
-
-  const sortKey = externalSortKey !== undefined ? externalSortKey : internalSortKey;
-  const sortDir = externalSortDir !== undefined ? externalSortDir : internalSortDir;
-
-  function handleSort(key) {
-    if (!sortable) return;
-    if (onSort) { onSort(key); return; }
-    if (key === internalSortKey) setInternalSortDir(d => d === "asc" ? "desc" : "asc");
-    else { setInternalSortKey(key); setInternalSortDir("asc"); }
-  }
-
-  let displayRows = rows;
-  if (sortable && sortKey && !onSort) {
-    displayRows = [...rows].sort((a, b) => {
-      let va = a[sortKey], vb = b[sortKey];
-      if (typeof va === "string") va = va.toLowerCase();
-      if (typeof vb === "string") vb = vb.toLowerCase();
-      if (va < vb) return sortDir === "asc" ? -1 : 1;
-      if (va > vb) return sortDir === "asc" ? 1 : -1;
-      return 0;
-    });
-  }
-
-  return (
-    <div style={{ border: `1px solid ${line}`, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-        <caption style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap" }}>
-          {columns.map(c => c.label).join(", ")} data table
-        </caption>
-        <thead>
-          <tr style={{ borderBottom: `1px solid ${line}`, background: surface }}>
-            {columns.map(c => (
-              <th key={c.key} scope="col" onClick={() => c.sortKey !== false && handleSort(c.key)} style={{
-                padding: "13px 16px", textAlign: c.align || "left", fontWeight: 400, fontSize: 10,
-                letterSpacing: ".08em", textTransform: "uppercase", color: t3, width: c.width,
-                cursor: sortable && c.sortKey !== false ? "pointer" : "default", userSelect: "none",
-              }}>
-                {c.label}
-                {sortable && sortKey === c.key && <span style={{ marginLeft: 4, fontSize: 9 }}>{sortDir === "asc" ? "\u25B2" : "\u25BC"}</span>}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {displayRows.length === 0 ? (
-            <tr><td colSpan={columns.length} style={{ padding: "32px 16px", textAlign: "center", color: t3, fontSize: 13 }}>No data</td></tr>
-          ) : displayRows.map((row, i) => (
-            <tr key={i} onClick={() => onRowClick?.(row, i)} style={{ borderBottom: i < displayRows.length - 1 ? `1px solid ${line}` : "none", cursor: onRowClick ? "pointer" : "default", transition: "background .12s" }}
-              onMouseEnter={e => e.currentTarget.style.background = hover}
-              onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-              {columns.map(c => (
-                <td key={c.key} style={{ padding: "14px 16px", textAlign: c.align || "left" }}>
-                  {c.render ? c.render(row) : row[c.key]}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
 // ─── LOADING SPINNER ─────────────────────────────────────
 // Using shared Spinner component from ./components/Spinner.jsx
 
@@ -216,46 +150,6 @@ function ProgressBar({ value, color }) {
   );
 }
 
-// ─── RESPONSIVE TABLE ───────────────────────────────────
-function ResponsiveTable({ columns, rows, onRowClick, sortable, emptyMessage }) {
-  const th = useTheme();
-  // Primary column is the first one
-  const primaryCol = columns[0];
-  const secondaryCols = columns.slice(1);
-  return (
-    <div className="responsive-table">
-      <Table columns={columns} rows={rows} onRowClick={onRowClick} sortable={sortable} />
-      <div className="mobile-cards" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {rows.length === 0 ? (
-          <div style={{ padding: 32, textAlign: "center", color: th.t3, fontSize: 13 }}>{emptyMessage || "No data"}</div>
-        ) : rows.map((row, i) => (
-          <div key={i} onClick={() => onRowClick?.(row, i)} style={{
-            background: th.surface, borderRadius: 10, padding: "16px 20px",
-            border: `1px solid ${th.line}`, cursor: onRowClick ? "pointer" : "default",
-            boxShadow: "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)",
-            transition: "transform .15s, box-shadow .15s",
-          }}
-            onMouseEnter={e => { if (onRowClick) { e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,.08)"; } }}
-            onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)"; }}>
-            {/* Primary header */}
-            <div style={{ fontSize: 14, fontWeight: 500, color: th.t1, marginBottom: 12, paddingBottom: 10, borderBottom: `1px solid ${th.line}` }}>
-              {primaryCol.render ? primaryCol.render(row) : row[primaryCol.key]}
-            </div>
-            {/* Label-value grid */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 16px" }}>
-              {secondaryCols.map(c => (
-                <div key={c.key}>
-                  <div style={{ fontSize: 9, textTransform: "uppercase", letterSpacing: ".08em", color: th.t3, marginBottom: 2 }}>{c.label}</div>
-                  <div style={{ fontSize: 13, color: th.t1 }}>{c.render ? c.render(row) : row[c.key]}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 // ─── SKELETON LOADING ───────────────────────────────────
 function SkeletonBlock({ width = "100%", height = 16, style = {} }) {
@@ -812,7 +706,7 @@ function Portfolio({ myProjects, investor, initialProjectId }) {
         <h1 style={{ fontFamily: serif, fontSize: 36, fontWeight: 300 }}>Portfolio</h1>
         <p style={{ fontSize: 14, color: t2, marginTop: 6 }}>{myProjects.length} investments · ${fmt(myProjects.reduce((s, p) => s + p.currentValue, 0))} total value</p>
       </div>
-      <Table
+      <DataTable
         columns={[
           { key: "name", label: "Project", render: r => (
             <div>
@@ -825,10 +719,10 @@ function Portfolio({ myProjects, investor, initialProjectId }) {
           { key: "currentValue", label: "Current Value", render: r => `$${fmt(r.currentValue)}` },
           { key: "irr", label: "Net IRR", render: r => <span style={{ color: green }} title="Internal Rate of Return">{r.irr}%</span> },
           { key: "moic", label: "MOIC", render: r => <span style={{ color: t2 }} title="Multiple on Invested Capital">{r.moic}x</span> },
-          { key: "completion", label: "Progress", width: 120, render: r => <ProgressBar value={r.completion} color={r.completion === 100 ? green : red} /> },
+          { key: "completion", label: "Progress", render: r => <ProgressBar value={r.completion} color={r.completion === 100 ? green : red} /> },
         ]}
-        rows={myProjects}
-        onRowClick={(_, i) => setSelected(i)}
+        data={myProjects}
+        onRowClick={(row) => setSelected(myProjects.indexOf(row))}
       />
     </>
   );
@@ -894,15 +788,14 @@ function CapTablePage({ myProjects, investor, toast }) {
         )} style={{ fontSize: 11, padding: "5px 12px", borderRadius: 2, border: `1px solid ${line}`, color: t3, cursor: "pointer" }}>Export CSV</span>
       </div>
 
-      <ResponsiveTable
-        sortable
+      <DataTable
         columns={[
           { key: "holder", label: "Holder", render: r => <span style={{ fontWeight: r.holder === investor.name ? 500 : 400, color: r.holder === investor.name ? t1 : t2 }}>{r.holder}</span> },
           { key: "type", label: "Class", render: r => <span style={{ color: t3 }}>{r.type}</span> },
           { key: "committed", label: "Committed", render: r => `$${fmt(r.committed)}` },
           { key: "called", label: "Called", render: r => <span style={{ color: t2 }}>${fmt(r.called)}</span> },
           { key: "unfunded", label: "Unfunded", render: r => <span style={{ color: r.unfunded > 0 ? "#8B7128" : t3 }}>${fmt(r.unfunded)}</span> },
-          { key: "ownership", label: "Ownership", width: 140, render: r => (
+          { key: "ownership", label: "Ownership", render: r => (
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={{ width: 60, height: 3, background: line, borderRadius: 1, overflow: "hidden" }}>
                 <div style={{ width: `${Math.min(r.ownership, 100)}%`, height: "100%", background: red, opacity: .6, borderRadius: 1 }} />
@@ -911,7 +804,7 @@ function CapTablePage({ myProjects, investor, toast }) {
             </div>
           )},
         ]}
-        rows={project.capTable}
+        data={project.capTable}
         emptyMessage="No cap table data"
       />
 
@@ -1307,17 +1200,16 @@ function DistributionsPage({ allDistributions, myProjects }) {
       {allDistributions.length === 0 ? (
         <EmptyState icon="$" title="No distributions have been recorded yet" subtitle="Distributions are typically paid quarterly and will appear here after processing." />
       ) : (
-        <ResponsiveTable
-          sortable
+        <DataTable
           columns={[
             { key: "project", label: "Project", render: r => <span style={{ fontFamily: serif, fontWeight: 500 }}>{r.project}</span> },
             { key: "quarter", label: "Period" },
             { key: "date", label: "Payment Date", render: r => <span style={{ color: t2 }}>{r.date}</span> },
             { key: "amount", label: "Amount", render: r => `$${fmt(r.amount)}` },
             { key: "type", label: "Type", render: r => <span style={{ color: t3 }}>{formatType(r.type)}</span> },
-            { key: "status", label: "Status", align: "right", sortKey: false, render: (d) => <span style={{ fontSize: 11, color: green }}>{d.type ? formatType(d.type) : "Paid"}</span> },
+            { key: "status", label: "Status", align: "right", sortable: false, render: (d) => <span style={{ fontSize: 11, color: green }}>{d.type ? formatType(d.type) : "Paid"}</span> },
           ]}
-          rows={allDistributions}
+          data={allDistributions}
           emptyMessage="No distributions yet"
         />
       )}
