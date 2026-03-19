@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { resetPassword } from "../api.js";
 import { colors, fonts } from "../styles/theme.js";
 import Button from "../components/Button.jsx";
-import { NorthstarIcon } from "../App.jsx";
+import { NorthstarIcon } from "../components/NorthstarIcon.jsx";
 
 const serif = fonts.serif;
 const sans = fonts.sans;

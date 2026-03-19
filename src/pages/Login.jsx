@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { colors, fonts } from "../styles/theme.js";
-import { NorthstarIcon, NorthstarWordmark } from "../App.jsx";
+import { NorthstarIcon, NorthstarWordmark } from "../components/NorthstarIcon.jsx";
 import { login as apiLogin, verifyMFA, forgotPassword, setToken } from "../api.js";
 import Button from "../components/Button.jsx";
 import Modal from "../components/Modal.jsx";

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { NorthstarIcon, NorthstarWordmark } from "./App.jsx";
+import { NorthstarIcon, NorthstarWordmark } from "./components/NorthstarIcon.jsx";
 import { colors, fonts } from "./styles/theme.js";
 const { red, green, darkText, cream } = colors; const { sans, serif } = fonts;
 import { submitProspectInterest, fetchProjects, isDemoMode, fmtCurrency } from "./api.js";
