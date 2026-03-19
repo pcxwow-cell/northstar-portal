@@ -31,8 +31,8 @@ npm run dev                  # Port 3000, proxies /api to 3003
 ### Demo Credentials (after seeding)
 | Role | Email | Password |
 |------|-------|----------|
-| Investor | james@chen.com | password123 |
-| Admin | admin@northstar.com | admin123 |
+| Investor | j.chen@pacificventures.ca | northstar2025 |
+| Admin | admin@northstardevelopment.ca | admin2025 |
 
 ## Architecture
 

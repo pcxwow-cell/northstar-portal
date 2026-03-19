@@ -131,6 +131,7 @@ router.get("/me", authenticate, async (req, res, next) => {
       email: user.email,
       role: user.role === "INVESTOR" ? "Limited Partner" : user.role,
       joined: user.joined,
+      mfaEnabled: !!user.mfaSecret,
       projectIds: user.investorProjects.map((ip) => ip.projectId),
     });
   } catch (err) { next(err); }

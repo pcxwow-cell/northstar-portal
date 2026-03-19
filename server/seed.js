@@ -2,6 +2,49 @@ require("dotenv").config();
 const bcrypt = require("bcryptjs");
 const prisma = require("./prisma");
 const { calculateXIRR, calculateMOIC } = require("./services/finance");
+const PDFDocument = require("pdfkit");
+const storage = require("./storage");
+
+// Generate a simple branded PDF buffer for seed documents
+function generatePDF(title, body, metadata = {}) {
+  return new Promise((resolve) => {
+    const doc = new PDFDocument({ size: "LETTER", margin: 72 });
+    const chunks = [];
+    doc.on("data", (chunk) => chunks.push(chunk));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+
+    // Header bar
+    doc.rect(0, 0, 612, 60).fill("#231F20");
+    doc.fontSize(14).fill("#FFFFFF").font("Helvetica-Bold").text("NORTHSTAR PACIFIC DEVELOPMENT GROUP", 72, 22);
+
+    // Title
+    doc.moveDown(2);
+    doc.fontSize(22).fill("#231F20").font("Helvetica-Bold").text(title, 72, 90, { width: 468 });
+
+    // Metadata line
+    const metaLine = Object.entries(metadata).map(([k, v]) => `${k}: ${v}`).join("  |  ");
+    if (metaLine) {
+      doc.moveDown(0.5);
+      doc.fontSize(10).fill("#767168").font("Helvetica").text(metaLine, { width: 468 });
+    }
+
+    // Separator
+    doc.moveDown(1);
+    doc.moveTo(72, doc.y).lineTo(540, doc.y).stroke("#CCCCCC");
+    doc.moveDown(1);
+
+    // Body
+    doc.fontSize(11).fill("#333333").font("Helvetica").text(body, { width: 468, lineGap: 4 });
+
+    // Footer
+    doc.fontSize(8).fill("#999999").text(
+      "This document is confidential and intended solely for the named recipient(s). Northstar Pacific Development Group.",
+      72, 700, { width: 468, align: "center" }
+    );
+
+    doc.end();
+  });
+}
 
 async function main() {
   console.log("Seeding database...");
@@ -61,7 +104,42 @@ async function main() {
     },
   });
 
-  console.log("  Users: 2");
+  // ─── Additional Investors ───
+  const investor2 = await prisma.user.create({
+    data: {
+      id: 3,
+      email: "sarah.whitfield@coastalfamily.ca",
+      passwordHash: investorHash,
+      name: "Sarah Whitfield",
+      initials: "SW",
+      role: "INVESTOR",
+      joined: "June 2023",
+    },
+  });
+  const investor3 = await prisma.user.create({
+    data: {
+      id: 4,
+      email: "m.rodriguez@westridgecapital.com",
+      passwordHash: investorHash,
+      name: "Michael Rodriguez",
+      initials: "MR",
+      role: "INVESTOR",
+      joined: "January 2024",
+    },
+  });
+  const investor4 = await prisma.user.create({
+    data: {
+      id: 5,
+      email: "lisa.park@pacificpension.ca",
+      passwordHash: investorHash,
+      name: "Lisa Park",
+      initials: "LP",
+      role: "INVESTOR",
+      joined: "March 2023",
+    },
+  });
+
+  console.log("  Users: 5 (1 admin + 4 investors)");
 
   // ─── Projects ───
   const projectsData = [
@@ -133,16 +211,36 @@ async function main() {
   const entity2 = await prisma.investorEntity.create({
     data: { userId: 1, name: "Chen Family Trust", type: "Trust", taxId: "88-***7890", address: "1234 Marine Drive, Vancouver BC", state: "BC", isDefault: false },
   });
-  console.log("  InvestorEntities: 2");
+  await prisma.investorEntity.create({
+    data: { userId: 3, name: "Coastal Family Office", type: "LLC", taxId: "***-**-5678", address: "800 West Pender St, Vancouver BC", state: "BC", isDefault: true },
+  });
+  await prisma.investorEntity.create({
+    data: { userId: 4, name: "Westridge Capital Inc.", type: "Corporation", taxId: "***-**-9012", address: "555 Burrard St Suite 1200, Vancouver BC", state: "BC", isDefault: true },
+  });
+  await prisma.investorEntity.create({
+    data: { userId: 5, name: "Pacific Pension Fund", type: "Trust", taxId: "***-**-3456", address: "1055 Dunsmuir St, Vancouver BC", state: "BC", isDefault: true },
+  });
+  console.log("  InvestorEntities: 5");
 
   // ─── Investor-Project relationships ───
   await prisma.investorProject.createMany({
     data: [
       { userId: 1, projectId: 1, committed: 500000, called: 400000, currentValue: 480000, irr: 18.4, moic: 1.20, entityId: entity1.id },
       { userId: 1, projectId: 2, committed: 350000, called: 175000, currentValue: 192500, irr: 22.1, moic: 1.10, entityId: entity2.id },
+      // Sarah Whitfield — Porthaven + Estrella
+      { userId: 3, projectId: 1, committed: 1500000, called: 1200000, currentValue: 1440000, irr: 16.2, moic: 1.20 },
+      { userId: 3, projectId: 3, committed: 400000, called: 200000, currentValue: 215000, irr: 12.5, moic: 1.08 },
+      // Michael Rodriguez — Porthaven + Panorama
+      { userId: 4, projectId: 1, committed: 1000000, called: 800000, currentValue: 960000, irr: 17.8, moic: 1.20 },
+      { userId: 4, projectId: 4, committed: 750000, called: 750000, currentValue: 825000, irr: 14.5, moic: 1.10 },
+      // Lisa Park — all 4 projects (pension fund)
+      { userId: 5, projectId: 1, committed: 2000000, called: 1600000, currentValue: 1920000, irr: 16.8, moic: 1.20 },
+      { userId: 5, projectId: 2, committed: 1500000, called: 750000, currentValue: 802500, irr: 15.0, moic: 1.07 },
+      { userId: 5, projectId: 3, committed: 800000, called: 400000, currentValue: 430000, irr: 11.5, moic: 1.08 },
+      { userId: 5, projectId: 4, committed: 1200000, called: 1200000, currentValue: 1320000, irr: 13.8, moic: 1.10 },
     ],
   });
-  console.log("  InvestorProjects: 2");
+  console.log("  InvestorProjects: 10");
 
   // ─── Cap Table Entries ───
   const capTableData = [
@@ -201,35 +299,102 @@ async function main() {
   await prisma.distribution.createMany({ data: distributionsData });
   console.log("  Distributions: " + distributionsData.length);
 
-  // ─── Documents ───
-  const documentsData = [
-    // Porthaven docs
-    { id: 1, projectId: 1, name: "Q2 2025 — Porthaven Quarterly Report", category: "Reporting", date: "Jul 15, 2025", size: "2.4 MB", status: "published", file: "/docs/q2-2025-quarterly-report.pdf" },
-    { id: 3, projectId: 1, name: "Porthaven — Construction Progress Photos", category: "Property Update", date: "Jun 28, 2025", size: "5.1 MB", status: "published", file: "/docs/porthaven-construction-photos.pdf" },
-    { id: 7, projectId: 1, name: "PPM — Porthaven", category: "Offering", date: "Feb 12, 2025", size: "3.8 MB", status: "published", file: "/docs/ppm-fund-i-overview.pdf" },
-    // Livy docs
-    { id: 4, projectId: 2, name: "Capital Call Notice #4 — Livy", category: "Capital Call", date: "Jun 10, 2025", size: "320 KB", status: "action_required", file: "/docs/capital-call-notice-4.pdf" },
-    { id: 5, projectId: 2, name: "Subscription Agreement — Livy", category: "Legal", date: "Jun 10, 2025", size: "1.2 MB", status: "pending_signature", file: "/docs/subscription-agreement-fund-ii.pdf" },
-    // General docs (no project)
-    { id: 2, projectId: null, name: "K-1 Tax Package — FY 2024", category: "Tax", date: "Mar 1, 2025", size: "840 KB", status: "published", file: "/docs/k1-tax-package-fy2024.pdf" },
-    { id: 6, projectId: null, name: "Distribution Statement — Q1 2025", category: "Distribution", date: "Apr 5, 2025", size: "180 KB", status: "published", file: "/docs/distribution-statement-q1-2025.pdf" },
-    { id: 8, projectId: null, name: "Annual Investor Letter 2024", category: "Reporting", date: "Jan 20, 2025", size: "1.1 MB", status: "published", file: "/docs/annual-investor-letter-2024.pdf" },
+  // ─── Documents (with real PDFs) ───
+  const documentsSpec = [
+    {
+      id: 1, projectId: 1, name: "Q2 2025 — Porthaven Quarterly Report", category: "Reporting", date: "Jul 15, 2025", status: "published",
+      storageKey: "documents/project-1/q2-2025-quarterly-report.pdf",
+      pdfTitle: "Q2 2025 Quarterly Report — Porthaven",
+      pdfBody: "Dear Investors,\n\nWe are pleased to provide this quarterly update on the Porthaven development.\n\nConstruction Progress\nThe project has reached 68% completion as of Q2 2025. Structural concrete is complete on floors 1-4, and exterior cladding installation has begun on the south facade. Interior framing is progressing on schedule.\n\nFinancial Summary\n• Total Raise: $6,000,000\n• Capital Called: 82%\n• Units Sold: 42 of 108 (39%)\n• Revenue to Date: $18,500,000\n• Current IRR: 18.4%\n• MOIC: 1.20x\n\nRetail Pre-Leasing\nWe have received strong interest from two national tenants for the ground-floor retail space. Letters of intent are anticipated in Q3 2025.\n\nNext Steps\n• Complete exterior cladding (Q3 2025)\n• Begin interior finishing on floors 1-2 (Q3 2025)\n• Finalize retail LOIs\n\nPlease contact Investor Relations with any questions.\n\nBest regards,\nGord Wylie\nPresident, Northstar Pacific Development Group",
+      pdfMeta: { Project: "Porthaven", Period: "Q2 2025", Date: "July 15, 2025" },
+    },
+    {
+      id: 3, projectId: 1, name: "Porthaven — Construction Progress Photos", category: "Property Update", date: "Jun 28, 2025", status: "published",
+      storageKey: "documents/project-1/porthaven-construction-photos.pdf",
+      pdfTitle: "Construction Progress Update — Porthaven",
+      pdfBody: "Porthaven Construction Update — June 2025\n\nThis report documents the construction progress at the Porthaven mixed-use development in Downtown Port Coquitlam.\n\nSite Overview\nThe 108-unit residential building with curated ground-floor retail is progressing on schedule. The structure is now visible from all surrounding streets and the project is generating significant community interest.\n\nKey Milestones Achieved\n• Foundation and underground parking: COMPLETE\n• Structural concrete floors 1-4: COMPLETE\n• Mechanical rough-in floors 1-2: COMPLETE\n• Exterior cladding south facade: IN PROGRESS (40%)\n• Elevator shaft construction: COMPLETE\n\nUpcoming Work (Q3 2025)\n• Continue exterior cladding on remaining facades\n• Begin window installation floors 1-3\n• Interior framing floors 3-4\n• MEP rough-in floors 3-4\n\nSafety Record\n• 0 lost-time incidents\n• 245 consecutive safe work days\n\nPhotographs are available upon request via your Investor Relations contact.\n\nMarcon Construction Ltd.\nGeneral Contractor",
+      pdfMeta: { Project: "Porthaven", Type: "Construction Update", Date: "June 28, 2025" },
+    },
+    {
+      id: 7, projectId: 1, name: "PPM — Porthaven", category: "Offering", date: "Feb 12, 2025", status: "published",
+      storageKey: "documents/project-1/ppm-porthaven.pdf",
+      pdfTitle: "Private Placement Memorandum — Porthaven Development LP",
+      pdfBody: "CONFIDENTIAL\n\nPrivate Placement Memorandum\nPorthaven Development Limited Partnership\n\nOffering Summary\n• Issuer: Porthaven Development LP\n• General Partner: Northstar Pacific Development Group Inc.\n• Target Raise: $6,000,000\n• Minimum Investment: $100,000\n• Preferred Return: 8.0% per annum\n• GP Catch-Up: 100% until 20/80 split\n• Carried Interest: 20% GP / 80% LP (above preferred return)\n• Estimated Term: 36 months\n\nProject Description\nPorthaven is a mixed-use development comprising 108 residential units and curated ground-floor retail space in Downtown Port Coquitlam, BC. The project is situated adjacent to Leigh Square, the cultural heart of the city.\n\nInvestment Highlights\n• Pre-sold 42 of 108 units representing $18.5M in revenue\n• Experienced development team with 15+ years track record\n• Strong market fundamentals in Tri-Cities submarket\n• Construction financing secured with Tier 1 lender\n\nRisk Factors\nThis investment involves significant risks. Please review the full risk factors section before investing. Past performance is not indicative of future results.\n\nThis memorandum is provided for informational purposes only and does not constitute an offer to sell or solicitation of an offer to buy any securities.",
+      pdfMeta: { Issuer: "Porthaven Development LP", Date: "February 12, 2025", Classification: "CONFIDENTIAL" },
+    },
+    {
+      id: 4, projectId: 2, name: "Capital Call Notice #4 — Livy", category: "Capital Call", date: "Jun 10, 2025", status: "action_required",
+      storageKey: "documents/project-2/capital-call-notice-4.pdf",
+      pdfTitle: "Capital Call Notice #4 — Livy Development LP",
+      pdfBody: "CAPITAL CALL NOTICE\n\nTo: All Limited Partners — Livy Development LP\nFrom: Northstar Pacific Development Group Inc., as General Partner\nDate: June 10, 2025\nDue Date: June 30, 2025\n\nPursuant to Section 4.2 of the Limited Partnership Agreement dated January 15, 2024, the General Partner hereby issues Capital Call Notice #4.\n\nCall Details\n• Call Amount: Pro rata share of $875,000 aggregate\n• Purpose: Development permit fees, final architectural drawings, initial site preparation\n• Due Date: June 30, 2025\n• Wire Instructions: See below\n\nYour Pro Rata Share\nPlease refer to your individual capital account statement for your specific call amount based on your committed capital percentage.\n\nWire Instructions\nBank: Royal Bank of Canada\nAccount: Livy Development LP — Capital Account\nTransit: [Provided separately via secure portal]\nAccount #: [Provided separately via secure portal]\nReference: CC4-[Your Investor ID]\n\nPlease confirm receipt of this notice and your anticipated funding date by replying through the investor portal or contacting ir@northstardevelopment.ca.\n\nNorthstar Pacific Development Group Inc.\nAs General Partner of Livy Development LP",
+      pdfMeta: { Fund: "Livy Development LP", Notice: "#4", Due: "June 30, 2025" },
+    },
+    {
+      id: 5, projectId: 2, name: "Subscription Agreement — Livy", category: "Legal", date: "Jun 10, 2025", status: "pending_signature",
+      storageKey: "documents/project-2/subscription-agreement-livy.pdf",
+      pdfTitle: "Subscription Agreement — Livy Development LP",
+      pdfBody: "SUBSCRIPTION AGREEMENT\n\nLivy Development Limited Partnership\n\nThis Subscription Agreement (the \"Agreement\") is entered into between the undersigned investor (the \"Subscriber\") and Northstar Pacific Development Group Inc. (the \"General Partner\") on behalf of Livy Development LP (the \"Partnership\").\n\n1. Subscription\nThe Subscriber hereby subscribes for limited partnership interests in the Partnership in the amount set forth on the signature page.\n\n2. Representations\nThe Subscriber represents and warrants that:\na) The Subscriber is an \"accredited investor\" as defined under applicable securities legislation;\nb) The Subscriber has received and reviewed the Private Placement Memorandum;\nc) The Subscriber understands the risks associated with this investment;\nd) The funds being invested are not derived from illegal activity.\n\n3. Capital Contributions\nCapital contributions shall be made in accordance with capital call notices issued by the General Partner.\n\n4. Distributions\nDistributions shall be made in accordance with the waterfall structure outlined in the PPM.\n\n5. Transfer Restrictions\nLimited partnership interests may not be transferred without prior written consent of the General Partner.\n\n[Signature pages to follow]\n\nPrepared by: Northstar Pacific Development Group Inc.\nDate: June 10, 2025",
+      pdfMeta: { Fund: "Livy Development LP", Type: "Legal Agreement", Date: "June 10, 2025" },
+    },
+    {
+      id: 2, projectId: null, name: "K-1 Tax Package — FY 2024", category: "Tax", date: "Mar 1, 2025", status: "published",
+      storageKey: "documents/general/k1-tax-package-fy2024.pdf",
+      pdfTitle: "Schedule K-1 Tax Package — Fiscal Year 2024",
+      pdfBody: "K-1 TAX DOCUMENT\n\nFiscal Year: 2024\nPartnership: Porthaven Development LP / Livy Development LP\nPrepared: March 1, 2025\n\nDear Investor,\n\nEnclosed please find your Schedule K-1 (Form 1065) for the fiscal year ended December 31, 2024. This document reports your share of the partnership's income, deductions, and credits for the tax year.\n\nKey Information\n• Ordinary Business Income (Loss): See Line 1\n• Net Rental Real Estate Income: See Line 2\n• Guaranteed Payments: See Line 4\n• Capital Gains: See Line 9a\n• Section 179 Deduction: See Line 12\n\nImportant Notes\n1. This K-1 should be provided to your tax advisor for inclusion in your personal tax return.\n2. Canadian investors: Please consult with your cross-border tax advisor regarding foreign tax credit implications.\n3. If you invested through an entity (LLC, Trust, IRA), the K-1 is issued to the entity.\n\nAmended K-1s\nIf a corrected K-1 is required, it will be issued within 30 days and you will be notified via the portal.\n\nQuestions? Contact ir@northstardevelopment.ca\n\nNorthstar Pacific Development Group Inc.",
+      pdfMeta: { Year: "FY 2024", Prepared: "March 1, 2025", Type: "Tax Document" },
+    },
+    {
+      id: 6, projectId: null, name: "Distribution Statement — Q1 2025", category: "Distribution", date: "Apr 5, 2025", status: "published",
+      storageKey: "documents/general/distribution-statement-q1-2025.pdf",
+      pdfTitle: "Distribution Statement — Q1 2025",
+      pdfBody: "DISTRIBUTION STATEMENT\n\nPeriod: Q1 2025 (January 1 — March 31, 2025)\nPayment Date: April 9, 2025\n\nDear Investor,\n\nThis statement summarizes distributions paid for the quarter ending March 31, 2025.\n\nPorthaven Development LP\n• Distribution Type: Income\n• Gross Distribution: $6,800\n• Withholding: $0\n• Net Distribution: $6,800\n• Source: Retail pre-lease deposit income\n\nLivy Development LP\n• No distributions — project in pre-development phase\n\nYear-to-Date Summary\n• Total YTD Distributions: $6,800\n• Total Since Inception: $27,600\n\nPayment Method\nDistributions have been deposited to your account on file via wire transfer. Please allow 3-5 business days for processing.\n\nCapital Account Balance\nPlease refer to your Capital Account Statement for your current account balance, including unreturned capital and accrued preferred return.\n\nNorthstar Pacific Development Group Inc.\nInvestor Relations",
+      pdfMeta: { Period: "Q1 2025", Payment: "April 9, 2025", Type: "Distribution" },
+    },
+    {
+      id: 8, projectId: null, name: "Annual Investor Letter 2024", category: "Reporting", date: "Jan 20, 2025", status: "published",
+      storageKey: "documents/general/annual-investor-letter-2024.pdf",
+      pdfTitle: "Annual Investor Letter — 2024",
+      pdfBody: "Dear Partners,\n\nAs we close the books on 2024, I want to take a moment to reflect on a year of significant progress across our portfolio and share our outlook for 2025.\n\n2024 Highlights\n\nPorthaven (Downtown Port Coquitlam)\nOur flagship mixed-use development reached 55% completion by year-end. Pre-sales have been strong with 42 of 108 units sold, generating $18.5M in revenue commitments. The project remains on budget and on schedule for Q2 2027 completion.\n\nLivy (Port Coquitlam)\nWe completed the architectural design phase with RHA Architecture and initiated the development permit process. The optimized unit mix reflects strong demand for studio and 1-bedroom units in the transit-oriented Poco market.\n\nEstrella (British Columbia)\nConstruction commenced on our 40-unit purpose-built rental, achieving 35% completion by year-end. The 20% affordable housing allocation secured favorable CMHC MLI Select financing terms.\n\nPanorama Building 6 (Surrey)\nCompleted and handed over in October 2024. The 55,000sf federal office building is fully leased to the Government of Canada on a long-term net lease, providing stable cash flow to investors.\n\n2025 Outlook\nWe anticipate continued strong performance across the portfolio. Key milestones include advancing Porthaven past 80% completion, securing the Livy development permit, and completing the Estrella rental project.\n\nThank you for your continued partnership and trust.\n\nWarm regards,\nGord Wylie\nPresident, Northstar Pacific Development Group",
+      pdfMeta: { Year: "2024", Author: "Gord Wylie, President", Date: "January 20, 2025" },
+    },
   ];
-  for (const d of documentsData) {
-    await prisma.document.create({ data: d });
-  }
-  console.log("  Documents: " + documentsData.length);
 
-  // Assign all documents to the investor
-  const allDocs = await prisma.document.findMany();
-  for (const doc of allDocs) {
-    try {
-      await prisma.documentAssignment.create({
-        data: { documentId: doc.id, userId: investor.id },
-      });
-    } catch (e) { /* skip if already exists */ }
+  // Generate and upload PDF files, then create document records
+  for (const d of documentsSpec) {
+    const pdfBuffer = await generatePDF(d.pdfTitle, d.pdfBody, d.pdfMeta);
+    await storage.upload(d.storageKey, pdfBuffer, "application/pdf");
+    const bytes = pdfBuffer.length;
+    const size = bytes >= 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(1)} MB` : `${Math.round(bytes / 1024)} KB`;
+    await prisma.document.create({
+      data: {
+        id: d.id, projectId: d.projectId, name: d.name, category: d.category,
+        date: d.date, size, status: d.status,
+        file: `/uploads/${d.storageKey}`, storageKey: d.storageKey,
+      },
+    });
   }
-  console.log("  DocumentAssignments: " + allDocs.length);
+  console.log("  Documents: " + documentsSpec.length + " (with PDF files)");
+
+  // Assign documents to investors based on their project access
+  const allDocs = await prisma.document.findMany();
+  const allInvestors = [investor, investor2, investor3, investor4];
+  let assignCount = 0;
+  for (const doc of allDocs) {
+    for (const inv of allInvestors) {
+      // General docs (no project) go to everyone; project docs go to investors in that project
+      if (!doc.projectId) {
+        await prisma.documentAssignment.create({ data: { documentId: doc.id, userId: inv.id } }).catch(() => {});
+        assignCount++;
+      } else {
+        const hasProject = await prisma.investorProject.findFirst({ where: { userId: inv.id, projectId: doc.projectId } });
+        if (hasProject) {
+          await prisma.documentAssignment.create({ data: { documentId: doc.id, userId: inv.id } }).catch(() => {});
+          assignCount++;
+        }
+      }
+    }
+  }
+  console.log("  DocumentAssignments: " + assignCount);
 
   // ─── Project Updates (with metric snapshots) ───
   const updatesData = [
@@ -349,10 +514,24 @@ async function main() {
         },
       },
     });
-    // Add investor as recipient (first 2 unread, rest read)
-    await prisma.threadRecipient.create({
-      data: { threadId: thread.id, userId: 1, unread: i < 2 },
-    });
+    // Add all investors as recipients based on targeting
+    const recipientIds = [];
+    if (t.targetType === "ALL") {
+      recipientIds.push(1, 3, 4, 5); // all investors
+    } else if (t.targetProjectId) {
+      // Get investors in the target project
+      const projInvestors = await prisma.investorProject.findMany({
+        where: { projectId: t.targetProjectId }, select: { userId: true },
+      });
+      recipientIds.push(...projInvestors.map(pi => pi.userId));
+    } else {
+      recipientIds.push(1); // fallback: James Chen only
+    }
+    for (const uid of recipientIds) {
+      await prisma.threadRecipient.create({
+        data: { threadId: thread.id, userId: uid, unread: uid === 1 ? i < 2 : i < 3 },
+      });
+    }
     // Add admin as recipient (read)
     await prisma.threadRecipient.create({
       data: { threadId: thread.id, userId: 2, unread: false },
@@ -398,27 +577,17 @@ async function main() {
   console.log("  SignatureRequests: 2");
 
   // ─── Notification Preferences ───
-  await prisma.notificationPreference.create({
-    data: {
-      userId: 1,
-      emailDocuments: true,
-      emailSignatures: true,
-      emailDistributions: true,
-      emailMessages: true,
-      emailCapitalCalls: true,
-    },
-  });
-  await prisma.notificationPreference.create({
-    data: {
-      userId: 2,
-      emailDocuments: true,
-      emailSignatures: true,
-      emailDistributions: false,
-      emailMessages: true,
-      emailCapitalCalls: true,
-    },
-  });
-  console.log("  NotificationPreferences: 2");
+  const notifPrefUsers = [
+    { userId: 1, emailDocuments: true, emailSignatures: true, emailDistributions: true, emailMessages: true, emailCapitalCalls: true },
+    { userId: 2, emailDocuments: true, emailSignatures: true, emailDistributions: false, emailMessages: true, emailCapitalCalls: true },
+    { userId: 3, emailDocuments: true, emailSignatures: true, emailDistributions: true, emailMessages: true, emailCapitalCalls: true },
+    { userId: 4, emailDocuments: true, emailSignatures: true, emailDistributions: true, emailMessages: false, emailCapitalCalls: true },
+    { userId: 5, emailDocuments: true, emailSignatures: true, emailDistributions: true, emailMessages: true, emailCapitalCalls: true },
+  ];
+  for (const pref of notifPrefUsers) {
+    await prisma.notificationPreference.create({ data: pref });
+  }
+  console.log("  NotificationPreferences: " + notifPrefUsers.length);
 
   // ─── Notification Logs ───
   const notifLogs = [
@@ -502,10 +671,14 @@ async function main() {
   const classBGroup = await prisma.investorGroup.create({
     data: { name: "Class B LPs", description: "Secondary Class B limited partners", color: "#8B7128", tier: "primary" },
   });
-  // Add James Chen to Class A
-  await prisma.groupMember.create({ data: { groupId: classAGroup.id, userId: 1 } });
-  await prisma.groupMember.create({ data: { groupId: subLPGroup.id, userId: 1 } });
-  console.log("  InvestorGroups: 3 (with hierarchy)");
+  // Add investors to groups
+  await prisma.groupMember.create({ data: { groupId: classAGroup.id, userId: 1 } });  // James Chen
+  await prisma.groupMember.create({ data: { groupId: classAGroup.id, userId: 3 } });  // Sarah Whitfield
+  await prisma.groupMember.create({ data: { groupId: classAGroup.id, userId: 5 } });  // Lisa Park
+  await prisma.groupMember.create({ data: { groupId: subLPGroup.id, userId: 1 } });   // James — West Coast
+  await prisma.groupMember.create({ data: { groupId: subLPGroup.id, userId: 3 } });   // Sarah — West Coast
+  await prisma.groupMember.create({ data: { groupId: classBGroup.id, userId: 4 } });  // Michael Rodriguez
+  console.log("  InvestorGroups: 3 (with hierarchy), 6 memberships");
 
   // ─── Cash Flows ───
   const cashFlowsData = [
@@ -517,6 +690,31 @@ async function main() {
     { userId: 1, projectId: 1, date: new Date("2025-03-15"), amount: 8900, type: "distribution", description: "Q1 2025 income distribution" },
     // Livy — James Chen
     { userId: 1, projectId: 2, date: new Date("2024-03-15"), amount: -250000, type: "capital_call", description: "Initial investment" },
+    // Porthaven — Sarah Whitfield
+    { userId: 3, projectId: 1, date: new Date("2023-03-01"), amount: -1000000, type: "capital_call", description: "Initial investment" },
+    { userId: 3, projectId: 1, date: new Date("2023-09-15"), amount: -200000, type: "capital_call", description: "Capital call #2" },
+    { userId: 3, projectId: 1, date: new Date("2024-09-15"), amount: 25500, type: "distribution", description: "Q3 2024 income distribution" },
+    { userId: 3, projectId: 1, date: new Date("2025-03-15"), amount: 27200, type: "distribution", description: "Q1 2025 income distribution" },
+    // Estrella — Sarah Whitfield
+    { userId: 3, projectId: 3, date: new Date("2024-06-01"), amount: -200000, type: "capital_call", description: "Initial investment" },
+    // Porthaven — Michael Rodriguez
+    { userId: 4, projectId: 1, date: new Date("2023-06-01"), amount: -800000, type: "capital_call", description: "Initial investment" },
+    { userId: 4, projectId: 1, date: new Date("2024-09-15"), amount: 17000, type: "distribution", description: "Q3 2024 income distribution" },
+    { userId: 4, projectId: 1, date: new Date("2025-03-15"), amount: 18100, type: "distribution", description: "Q1 2025 income distribution" },
+    // Panorama — Michael Rodriguez
+    { userId: 4, projectId: 4, date: new Date("2022-06-01"), amount: -750000, type: "capital_call", description: "Initial investment" },
+    { userId: 4, projectId: 4, date: new Date("2024-12-15"), amount: 22500, type: "distribution", description: "Q4 2024 income distribution" },
+    // Porthaven — Lisa Park
+    { userId: 5, projectId: 1, date: new Date("2023-01-15"), amount: -1600000, type: "capital_call", description: "Initial investment" },
+    { userId: 5, projectId: 1, date: new Date("2024-09-15"), amount: 34000, type: "distribution", description: "Q3 2024 income distribution" },
+    { userId: 5, projectId: 1, date: new Date("2025-03-15"), amount: 36200, type: "distribution", description: "Q1 2025 income distribution" },
+    // Livy — Lisa Park
+    { userId: 5, projectId: 2, date: new Date("2024-01-15"), amount: -750000, type: "capital_call", description: "Initial investment" },
+    // Estrella — Lisa Park
+    { userId: 5, projectId: 3, date: new Date("2024-03-01"), amount: -400000, type: "capital_call", description: "Initial investment" },
+    // Panorama — Lisa Park
+    { userId: 5, projectId: 4, date: new Date("2022-03-01"), amount: -1200000, type: "capital_call", description: "Initial investment" },
+    { userId: 5, projectId: 4, date: new Date("2024-12-15"), amount: 36000, type: "distribution", description: "Q4 2024 income distribution" },
   ];
   await prisma.cashFlow.createMany({ data: cashFlowsData });
   console.log("  CashFlows: " + cashFlowsData.length);

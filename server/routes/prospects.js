@@ -73,6 +73,20 @@ router.post("/", validate(prospectSchema), async (req, res) => {
   }
 });
 
+// GET /api/v1/prospects/projects — PUBLIC: list projects for prospect portal
+router.get("/projects", async (req, res) => {
+  try {
+    const projects = await prisma.project.findMany({
+      where: { status: { not: "Archived" } },
+      select: { id: true, name: true, location: true, type: true, status: true, description: true, sqft: true, units: true, completionPct: true, totalRaise: true },
+      orderBy: { id: "asc" },
+    });
+    res.json(projects);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to load projects" });
+  }
+});
+
 // ─── All routes below require ADMIN auth ───
 
 // GET /api/v1/prospects/stats — admin stats
