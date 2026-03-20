@@ -24,9 +24,13 @@ function SectionHeaderLocal({ title, right }) {
 export default function FinancialModelerPage({ myProjects, investor }) {
   const { bg, surface, line, t1, t2, t3 } = useTheme();
   const [selectedIdx, setSelectedIdx] = useState(0);
-  const project = myProjects[selectedIdx];
-
   const [exitValue, setExitValue] = useState("");
+  const [holdYears, setHoldYears] = useState("5");
+  const [annualCF, setAnnualCF] = useState("0");
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const project = myProjects[selectedIdx];
 
   if (!myProjects.length) return (
     <div style={{ padding: 40, textAlign: "center", color: t3 }}>
@@ -34,10 +38,6 @@ export default function FinancialModelerPage({ myProjects, investor }) {
       <p style={{ fontSize: 14, marginTop: 16 }}>No projects assigned to your account.</p>
     </div>
   );
-  const [holdYears, setHoldYears] = useState("5");
-  const [annualCF, setAnnualCF] = useState("0");
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
 
   async function handleRun() {
     setLoading(true);

@@ -219,12 +219,12 @@ export default function DocumentsPage({ toast, allDocuments, myProjects, investo
         {previewDoc && (
           <>
             {(() => {
-              const url = getDocumentPreviewUrl(previewDoc.id);
+              const url = getDocumentPreviewUrl(previewDoc.id) || previewDoc.file;
               return url ? (
                 <iframe src={url} style={{ width: "100%", height: 500, border: "none", borderRadius: 4, marginBottom: 16 }} title={previewDoc.name} />
               ) : (
                 <div style={{ padding: 40, textAlign: "center", color: t3, fontSize: 13, marginBottom: 16 }}>
-                  PDF preview not available in demo mode.
+                  PDF preview not available.
                 </div>
               );
             })()}
@@ -287,7 +287,7 @@ export default function DocumentsPage({ toast, allDocuments, myProjects, investo
               This document requires your review and acknowledgment.
             </p>
             <div style={{ border: `1px solid ${line}`, borderRadius: 2, padding: 20, marginBottom: 24, background: surface }}>
-              <iframe src={reviewDoc.file} style={{ width: "100%", height: 300, border: "none", borderRadius: 2 }} title={reviewDoc.name} />
+              <iframe src={getDocumentPreviewUrl(reviewDoc.id) || reviewDoc.file} style={{ width: "100%", height: 300, border: "none", borderRadius: 2 }} title={reviewDoc.name} />
             </div>
             <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
               <span onClick={() => setReviewDoc(null)} style={{ fontSize: 12, padding: "8px 16px", borderRadius: 2, border: `1px solid ${line}`, color: t3, cursor: "pointer" }}>Close</span>
