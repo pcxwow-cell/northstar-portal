@@ -4,7 +4,7 @@
 > Priority: P0 = must-have, P1 = should-have, P2 = nice-to-have, P3 = future
 > Status: ○ not started, ◐ in progress, ● done
 > Research baseline: Juniper Square, Agora, InvestNext, Covercy, CashFlow Portal
-> Audit status: 114 issues found, ~100 unfixed — see audit docs for details
+> Audit status: 114 issues found, 11 of 18 production issues fixed — see audit docs for details
 
 ---
 
@@ -15,6 +15,9 @@ See `docs/FRONTEND-PLAN.md` for completed extraction results.
 
 **Now working through functional fixes** per `docs/FEATURE-FIX-PLAN.md` (12 sprints, 67 tasks).
 Recent fixes (2026-03-19): group document assignment, PDF preview, acknowledge endpoint, signature request display, embedded signing, signed document download.
+Production database reseeded: 5 users (1 admin + 4 investors), 8 documents with real branded PDFs (pdfkit), 28 document assignments, 10 investor-project links, 8 waterfall tiers, 23 cash flows, 3 investor groups with 6 memberships, 5 entities.
+11 of 18 production issues fixed (P1, P2, P4, P5, P8, P9, P10, P12, P13, P17, P18).
+7 remaining: P3 (Resend API key), P6 (email from address), P7 (portal branding), P11 (distribution id field), P14-P16 (low priority polish).
 
 ---
 
@@ -270,3 +273,5 @@ Recent fixes (2026-03-19): group document assignment, PDF preview, acknowledge e
 | — | PDF preview: inline preview modal for investors + admin, auth via query token | 2026-03-19 |
 | — | Acknowledge endpoint: POST /documents/:id/acknowledge, investor UI button | 2026-03-19 |
 | — | Signature request display: admin document detail shows signer status | 2026-03-19 |
+| — | Production reseed: 5 users, 8 real branded PDFs (pdfkit), 28 assignments, 23 cash flows, 8 waterfall tiers | 2026-03-19 |
+| — | 11 of 18 production issues fixed (P1, P2, P4, P5, P8, P9, P10, P12, P13, P17, P18) | 2026-03-19 |

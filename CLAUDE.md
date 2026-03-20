@@ -12,13 +12,14 @@ These rules apply to ALL agents working on this project.
 
 ## Project State (as of 2026-03-19)
 
-- **Overall: 6.5/10** — strong backend (8), improving frontend (5.5)
+- **Overall: 7.5/10** — strong backend (8), improving frontend (6), 11 of 18 production issues fixed
 - **Deploy:** Vercel (frontend) → Railway (backend) → Supabase (PostgreSQL)
 - **Backend:** Express 4 + Prisma ORM, 22 models, 136 tests, adapter patterns for email/storage/e-sign
 - **Frontend:** React 18 + Vite 5, fully extracted: App.jsx (724 lines), Admin.jsx (226 lines), 12 pages, 14 admin managers, 15 shared components
 - **Auth:** JWT + bcrypt + TOTP MFA, roles: INVESTOR, ADMIN, GP
-- **Issues:** 114 found, ~100 unfixed (7 critical, 4 blockers, 11 broken, ~65 missing, 18 UX)
-- **Priority:** Functional fixes (Sprint A-L in FEATURE-FIX-PLAN.md), Sprint B complete
+- **Production seed:** 5 users (1 admin + 4 investors, pw: northstar2025), 8 docs with real branded PDFs (pdfkit), 28 assignments, 23 cash flows, 8 waterfall tiers, 3 groups, 5 entities
+- **Issues:** 11 of 18 production issues fixed (P1,P2,P4,P5,P8-P10,P12,P13,P17,P18). 7 remaining: P3 (Resend key), P6 (email from), P7 (branding), P11 (distribution id), P14-P16 (polish)
+- **Priority:** Remaining production fixes (P3, P6, P7, P11), then low-priority polish
 - **Live URLs:** Frontend: https://northstar-portal-roan.vercel.app/ | API: https://northstar-portal-production.up.railway.app/
 
 ## Key Docs

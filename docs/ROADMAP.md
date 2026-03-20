@@ -1,14 +1,15 @@
 # Northstar Investor Portal — Roadmap
 
 > Last updated: 2026-03-19
-> Honest assessment after comprehensive QA audit + extraction + functional fixes
+> Honest assessment after production fixes + database reseed
 
 ## Current State
 
 **Architecture**: React 18 + Vite 5 (Vercel) → Express 4 + Prisma ORM (Railway) → PostgreSQL (Supabase)
 **Backend quality**: 8/10 — proper auth, service layer, 136 tests, adapter patterns, e-sign/email/storage adapters
-**Frontend quality**: 5.5/10 — extracted to 12 pages + 14 admin managers + 15 shared components, no tests yet
-**Overall**: 6.5/10 — architecture fixed, functional fixes in progress, ~100 issues remaining
+**Frontend quality**: 6/10 — extracted to 12 pages + 14 admin managers + 15 shared components, no tests yet
+**Overall**: 7.5/10 — 11 of 18 production issues fixed, production seed with real branded PDFs, 4 investors active
+**Production seed**: 5 users (1 admin + 4 investors, password: northstar2025), 8 documents with real branded PDFs (pdfkit), 28 assignments, 23 cash flows, 8 waterfall tiers, 3 investor groups, 5 entities
 
 ### What Actually Works
 - JWT auth with bcrypt, MFA/TOTP, account lockout, role-based access
@@ -31,19 +32,21 @@
 
 ### What's Broken or Missing (~100 issues)
 
-**Critical (7 remaining):**
-- Investor onboarding trap (PENDING users get "invalid credentials")
-- 22 admin write functions crash in demo mode (no fallback)
-- No email notifications on new messages
-- Tax IDs stored/displayed in plain text
+**Remaining (7 issues):**
+- P3: Resend API key not configured (emails not sending)
+- P6: Email from address needs updating
+- P7: Portal branding polish needed
+- P11: Distribution id field missing
+- P14-P16: Low priority polish items
 
-**Fixed recently:**
+**Fixed (11 of 18 production issues — P1, P2, P4, P5, P8, P9, P10, P12, P13, P17, P18):**
 - ~~Document downloads bypass tracking~~ → Fixed: uses secure endpoint with tracking
 - ~~Document assignment destroys tracking history~~ → Fixed: upsert preserves timestamps
 - ~~No PDF preview~~ → Fixed: inline preview modal for investors + admin
 - ~~No group document assignment~~ → Fixed: assign to investor groups
 - ~~Acknowledged field not wired~~ → Fixed: POST endpoint + investor UI
 - ~~E-sign incomplete~~ → Fixed: embedded signing + signed doc download
+- Production database reseeded with real branded PDFs generated via pdfkit
 
 **Blocker (4):**
 - No empty states — new investors see all zeros

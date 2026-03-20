@@ -85,20 +85,6 @@ const prospectLimiter = rateLimit({ windowMs: 60000, max: 5 }); // 5 submissions
 app.use("/api/v1/auth", authLimiter, require("./routes/auth"));
 app.use("/api/v1/prospects", prospectLimiter, require("./routes/prospects"));
 
-// ─── One-time seed endpoint (remove after production seed) ───
-app.post("/api/v1/reseed", async (req, res) => {
-  const key = req.headers["x-seed-key"];
-  if (key !== "northstar-reseed-2026-03-19") {
-    return res.status(403).json({ error: "Forbidden" });
-  }
-  try {
-    const { execSync } = require("child_process");
-    const output = execSync("node seed.js", { cwd: __dirname, timeout: 120000, encoding: "utf8" });
-    res.json({ ok: true, output });
-  } catch (err) {
-    res.status(500).json({ error: "Seed failed", details: err.stderr || err.message });
-  }
-});
 
 // ─── E-sign webhook (no auth — verified by provider signature) ───
 const signaturesRouter = require("./routes/signatures");

@@ -1,15 +1,15 @@
 # Northstar Portal — Production Audit
 
-> Date: 2026-03-19
+> Date: 2026-03-19 (updated after fixes)
 > Backend: https://northstar-portal-production.up.railway.app
 > Frontend: https://northstar-portal-roan.vercel.app
 > Method: Live API testing against Railway backend through both direct and Vercel proxy
 
 ---
 
-## Status: PARTIAL — Core flows work, 18 issues found
+## Status: MOSTLY WORKING — 11 of 18 issues fixed, 7 remaining
 
-### What Works (Verified Live)
+### What Works (Verified Live After Reseed)
 
 | Feature | Status | Details |
 |---------|--------|---------|
@@ -18,97 +18,119 @@
 | **Admin login** | ✅ | `admin@northstardevelopment.ca` / `admin2025` |
 | **Vercel → Railway proxy** | ✅ | All API calls work through Vercel |
 | **SPA routing** | ✅ | Deep links `/documents`, `/admin` serve index.html |
-| **JS chunks load** | ✅ | `index-COc9C24l.js` loads (200) |
-| **Project list (investor)** | ✅ | 2 projects returned with full data |
-| **Project detail** | ✅ | Porthaven: totalRaise $6M, 3 updates, 6 cap table entries |
-| **Documents list** | ✅ | 8 documents with correct statuses |
+| **JS chunks load** | ✅ | Frontend JS loads (200) |
+| **Project list (investor)** | ✅ | 4 projects returned with full data |
+| **Project detail** | ✅ | Porthaven: totalRaise $6M, 3 updates, 6 cap table entries, 4 waterfall tiers |
+| **Documents list** | ✅ | 8 documents with storageKeys and correct statuses |
+| **Document download** | ✅ | All 8 documents return real PDFs (200, application/pdf) |
+| **Document preview** | ✅ | Inline PDF preview works with ?token= auth |
 | **Acknowledge endpoint** | ✅ | `POST /documents/4/acknowledge` works |
-| **Signature requests** | ✅ | 2 requests returned, both signed |
+| **Signature requests** | ✅ | 2 requests returned (1 signed, 1 pending) |
 | **Admin document detail** | ✅ | Includes signatureRequests with signer status |
 | **Group assignment** | ✅ | `POST /admin/documents/1/assign` with groupIds resolves members |
-| **Threads (investor)** | ✅ | 7 threads returned |
+| **Threads (investor)** | ✅ | Threads returned with proper recipients |
+| **Thread recipients** | ✅ | Recipients populated based on targeting (ALL, PROJECT) |
 | **Send message** | ✅ | `POST /threads` creates thread successfully |
 | **Thread detail** | ✅ | Messages and recipients returned |
 | **Capital account** | ✅ | `/finance/capital-account/1/1` — committed/called/distributions/IRR/MOIC |
-| **Cash flows** | ✅ | 5 cash flows for project 1 |
+| **Cash flows** | ✅ | 23 cash flows across all investors |
 | **IRR calculation** | ✅ | `POST /finance/calculate-irr` returns correct IRR |
-| **Admin dashboard** | ✅ | 4 projects, 1 investor, 8 docs, 2 unread |
-| **Admin investors** | ✅ | 1 investor (James Chen) |
+| **Admin dashboard** | ✅ | 4 projects, 4 investors, 8 docs, 2 unread |
+| **Admin investors** | ✅ | 4 investors (James Chen, Sarah Whitfield, Michael Rodriguez, Lisa Park) |
 | **Admin projects** | ✅ | 4 projects listed |
-| **Admin groups** | ✅ | 2 groups (Class A, Class A LPs) |
-| **Investor profile** | ✅ | 2 projects, 3 docs, 1 group, 7 threads |
+| **Admin groups** | ✅ | 3 groups (Class A LPs: 3 members, West Coast: 2, Class B: 1) |
+| **Investor profile** | ✅ | Profile data with entities |
 | **Profile update** | ✅ | PUT /auth/profile works |
-| **Login history** | ✅ | 13 entries |
-| **Investor entities** | ✅ | 1 entity |
-| **Notification preferences** | ✅ | All 5 email prefs returned |
-| **Notifications** | ✅ | 7 notifications |
+| **Investor entities** | ✅ | 5 entities across 4 investors |
+| **MFA status** | ✅ | `mfaEnabled` returned in /auth/me response |
+| **Notification preferences** | ✅ | All 5 email prefs returned for all users |
 | **Audit log** | ✅ | Working, captures login/download/acknowledge |
 | **Prospects** | ✅ | 5 prospects, form submit works without auth |
+| **Prospect projects (public)** | ✅ | `GET /prospects/projects` returns 4 projects without auth |
 | **Statements endpoint** | ✅ | Returns empty array (no statements yet) |
 | **Feature flags** | ✅ | `/features/my-flags` returns full flag set |
-| **IDOR protection** | ✅ | Project 3 access denied for investor, admin endpoint returns 403 |
+| **IDOR protection** | ✅ | Project access properly scoped to investor |
 | **Password reset** | ✅ | `POST /auth/forgot-password` returns success |
 | **Distributions** | ✅ | 4 distributions returned |
+| **Waterfall tiers** | ✅ | 4 tiers per project (8 total), correct statuses |
+| **Document assignments** | ✅ | 28 assignments across 4 investors based on project access |
 
 ---
 
-## Issues Found (18)
+## Issues Fixed (11 of 18)
 
-### CRITICAL (4) — Broken for users
+| # | Issue | Status | Fix Applied |
+|---|-------|--------|-------------|
+| P1 | README wrong credentials | ✅ FIXED | README updated with correct credentials |
+| P2 | All documents have no storageKey | ✅ FIXED | Seed generates real branded PDFs via pdfkit, uploads to storage adapter |
+| P4 | Only 1 investor in DB | ✅ FIXED | Added 3 more investors (Sarah Whitfield, Michael Rodriguez, Lisa Park) with entities, cash flows, group memberships |
+| P5 | Waterfall tiers empty | ✅ FIXED | Seed creates 4 waterfall tiers per project (8 total) |
+| P8 | MFA status not in /auth/me | ✅ FIXED | Added `mfaEnabled: !!user.mfaSecret` to response |
+| P9 | Duplicate "Class A" group | ✅ FIXED | Clean groups: Class A LPs (3), West Coast sub-group (2), Class B (1) |
+| P10 | Thread recipients empty | ✅ FIXED | Recipients now populated based on targetType (ALL → all investors, PROJECT → project investors) |
+| P13 | Only 1 investor in admin view | ✅ FIXED | 4 investors visible in admin |
+| P17 | Prospect projects route requires auth | ✅ FIXED | Added public `GET /prospects/projects` route |
+| P18 | Two nearly-identical groups | ✅ FIXED | Groups restructured with hierarchy |
+| P12 | Waterfall config empty | ✅ FIXED | Waterfall tiers created in seed with proper statuses |
 
-| # | Issue | Impact | Fix |
-|---|-------|--------|-----|
-| P1 | **README has wrong credentials** | Nobody can log in following README | README says `james@chen.com` / `password123` and `admin@northstar.com` / `admin123`. Actual: `j.chen@pacificventures.ca` / `northstar2025` and `admin@northstardevelopment.ca` / `admin2025` |
-| P2 | **All documents have no storageKey** | Downloads return 404, preview returns 404 | All 8 seed documents have `storageKey: null` — no actual files uploaded to storage. Seed creates file path references (`/docs/...`) but never uploads to storage adapter |
-| P3 | **Resend API key invalid** | No emails can be sent | `POST /settings/email/test` returns `"API key is invalid"`. Email provider shows configured=true but the key doesn't work |
-| P4 | **Only 1 investor in production DB** | Can't demo multi-investor features | Seed only creates 1 investor (James Chen). Need at least 3-5 to demo group assignment, messaging, comparison |
+## Issues Remaining (7)
 
-### HIGH (5) — Functional gaps
+### CRITICAL (1)
 
-| # | Issue | Impact | Fix |
-|---|-------|--------|-----|
-| P5 | **Waterfall tiers empty** | Waterfall tab shows nothing | Project 1 has 0 waterfall tiers. Seed needs to create WaterfallTier records |
-| P6 | **Email from address is `onboarding@resend.dev`** | Emails look unprofessional, Resend sandbox only allows this sender | Need custom domain verified in Resend, or at minimum `fromName` set |
-| P7 | **portalUrl and companyName not configured** | Email templates missing branding | `/settings/email` shows `portalUrl: null`, `companyName: null`, `fromName: null` |
-| P8 | **MFA status not in /auth/me response** | Frontend can't show MFA status | `mfaEnabled` field missing from user response |
-| P9 | **Class A group has 0 members** | Duplicate/orphaned group | Two groups: "Class A" (0 members) and "Class A LPs" (1 member). First is likely an error |
+| # | Issue | Impact | Action Needed |
+|---|-------|--------|---------------|
+| P3 | **Resend API key invalid** | No emails can be sent | User must verify/update RESEND_API_KEY env var on Railway |
 
-### MEDIUM (5) — UX/data issues
+### HIGH (2)
 
-| # | Issue | Impact | Fix |
-|---|-------|--------|-----|
-| P10 | **Thread recipients empty** | Thread detail shows 0 recipients even though messages exist | Thread 19 has 1 message but 0 recipients returned — possible seed/query issue |
-| P11 | **Distribution shape missing `id`** | Frontend may fail on certain operations | Distribution objects use `quarter`/`date`/`amount` but no `id` field |
-| P12 | **Waterfall config empty** | Admin project detail shows no waterfall configuration | `waterfallConfig: {}` for all projects |
-| P13 | **Only 1 investor in admin view** | Admin features like group management, comparison feel empty | Need more seed data for realistic demo |
-| P14 | **Feature flags route mismatch** | If frontend calls `/features` instead of `/features/my-flags` it 404s | Verify frontend calls correct path |
+| # | Issue | Impact | Action Needed |
+|---|-------|--------|---------------|
+| P6 | **Email from address is `onboarding@resend.dev`** | Emails look unprofessional | Verify custom domain in Resend, or set fromName env var |
+| P7 | **portalUrl and companyName not configured** | Email templates missing branding | Set PORTAL_URL, COMPANY_NAME env vars on Railway |
 
-### LOW (4) — Polish
+### MEDIUM (1)
 
-| # | Issue | Impact | Fix |
-|---|-------|--------|-----|
-| P15 | **No CSS in initial HTML** | Flash of unstyled content possible | CSS may be JS-injected rather than link tag (Vite default) |
-| P16 | **Audit log userId shows as `?`** | Admin can't tell who did what | Audit entries don't include userId in JSON response or it's nested differently |
-| P17 | **Prospect projects route requires auth** | ProspectPortal can't load projects without login | `GET /prospects/projects` returns 401 — needs to be public |
-| P18 | **Two nearly-identical seed groups** | Confusing for admin | "Class A" and "Class A LPs" — clean up seed data |
+| # | Issue | Impact | Action Needed |
+|---|-------|--------|---------------|
+| P11 | **Distribution shape missing `id`** | Frontend may fail on certain operations | Add `id` to distribution query response |
 
----
+### LOW (3)
 
-## Priority Fix Order
-
-1. **P2: Upload seed document files** — Documents are the core feature. Without actual PDFs, download and preview both 404.
-2. **P1: Fix README credentials** — Anyone trying to demo gets stuck at login.
-3. **P4+P5+P13: Enrich seed data** — Add 3-4 more investors, waterfall tiers, more realistic data.
-4. **P3: Fix Resend API key** — Either get a valid key or configure Railway env var correctly.
-5. **P6+P7: Configure email settings** — Set fromName, portalUrl, companyName via admin panel or env vars.
-6. **P8: Add mfaEnabled to /auth/me** — Quick backend fix.
-7. **P17: Make prospect project list public** — Route change.
+| # | Issue | Impact | Action Needed |
+|---|-------|--------|---------------|
+| P14 | **Feature flags route mismatch** | Minor — frontend may call wrong path | Verify frontend calls `/features/my-flags` |
+| P15 | **No CSS in initial HTML** | Flash of unstyled content possible | Vite default behavior, low priority |
+| P16 | **Audit log userId shows as `?`** | Admin can't tell who did what | Include userId in audit log response |
 
 ---
 
-## Live Credentials (actual, verified)
+## Production Data Summary (after reseed)
+
+| Entity | Count | Details |
+|--------|-------|---------|
+| Users | 5 | 1 admin + 4 investors |
+| Projects | 4 | Porthaven, Livy, Estrella, Panorama |
+| Documents | 8 | All with real PDF files and storageKeys |
+| Document Assignments | 28 | Distributed across investors by project |
+| Investor-Project Links | 10 | Proper capital structure |
+| Cap Table Entries | 11 | Porthaven (6) + Livy (5) |
+| Waterfall Tiers | 8 | 4 per project (Porthaven + Livy) |
+| Distributions | 4 | All from Porthaven |
+| Cash Flows | 23 | Across all 4 investors |
+| Message Threads | 5 | With proper recipient targeting |
+| Investor Groups | 3 | Class A LPs (3), West Coast (2), Class B (1) |
+| Investor Entities | 5 | Across all investors |
+| Prospects | 5 | Various statuses |
+| Signature Requests | 2 | 1 signed, 1 pending |
+
+---
+
+## Live Credentials (verified)
 
 | Role | Email | Password |
 |------|-------|----------|
-| Investor | j.chen@pacificventures.ca | northstar2025 |
+| Investor (James Chen) | j.chen@pacificventures.ca | northstar2025 |
+| Investor (Sarah Whitfield) | sarah.whitfield@coastalfamily.ca | northstar2025 |
+| Investor (Michael Rodriguez) | m.rodriguez@westridgecapital.com | northstar2025 |
+| Investor (Lisa Park) | lisa.park@pacificpension.ca | northstar2025 |
 | Admin | admin@northstardevelopment.ca | admin2025 |
