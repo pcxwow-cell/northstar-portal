@@ -92,10 +92,23 @@ export default function Overview({ onNavigate, investor, projects, myProjects, a
       {(() => {
         if (myProjects.length === 0) {
           return (
-            <Card padding="40px" style={{ textAlign: "center", marginBottom: 48 }}>
-              <div style={{ fontSize: 32, marginBottom: 12 }}>{"\uD83D\uDCCA"}</div>
-              <div style={{ fontSize: 15, color: t1, fontWeight: 500, marginBottom: 8 }}>Welcome to your investor portal</div>
-              <div style={{ fontSize: 13, color: t3, lineHeight: 1.6, maxWidth: 400, margin: "0 auto" }}>Your portfolio is being set up. You'll see your investments here once assigned by your administrator.</div>
+            <Card padding="48px 40px" style={{ textAlign: "center", marginBottom: 48 }}>
+              <div style={{ fontSize: 20, fontFamily: serif, fontWeight: 400, color: t1, marginBottom: 12 }}>Welcome to Northstar</div>
+              <div style={{ fontSize: 13, color: t3, lineHeight: 1.8, maxWidth: 440, margin: "0 auto 24px" }}>
+                Your investor portal is being set up. Here is what to expect:
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 360, margin: "0 auto", textAlign: "left" }}>
+                {[
+                  { step: "1", text: "Your administrator will assign you to one or more projects" },
+                  { step: "2", text: "Review your capital account statements and documents" },
+                  { step: "3", text: "Track distributions, performance, and project updates" },
+                ].map(s => (
+                  <div key={s.step} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                    <span style={{ width: 24, height: 24, borderRadius: "50%", background: `${red}12`, color: red, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 600, flexShrink: 0 }}>{s.step}</span>
+                    <span style={{ fontSize: 13, color: t2, lineHeight: 1.5 }}>{s.text}</span>
+                  </div>
+                ))}
+              </div>
             </Card>
           );
         }

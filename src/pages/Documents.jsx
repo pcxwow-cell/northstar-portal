@@ -184,7 +184,7 @@ export default function DocumentsPage({ toast, allDocuments, myProjects, investo
       </div>
 
       {filtered.length === 0 ? (
-        <EmptyState icon="\uD83D\uDCC4" title="No documents available" subtitle="Documents will appear here when they are uploaded to your projects." />
+        <EmptyState icon={"\uD83D\uDCC4"} title="No documents have been shared with you yet" subtitle="Documents will appear here when they are uploaded and assigned to your projects." />
       ) : (
       <Card padding="0" style={{ overflow: "hidden", background: surface }}>
         {filtered.map((d, i) => (

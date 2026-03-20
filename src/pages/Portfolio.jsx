@@ -8,6 +8,7 @@ import StatusBadge from "../components/StatusBadge.jsx";
 import Tabs from "../components/Tabs.jsx";
 import DataTable from "../components/DataTable.jsx";
 import SectionHeader from "../components/SectionHeader.jsx";
+import EmptyState from "../components/EmptyState.jsx";
 
 const serif = fonts.serif;
 const sans = fonts.sans;
@@ -256,6 +257,15 @@ export default function Portfolio({ myProjects, investor, initialProjectId }) {
           <div style={{ padding: 24, textAlign: "center", color: t3, fontSize: 13 }}>No distributions yet.</div>
         )}
         </>)}
+      </>
+    );
+  }
+
+  if (myProjects.length === 0) {
+    return (
+      <>
+        <SectionHeader title="Portfolio" subtitle="0 investments" size="lg" style={{ marginBottom: 40 }} />
+        <EmptyState icon={"\uD83D\uDCBC"} title="No investments yet" subtitle="Your portfolio will appear here once you are assigned to one or more projects by your administrator." />
       </>
     );
   }
