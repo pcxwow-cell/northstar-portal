@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAdminData } from "../context/AdminDataContext.jsx";
-import { fetchAdminDocuments, fetchAdminDocumentDetail, fetchAdminInvestors, uploadDocument, bulkUploadK1, deleteDocument, assignDocument, createSignatureRequest, downloadSignedDocument, sendSignatureReminder, fetchGroups, getDocumentPreviewUrl } from "../api.js";
+import { fetchAdminDocuments, fetchAdminDocumentDetail, fetchAdminInvestors, uploadDocument, bulkUploadK1, deleteDocument, assignDocument, createSignatureRequest, downloadSignedDocument, sendSignatureReminder, fetchGroups, getDocumentPreviewUrl, DOCUMENT_CATEGORIES } from "../api.js";
 import { colors, inputStyle } from "../styles/theme.js";
 import Spinner from "../components/Spinner.jsx";
 import SectionHeader from "../components/SectionHeader.jsx";
@@ -102,7 +102,7 @@ export default function DocumentManager({ toast, hideHeader, initialAction, onAc
     finally { setUploading(false); }
   }
 
-  const categories = ["Reporting", "Property Update", "Offering", "Capital Call", "Legal", "Tax", "Distribution"];
+  const categories = DOCUMENT_CATEGORIES;
   const docSort = useSortable("name");
 
   async function openSignModal() {

@@ -967,6 +967,19 @@ export async function runFinancialModel(data) {
   return apiFetch("/finance/model-scenario", { method: "POST", body: JSON.stringify(data) });
 }
 
+// ─── Document Categories (configurable) ───
+export const DOCUMENT_CATEGORIES = ["Reporting", "Property Update", "Offering", "Capital Call", "Legal", "Tax", "Distribution"];
+
+export async function fetchDocumentCategories() {
+  if (_demoMode) return [...DOCUMENT_CATEGORIES];
+  try {
+    const data = await apiFetch("/settings/document-categories");
+    return data.categories || DOCUMENT_CATEGORIES;
+  } catch {
+    return [...DOCUMENT_CATEGORIES];
+  }
+}
+
 // ─── Utility (kept from data.js) ───
 export const fmt = (n) => {
   if (typeof n !== "number") return n;
