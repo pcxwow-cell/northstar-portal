@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchAdminInvestors, fetchAdminProjects, inviteInvestor, approveInvestor, deactivateInvestor, resetInvestorPassword, updateInvestor, updateInvestorKPI, exportInvestorsCSV, fmt } from "../api.js";
+import { fetchAdminInvestors, fetchAdminProjects, inviteInvestor, approveInvestor, deactivateInvestor, resetInvestorPassword, updateInvestor, updateInvestorKPI, exportInvestorsCSV, bulkInviteInvestors, bulkApproveInvestors, bulkDeactivateInvestors, fmt } from "../api.js";
 import { colors, inputStyle } from "../styles/theme.js";
 import Spinner from "../components/Spinner.jsx";
 import SectionHeader from "../components/SectionHeader.jsx";
@@ -68,6 +68,12 @@ export default function InvestorManager({ toast, onViewProfile, hideHeader }) {
   const [sortBy, setSortBy] = useState("name");
   const [sortDir, setSortDir] = useState("asc");
   const [showInvite, setShowInvite] = useState(false);
+  const [showBulkInvite, setShowBulkInvite] = useState(false);
+  const [bulkFile, setBulkFile] = useState(null);
+  const [bulkPreview, setBulkPreview] = useState([]);
+  const [bulkResult, setBulkResult] = useState(null);
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
   const [inviteName, setInviteName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [editing, setEditing] = useState(null);
@@ -118,16 +124,70 @@ export default function InvestorManager({ toast, onViewProfile, hideHeader }) {
     else { setSortBy(col); setSortDir("asc"); }
   }
 
+  function handleBulkFileChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBulkFile(file); setBulkResult(null);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const lines = ev.target.result.trim().split("\n").filter(l => l.trim());
+      if (lines.length < 2) { setBulkPreview([]); return; }
+      setBulkPreview(lines.slice(1, 11).map(l => { const p = l.split(",").map(s => s.trim().replace(/^"|"$/g, "")); return { name: p[0] || "", email: p[1] || "" }; }));
+    };
+    reader.readAsText(file);
+  }
+  async function handleBulkInvite() {
+    if (!bulkFile) return;
+    setBulkLoading(true);
+    try { const r = await bulkInviteInvestors(bulkFile); setBulkResult(r); if (r.success > 0) reload(); }
+    catch (e) { toast(e.message, "error"); } finally { setBulkLoading(false); }
+  }
+
+  function toggleSelect(id) { setSelectedIds(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; }); }
+  function toggleSelectAll() { selectedIds.size === investors.length ? setSelectedIds(new Set()) : setSelectedIds(new Set(investors.map(i => i.id))); }
+  async function handleBulkAction(fn, label) {
+    try { const r = await fn([...selectedIds]); toast(`${r.success} investor(s) ${label}`); setSelectedIds(new Set()); reload(); } catch (e) { toast(e.message, "error"); }
+  }
+
   if (invLoading && investors.length === 0) return <Spinner />;
 
   return (
     <>
       {confirmAction && <ConfirmDialog {...confirmAction} open={true} onCancel={() => setConfirmAction(null)} />}
       {credentialDialog && <CredentialDialog {...credentialDialog} onClose={() => setCredentialDialog(null)} />}
+      {showBulkInvite && (
+        <Modal open={true} onClose={() => setShowBulkInvite(false)} title="Bulk Invite Investors" maxWidth={520}>
+          <p style={{ fontSize: 13, color: colors.mutedText, marginBottom: 16 }}>Upload a CSV file with <strong>name</strong> and <strong>email</strong> columns.</p>
+          <input type="file" accept=".csv" onChange={handleBulkFileChange} style={{ marginBottom: 16, fontSize: 13 }} />
+          {bulkPreview.length > 0 && !bulkResult && (
+            <div style={{ marginBottom: 16, maxHeight: 200, overflowY: "auto", border: "1px solid #E8E5DE", borderRadius: 8 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", padding: "8px 12px", fontSize: 11, color: colors.mutedText, borderBottom: "1px solid #E8E5DE", textTransform: "uppercase" }}><span>Name</span><span>Email</span></div>
+              {bulkPreview.map((r, i) => <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", padding: "6px 12px", fontSize: 12, borderBottom: "1px solid #F5F3F0" }}><span>{r.name}</span><span>{r.email}</span></div>)}
+            </div>
+          )}
+          {bulkResult && (
+            <div style={{ padding: 16, borderRadius: 8, background: bulkResult.failed.length ? colors.warningBg : colors.successBg, marginBottom: 16, fontSize: 13 }}>
+              <div style={{ fontWeight: 500 }}>{bulkResult.success} invited successfully{bulkResult.failed.length > 0 && `, ${bulkResult.failed.length} failed`}</div>
+              {bulkResult.failed.map((f, i) => <div key={i} style={{ fontSize: 12, color: colors.red, marginTop: 4 }}>Row {f.row}: {f.error}</div>)}
+            </div>
+          )}
+          {!bulkResult && <Button onClick={handleBulkInvite} disabled={!bulkFile || bulkLoading} style={{ opacity: !bulkFile || bulkLoading ? 0.5 : 1 }}>{bulkLoading ? "Importing..." : "Import & Invite"}</Button>}
+          {bulkResult && <Button onClick={() => setShowBulkInvite(false)}>Done</Button>}
+        </Modal>
+      )}
       {!hideHeader && <SectionHeader title="Investors" size="lg" style={{ marginBottom: 24 }} />}
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 16 }}>
-        <Button variant="outline" onClick={() => exportInvestorsCSV().catch(e => toast?.(e.message, "error"))} style={{ fontSize: 12 }}>Export CSV</Button>
-        <Button onClick={() => setShowInvite(!showInvite)}>{showInvite ? "Cancel" : "Invite Investor"}</Button>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <div style={{ display: "flex", gap: 8 }}>
+          {selectedIds.size > 0 && <>
+            <Button onClick={() => handleBulkAction(bulkApproveInvestors, "approved")} style={{ fontSize: 12, background: colors.green }}>Approve Selected ({selectedIds.size})</Button>
+            <Button onClick={() => setConfirmAction({ title: "Deactivate Selected", message: `Deactivate ${selectedIds.size} investor(s)?`, danger: true, onConfirm: () => { setConfirmAction(null); handleBulkAction(bulkDeactivateInvestors, "deactivated"); } })} variant="outline" style={{ fontSize: 12, color: colors.red, borderColor: colors.red }}>Deactivate Selected</Button>
+          </>}
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <Button variant="outline" onClick={() => exportInvestorsCSV().catch(e => toast?.(e.message, "error"))} style={{ fontSize: 12 }}>Export CSV</Button>
+          <Button variant="outline" onClick={() => { setShowBulkInvite(true); setBulkFile(null); setBulkPreview([]); setBulkResult(null); }} style={{ fontSize: 12 }}>Bulk Invite (CSV)</Button>
+          <Button onClick={() => setShowInvite(!showInvite)}>{showInvite ? "Cancel" : "Invite Investor"}</Button>
+        </div>
       </div>
 
       {/* Invite form */}
@@ -153,7 +213,8 @@ export default function InvestorManager({ toast, onViewProfile, hideHeader }) {
 
       {/* Column headers */}
       <Card className="admin-table-scroll" padding="0" style={{ overflow: "hidden" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 100px 120px 120px 140px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "32px 1fr 1fr 100px 120px 120px 140px", padding: "10px 20px", borderBottom: "1px solid #E8E5DE", alignItems: "center" }}>
+          <input type="checkbox" checked={investors.length > 0 && selectedIds.size === investors.length} onChange={toggleSelectAll} style={{ cursor: "pointer" }} />
           <SortableHeader columns={[
             { key: "name", label: "Name" },
             { key: "email", label: "Email" },
@@ -166,7 +227,8 @@ export default function InvestorManager({ toast, onViewProfile, hideHeader }) {
 
         {investors.map((inv) => (
           <div key={inv.id}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 100px 120px 120px 140px", padding: "14px 20px", borderBottom: `1px solid ${colors.lightBorder}`, alignItems: "center", fontSize: 13 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "32px 1fr 1fr 100px 120px 120px 140px", padding: "14px 20px", borderBottom: `1px solid ${colors.lightBorder}`, alignItems: "center", fontSize: 13 }}>
+              <input type="checkbox" checked={selectedIds.has(inv.id)} onChange={() => toggleSelect(inv.id)} style={{ cursor: "pointer" }} />
               <span style={{ fontWeight: 500 }}>{inv.name}</span>
               <span style={{ color: "#666" }}>{inv.email}</span>
               <span><StatusBadge status={inv.status} size="sm" /></span>
