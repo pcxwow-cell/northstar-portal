@@ -4,6 +4,7 @@ const prisma = require("../prisma");
 const { requireRole } = require("../middleware/auth");
 const { calculateXIRR, calculateMOIC, calculateWaterfall, capitalAccountStatement } = require("../services/finance");
 const audit = require("../services/audit");
+const { requireFeature } = require("../middleware/featureGuard");
 const { validate, recordCashFlowSchema, calculateIrrSchema, calculateWaterfallSchema } = require("../middleware/validate");
 
 // ─── POST /calculate-irr ────────────────────────────────
@@ -392,7 +393,7 @@ router.post("/model-scenario", requireRole("ADMIN", "GP"), async (req, res) => {
 });
 
 // ─── POST /bulk-distribution (ADMIN/GP) ──────────────────
-router.post("/bulk-distribution", requireRole("ADMIN", "GP"), async (req, res, next) => {
+router.post("/bulk-distribution", requireRole("ADMIN", "GP"), requireFeature("bulkOperations"), async (req, res, next) => {
   try {
     const { projectId, amount, quarter, date, type } = req.body;
     if (!projectId || !amount) return res.status(400).json({ error: "projectId and amount required" });
@@ -465,7 +466,7 @@ router.post("/bulk-distribution", requireRole("ADMIN", "GP"), async (req, res, n
 });
 
 // ─── POST /bulk-capital-call (ADMIN/GP) ──────────────────
-router.post("/bulk-capital-call", requireRole("ADMIN", "GP"), async (req, res, next) => {
+router.post("/bulk-capital-call", requireRole("ADMIN", "GP"), requireFeature("bulkOperations"), async (req, res, next) => {
   try {
     const { projectId, amount, quarter, date, dueDate } = req.body;
     if (!projectId || !amount) return res.status(400).json({ error: "projectId and amount required" });

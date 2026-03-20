@@ -8,6 +8,7 @@ const storage = require("../storage");
 const { requireRole } = require("../middleware/auth");
 const audit = require("../services/audit");
 const { validate, createProjectSchema, inviteInvestorSchema } = require("../middleware/validate");
+const { requireFeature } = require("../middleware/featureGuard");
 const router = Router();
 
 // Multer config for project image uploads
@@ -234,7 +235,7 @@ router.post("/projects/:id/image", imageUpload.single("image"), async (req, res,
 });
 
 // ─── WATERFALL CONFIG ───
-router.put("/projects/:id/waterfall", async (req, res, next) => {
+router.put("/projects/:id/waterfall", requireFeature("manageWaterfall"), async (req, res, next) => {
   try {
     const { prefReturn, catchUp, carry } = req.body;
     const id = parseInt(req.params.id);
@@ -278,7 +279,7 @@ router.post("/projects/:id/updates", async (req, res, next) => {
 });
 
 // ─── INVESTOR KPI / RETURNS EDITING ───
-router.put("/investors/:userId/projects/:projectId", async (req, res, next) => {
+router.put("/investors/:userId/projects/:projectId", requireFeature("editKPIs"), async (req, res, next) => {
   try {
     const { committed, called, currentValue, irr, moic } = req.body;
     const updated = await prisma.investorProject.update({
@@ -354,7 +355,7 @@ router.get("/investors", async (req, res, next) => {
 });
 
 // ─── DOCUMENT ASSIGNMENT ───
-router.post("/documents/:id/assign", async (req, res, next) => {
+router.post("/documents/:id/assign", requireFeature("uploadDocuments"), async (req, res, next) => {
   try {
     const { userIds = [], groupIds = [] } = req.body;
     const docId = parseInt(req.params.id);
@@ -399,7 +400,7 @@ router.post("/documents/:id/assign", async (req, res, next) => {
 // ─── USER MANAGEMENT ───
 
 // POST /admin/investors/invite — create a new investor with temporary password
-router.post("/investors/invite", validate(inviteInvestorSchema), async (req, res, next) => {
+router.post("/investors/invite", requireFeature("inviteUsers"), validate(inviteInvestorSchema), async (req, res, next) => {
   try {
     const { name, email, initials } = req.body;
 
@@ -486,7 +487,7 @@ router.post("/investors/:id/unlock", async (req, res, next) => {
 });
 
 // POST /admin/investors/:id/deactivate — soft-delete / deactivate an investor
-router.post("/investors/:id/deactivate", async (req, res, next) => {
+router.post("/investors/:id/deactivate", requireFeature("deactivateUsers"), async (req, res, next) => {
   try {
     const user = await prisma.user.update({
       where: { id: parseInt(req.params.id) },
@@ -805,7 +806,7 @@ router.get("/staff", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.post("/staff", async (req, res, next) => {
+router.post("/staff", requireFeature("inviteUsers"), async (req, res, next) => {
   try {
     const { name, email, role } = req.body;
     if (!name || !email || !role) return res.status(400).json({ error: "Name, email, and role required" });
@@ -884,7 +885,7 @@ router.put("/staff/:id", async (req, res, next) => {
 });
 
 // POST /admin/staff/:id/deactivate — deactivate a staff member
-router.post("/staff/:id/deactivate", async (req, res, next) => {
+router.post("/staff/:id/deactivate", requireFeature("deactivateUsers"), async (req, res, next) => {
   try {
     const targetId = parseInt(req.params.id);
     if (targetId === req.user.id) {
@@ -1021,7 +1022,7 @@ router.delete("/projects/:id/cap-table/:entryId", async (req, res, next) => {
 });
 
 // ─── WATERFALL TIER CRUD ───
-router.post("/projects/:id/waterfall-tiers", async (req, res, next) => {
+router.post("/projects/:id/waterfall-tiers", requireFeature("manageWaterfall"), async (req, res, next) => {
   try {
     const { tierName, lpShare, gpShare, threshold, status } = req.body;
     if (!tierName) return res.status(400).json({ error: "Tier name required" });
@@ -1048,7 +1049,7 @@ router.post("/projects/:id/waterfall-tiers", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.put("/projects/:id/waterfall-tiers/:tierId", async (req, res, next) => {
+router.put("/projects/:id/waterfall-tiers/:tierId", requireFeature("manageWaterfall"), async (req, res, next) => {
   try {
     const { tierName, tierOrder, lpShare, gpShare, threshold, status } = req.body;
     const data = {};
@@ -1067,7 +1068,7 @@ router.put("/projects/:id/waterfall-tiers/:tierId", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.delete("/projects/:id/waterfall-tiers/:tierId", async (req, res, next) => {
+router.delete("/projects/:id/waterfall-tiers/:tierId", requireFeature("manageWaterfall"), async (req, res, next) => {
   try {
     await prisma.waterfallTier.delete({ where: { id: parseInt(req.params.tierId) } });
     audit.log(req, "waterfall_tier_delete", `project:${req.params.id}`, { tierId: req.params.tierId });

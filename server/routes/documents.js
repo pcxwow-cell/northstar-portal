@@ -7,6 +7,7 @@ const { requireRole } = require("../middleware/auth");
 const { notifyMany } = require("../services/notifications");
 const audit = require("../services/audit");
 const { validate, uploadDocumentSchema } = require("../middleware/validate");
+const { requireFeature } = require("../middleware/featureGuard");
 const router = Router();
 
 // Multer config — store in memory, then pass to storage adapter
@@ -169,7 +170,7 @@ router.post("/:id/acknowledge", async (req, res, next) => {
 });
 
 // POST /api/v1/documents/upload — admin uploads a document
-router.post("/upload", requireRole("ADMIN", "GP"), upload.single("file"), validate(uploadDocumentSchema), async (req, res, next) => {
+router.post("/upload", requireRole("ADMIN", "GP"), requireFeature("uploadDocuments"), upload.single("file"), validate(uploadDocumentSchema), async (req, res, next) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No file provided" });
 
@@ -249,7 +250,7 @@ router.post("/upload", requireRole("ADMIN", "GP"), upload.single("file"), valida
 });
 
 // POST /api/v1/documents/bulk-k1 — bulk upload K-1 documents with auto-matching
-router.post("/bulk-k1", requireRole("ADMIN", "GP"), upload.array("files", 50), async (req, res, next) => {
+router.post("/bulk-k1", requireRole("ADMIN", "GP"), requireFeature("bulkOperations"), upload.array("files", 50), async (req, res, next) => {
   try {
     if (!req.files || req.files.length === 0) return res.status(400).json({ error: "No files provided" });
 
