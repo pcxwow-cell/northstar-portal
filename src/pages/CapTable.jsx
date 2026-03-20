@@ -6,6 +6,7 @@ import Button from "../components/Button.jsx";
 import Card from "../components/Card.jsx";
 import DataTable from "../components/DataTable.jsx";
 import SectionHeader from "../components/SectionHeader.jsx";
+import SavedScenarios, { saveScenario, loadScenarios } from "../components/SavedScenarios.jsx";
 
 const serif = fonts.serif;
 const sans = fonts.sans;
@@ -41,6 +42,8 @@ export default function CapTablePage({ myProjects, investor, toast }) {
   const [waterfallInput, setWaterfallInput] = useState("");
   const [waterfallResult, setWaterfallResult] = useState(null);
   const [waterfallLoading, setWaterfallLoading] = useState(false);
+  const [scenarioName, setScenarioName] = useState("");
+  const [savedRefreshKey, setSavedRefreshKey] = useState(0);
   const project = myProjects[selectedIdx];
 
   if (!myProjects.length) return (
@@ -226,9 +229,31 @@ export default function CapTablePage({ myProjects, investor, toast }) {
                   Estimated LP IRR: <span style={{ color: green, fontWeight: 500 }}>{(waterfallResult.lpIRR * 100).toFixed(1)}%</span>
                 </div>
               )}
+
+              {/* Save Scenario */}
+              <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 16, paddingTop: 16, borderTop: `1px solid ${line}` }}>
+                <input value={scenarioName} onChange={e => setScenarioName(e.target.value)} placeholder="Scenario name..." style={{ flex: 1, padding: "8px 12px", background: `${line}33`, border: `1px solid ${line}`, borderRadius: 6, fontSize: 13, fontFamily: sans, color: t1, outline: "none", boxSizing: "border-box" }} />
+                <Button onClick={() => {
+                  const name = scenarioName.trim() || `Scenario ${loadScenarios(project.id).length + 1}`;
+                  const lpCap = project.capTable.reduce((s, r) => r.type !== "GP Interest" ? s + r.called : s, 0);
+                  const lpMOIC = lpCap > 0 ? waterfallResult.lpTotal / lpCap : null;
+                  saveScenario(project.id, {
+                    name, date: new Date().toISOString(), inputAmount: parseFloat(waterfallInput),
+                    lpTotal: waterfallResult.lpTotal, gpTotal: waterfallResult.gpTotal,
+                    lpIRR: waterfallResult.lpIRR, lpMOIC,
+                    tiers: waterfallResult.tiers,
+                  });
+                  setSavedRefreshKey(k => k + 1);
+                  setScenarioName("");
+                  toast("Scenario saved");
+                }} variant="outline" style={{ padding: "8px 16px", fontSize: 12, whiteSpace: "nowrap" }}>Save Scenario</Button>
+              </div>
             </>
           )}
         </Card>
+
+        {/* Saved Scenarios */}
+        <SavedScenarios projectId={project.id} refreshKey={savedRefreshKey} />
       </div>
     </>
   );
