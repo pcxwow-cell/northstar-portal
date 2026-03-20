@@ -70,6 +70,7 @@ model Project {
   unitsSold           Int       @default(0) @map("units_sold")
   revenue             Float     @default(0)
   orgChart            String?   @map("org_chart") // JSON string: [{role, name, company}]
+  imageUrl            String?   @map("image_url") // URL or storage key for project hero image
   createdAt           DateTime @default(now()) @map("created_at")
   updatedAt           DateTime @updatedAt @map("updated_at")
 

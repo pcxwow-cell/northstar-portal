@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAdminData } from "../context/AdminDataContext.jsx";
-import { fetchAdminProjectDetail, updateProject, postUpdate, updateWaterfall, recordCashFlow, recalculateProject, fetchCashFlows, fetchProjectCashFlows, updateCashFlow, deleteCashFlow, runFinancialModel, createCapTableEntry, updateCapTableEntry, deleteCapTableEntry, createWaterfallTier, updateWaterfallTier, deleteWaterfallTier, recordBulkDistribution, fmt, fmtCurrency } from "../api.js";
+import { fetchAdminProjectDetail, updateProject, postUpdate, updateWaterfall, recordCashFlow, recalculateProject, fetchCashFlows, fetchProjectCashFlows, updateCashFlow, deleteCashFlow, runFinancialModel, createCapTableEntry, updateCapTableEntry, deleteCapTableEntry, createWaterfallTier, updateWaterfallTier, deleteWaterfallTier, recordBulkDistribution, uploadProjectImage, fmt, fmtCurrency } from "../api.js";
 import { colors, fonts, inputStyle, labelStyle } from "../styles/theme.js";
 import Spinner from "../components/Spinner.jsx";
 import SectionHeader from "../components/SectionHeader.jsx";
@@ -449,9 +449,28 @@ export default function ProjectDetail({ projectId, onBack, toast }) {
   return (
     <>
       <p style={{ fontSize: 12, color: colors.red, cursor: "pointer", marginBottom: 24 }} onClick={onBack}>← Back to projects</p>
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 300 }}>{project.name}</h1>
-        <div style={{ fontSize: 13, color: colors.mutedText }}>{project.location} · {project.type}</div>
+      <div style={{ display: "flex", gap: 20, alignItems: "center", marginBottom: 24 }}>
+        {/* Project image */}
+        <label style={{ width: 80, height: 80, borderRadius: 10, overflow: "hidden", flexShrink: 0, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", background: project.imageUrl ? "none" : `linear-gradient(135deg, ${colors.red}15, ${colors.red}05)` }}>
+          {project.imageUrl ? (
+            <img src={project.imageUrl} alt={project.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          ) : (
+            <span style={{ fontSize: 28, fontWeight: 300, color: `${colors.red}40` }}>{project.name?.[0] || "P"}</span>
+          )}
+          <input type="file" accept=".jpg,.jpeg,.png,.webp" style={{ display: "none" }} onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            try {
+              const result = await uploadProjectImage(projectId, file);
+              setProject(prev => ({ ...prev, imageUrl: result.imageUrl }));
+              toast("Project image updated");
+            } catch (err) { toast(err.message, "error"); }
+          }} />
+        </label>
+        <div>
+          <h1 style={{ fontSize: 28, fontWeight: 300 }}>{project.name}</h1>
+          <div style={{ fontSize: 13, color: colors.mutedText }}>{project.location} · {project.type}</div>
+        </div>
       </div>
 
       {/* KPI cards */}

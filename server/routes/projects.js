@@ -15,6 +15,7 @@ function toProject(p) {
     completion: p.completionPct,
     totalRaise: p.totalRaise,
     description: p.description,
+    imageUrl: p.imageUrl || null,
   };
 }
 

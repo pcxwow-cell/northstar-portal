@@ -1,11 +1,29 @@
 const { Router } = require("express");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
+const multer = require("multer");
+const path = require("path");
 const prisma = require("../prisma");
+const storage = require("../storage");
 const { requireRole } = require("../middleware/auth");
 const audit = require("../services/audit");
 const { validate, createProjectSchema, inviteInvestorSchema } = require("../middleware/validate");
 const router = Router();
+
+// Multer config for project image uploads
+const imageUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (req, file, cb) => {
+    const allowed = [".jpg", ".jpeg", ".png", ".webp"];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowed.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Invalid file type. Only JPG, JPEG, PNG, and WEBP are allowed."));
+    }
+  },
+});
 
 // All admin routes require ADMIN or GP role
 router.use(requireRole("ADMIN", "GP"));
@@ -75,7 +93,7 @@ router.get("/projects", async (req, res, next) => {
     res.json(projects.map(p => ({
       id: p.id, name: p.name, location: p.location, status: p.status,
       completion: p.completionPct, totalRaise: p.totalRaise, units: p.units,
-      type: p.type, sqft: p.sqft, description: p.description,
+      type: p.type, sqft: p.sqft, description: p.description, imageUrl: p.imageUrl,
       investorCount: p._count.investorProjects, docCount: p._count.documents,
     })));
   } catch (err) { next(err); }
@@ -103,7 +121,7 @@ router.get("/projects/:id", async (req, res, next) => {
       units: project.units, completion: project.completionPct, totalRaise: project.totalRaise,
       prefReturn: project.prefReturnPct, catchUp: project.gpCatchupPct, carry: project.carryPct,
       estimatedCompletion: project.estimatedCompletion, unitsSold: project.unitsSold,
-      revenue: project.revenue, orgChart: project.orgChart,
+      revenue: project.revenue, orgChart: project.orgChart, imageUrl: project.imageUrl,
       investors: project.investorProjects.map(ip => ({
         userId: ip.user.id, name: ip.user.name, email: ip.user.email,
         committed: ip.committed, called: ip.called, currentValue: ip.currentValue, irr: ip.irr, moic: ip.moic,
@@ -182,6 +200,37 @@ router.delete("/projects/:id", async (req, res, next) => {
     audit.log(req, "project_delete", `project:${projectId}`, { name: project.name });
     res.json({ ok: true, name: project.name });
   } catch (err) { next(err); }
+});
+
+// ─── PROJECT IMAGE UPLOAD ───
+router.post("/projects/:id/image", imageUpload.single("image"), async (req, res, next) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image file provided" });
+
+    const projectId = parseInt(req.params.id);
+    const project = await prisma.project.findUnique({ where: { id: projectId } });
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    // Store via storage adapter
+    const ext = path.extname(req.file.originalname).toLowerCase();
+    const storageKey = `project-images/${projectId}/${Date.now()}${ext}`;
+    await storage.upload(storageKey, req.file.buffer, req.file.mimetype);
+
+    const imageUrl = `/uploads/${storageKey}`;
+    await prisma.project.update({
+      where: { id: projectId },
+      data: { imageUrl },
+    });
+
+    audit.log(req, "project_image_upload", `project:${projectId}`, { imageUrl });
+    res.json({ imageUrl });
+  } catch (err) {
+    // Handle multer file filter errors
+    if (err.message && err.message.includes("Invalid file type")) {
+      return res.status(400).json({ error: err.message });
+    }
+    next(err);
+  }
 });
 
 // ─── WATERFALL CONFIG ───
