@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAdminData } from "../context/AdminDataContext.jsx";
-import { fetchAdminProjectDetail, updateProject, postUpdate, updateWaterfall, recordCashFlow, recalculateProject, fetchCashFlows, fetchProjectCashFlows, updateCashFlow, deleteCashFlow, runFinancialModel, createCapTableEntry, updateCapTableEntry, deleteCapTableEntry, createWaterfallTier, updateWaterfallTier, deleteWaterfallTier, recordBulkDistribution, uploadProjectImage, fmt, fmtCurrency } from "../api.js";
+import { fetchAdminProjectDetail, updateProject, postUpdate, updateWaterfall, recordCashFlow, recalculateProject, fetchCashFlows, fetchProjectCashFlows, updateCashFlow, deleteCashFlow, runFinancialModel, createCapTableEntry, updateCapTableEntry, deleteCapTableEntry, createWaterfallTier, updateWaterfallTier, deleteWaterfallTier, recordBulkDistribution, uploadProjectImage, bulkImportCashFlows, fmt, fmtCurrency } from "../api.js";
 import { colors, fonts, inputStyle, labelStyle } from "../styles/theme.js";
 import Spinner from "../components/Spinner.jsx";
 import SectionHeader from "../components/SectionHeader.jsx";
@@ -140,6 +140,11 @@ function ProjectCashFlowsTab({ project, projectId, cashFlowsList, cfInvestors, s
   const [editDate, setEditDate] = useState("");
   const [editAmount, setEditAmount] = useState("");
   const [editType, setEditType] = useState("");
+  const [showCfImport, setShowCfImport] = useState(false);
+  const [cfImportFile, setCfImportFile] = useState(null);
+  const [cfImportPreview, setCfImportPreview] = useState([]);
+  const [cfImportResult, setCfImportResult] = useState(null);
+  const [cfImportLoading, setCfImportLoading] = useState(false);
   const [editDesc, setEditDesc] = useState("");
 
   function startEdit(cf) {
@@ -171,6 +176,25 @@ function ProjectCashFlowsTab({ project, projectId, cashFlowsList, cfInvestors, s
     } catch (err) { toast(err.message, "error"); }
   }
 
+  function handleCfImportFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCfImportFile(file); setCfImportResult(null);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const lines = ev.target.result.trim().split("\n").filter(l => l.trim());
+      if (lines.length < 2) { setCfImportPreview([]); return; }
+      setCfImportPreview(lines.slice(1, 11).map(l => { const p = l.split(",").map(s => s.trim().replace(/^"|"$/g, "")); return { date: p[0] || "", amount: p[1] || "", type: p[2] || "", desc: p[3] || "" }; }));
+    };
+    reader.readAsText(file);
+  }
+  async function handleCfImport() {
+    if (!cfImportFile) return;
+    setCfImportLoading(true);
+    try { const r = await bulkImportCashFlows(projectId, cfImportFile); setCfImportResult(r); if (r.success > 0) loadCashFlows(); }
+    catch (e) { toast(e.message, "error"); } finally { setCfImportLoading(false); }
+  }
+
   // Calculate running balance and totals
   const totalContributed = cashFlowsList.filter(cf => cf.amount < 0).reduce((s, cf) => s + Math.abs(cf.amount), 0);
   const totalDistributed = cashFlowsList.filter(cf => cf.amount > 0).reduce((s, cf) => s + cf.amount, 0);
@@ -198,6 +222,7 @@ function ProjectCashFlowsTab({ project, projectId, cashFlowsList, cfInvestors, s
         <div style={{ fontSize: 13, fontWeight: 600, color: "#666" }}>Cash Flow History ({cashFlowsList.length} records)</div>
         <div style={{ display: "flex", gap: 8 }}>
           <Button onClick={() => setShowCfModal(true)}>Record Cash Flow</Button>
+          <Button variant="outline" onClick={() => { setShowCfImport(true); setCfImportFile(null); setCfImportPreview([]); setCfImportResult(null); }} style={{ fontSize: 12 }}>Import CSV</Button>
           <Button variant="outline" onClick={handleRecalculate} disabled={recalculating} style={{ opacity: recalculating ? 0.5 : 1 }}>
             {recalculating ? "Recalculating..." : "Recalculate IRR/MOIC"}
           </Button>
@@ -283,6 +308,26 @@ function ProjectCashFlowsTab({ project, projectId, cashFlowsList, cfInvestors, s
             <Button type="submit">Record</Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Import CSV Modal */}
+      <Modal open={showCfImport} onClose={() => setShowCfImport(false)} title="Import Cash Flows from CSV" maxWidth={520}>
+        <p style={{ fontSize: 13, color: colors.mutedText, marginBottom: 16 }}>Upload a CSV with columns: <strong>date, amount, type, description</strong> (and optionally <strong>email</strong> for the investor).</p>
+        <input type="file" accept=".csv" onChange={handleCfImportFile} style={{ marginBottom: 16, fontSize: 13 }} />
+        {cfImportPreview.length > 0 && !cfImportResult && (
+          <div style={{ marginBottom: 16, maxHeight: 200, overflowY: "auto", border: "1px solid #E8E5DE", borderRadius: 8 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", padding: "8px 12px", fontSize: 11, color: colors.mutedText, borderBottom: "1px solid #E8E5DE", textTransform: "uppercase" }}><span>Date</span><span>Amount</span><span>Type</span><span>Description</span></div>
+            {cfImportPreview.map((r, i) => <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", padding: "6px 12px", fontSize: 12, borderBottom: "1px solid #F5F3F0" }}><span>{r.date}</span><span>{r.amount}</span><span>{r.type}</span><span>{r.desc}</span></div>)}
+          </div>
+        )}
+        {cfImportResult && (
+          <div style={{ padding: 16, borderRadius: 8, background: cfImportResult.failed.length ? colors.warningBg : colors.successBg, marginBottom: 16, fontSize: 13 }}>
+            <div style={{ fontWeight: 500 }}>{cfImportResult.success} imported successfully{cfImportResult.failed.length > 0 && `, ${cfImportResult.failed.length} failed`}</div>
+            {cfImportResult.failed.map((f, i) => <div key={i} style={{ fontSize: 12, color: colors.red, marginTop: 4 }}>Row {f.row}: {f.error}</div>)}
+          </div>
+        )}
+        {!cfImportResult && <Button onClick={handleCfImport} disabled={!cfImportFile || cfImportLoading} style={{ opacity: !cfImportFile || cfImportLoading ? 0.5 : 1 }}>{cfImportLoading ? "Importing..." : "Import"}</Button>}
+        {cfImportResult && <Button onClick={() => setShowCfImport(false)}>Done</Button>}
       </Modal>
     </Card>
   );
