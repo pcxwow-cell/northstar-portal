@@ -443,6 +443,9 @@ model Prospect {
   status              String   @default("new") // new | contacted | qualified | converted | declined
   createdAt           DateTime @default(now()) @map("created_at")
   updatedAt           DateTime @updatedAt @map("updated_at")
+  leadSource          String?  @map("lead_source") // Website | Referral | Event | Cold Outreach | Other
+  notes               String?
+  followUpDate        DateTime? @map("follow_up_date")
 
   interestedProject Project? @relation(fields: [interestedProjectId], references: [id])
 

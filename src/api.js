@@ -678,11 +678,11 @@ export async function createDistribution(data) {
 
 // ─── Prospects (public + admin) ───
 const _demoProspects = [
-  { id: 1, name: "Sarah Mitchell", email: "sarah.mitchell@westcoastwealth.ca", phone: "604-555-0142", entityType: "Individual", accreditationStatus: "Accredited", investmentRange: "$250K-$500K", interestedProjectId: 1, interestedProject: { id: 1, name: "Porthaven" }, message: "Interested in the Porthaven development. Would like to schedule a call.", status: "new", createdAt: "2026-03-10T14:30:00Z", updatedAt: "2026-03-10T14:30:00Z" },
-  { id: 2, name: "David Park", email: "dpark@harbourinvestments.com", phone: "778-555-0319", entityType: "LLC", accreditationStatus: "Accredited", investmentRange: "$500K+", interestedProjectId: 2, interestedProject: { id: 2, name: "Livy" }, message: "Our firm is looking at residential development opportunities in the Port Coquitlam area.", status: "contacted", createdAt: "2026-03-08T10:00:00Z", updatedAt: "2026-03-09T09:00:00Z" },
-  { id: 3, name: "Michelle Wong", email: "mwong@pacificridge.ca", phone: "604-555-0287", entityType: "Trust", accreditationStatus: "Accredited", investmentRange: "$100K-$250K", interestedProjectId: 3, interestedProject: { id: 3, name: "Estrella" }, message: "Interested in the affordable housing component of Estrella.", status: "qualified", createdAt: "2026-03-05T16:45:00Z", updatedAt: "2026-03-07T11:00:00Z" },
-  { id: 4, name: "Robert Fraser", email: "rob.fraser@gmail.com", phone: null, entityType: "Individual", accreditationStatus: "Not Yet", investmentRange: "$50K-$100K", interestedProjectId: null, interestedProject: null, message: "Just learning about real estate investment.", status: "declined", createdAt: "2026-02-28T08:00:00Z", updatedAt: "2026-03-01T10:00:00Z" },
-  { id: 5, name: "Jennifer Liu", email: "jliu@mapleleafcapital.ca", phone: "604-555-0456", entityType: "IRA", accreditationStatus: "Accredited", investmentRange: "$250K-$500K", interestedProjectId: 1, interestedProject: { id: 1, name: "Porthaven" }, message: "Looking to allocate from our self-directed IRA into real estate development.", status: "new", createdAt: "2026-03-12T09:15:00Z", updatedAt: "2026-03-12T09:15:00Z" },
+  { id: 1, name: "Sarah Mitchell", email: "sarah.mitchell@westcoastwealth.ca", phone: "604-555-0142", entityType: "Individual", accreditationStatus: "Accredited", investmentRange: "$250K-$500K", interestedProjectId: 1, interestedProject: { id: 1, name: "Porthaven" }, message: "Interested in the Porthaven development. Would like to schedule a call.", status: "new", createdAt: "2026-03-10T14:30:00Z", updatedAt: "2026-03-10T14:30:00Z", leadSource: "Website", notes: "", followUpDate: "2026-03-22T00:00:00Z" },
+  { id: 2, name: "David Park", email: "dpark@harbourinvestments.com", phone: "778-555-0319", entityType: "LLC", accreditationStatus: "Accredited", investmentRange: "$500K+", interestedProjectId: 2, interestedProject: { id: 2, name: "Livy" }, message: "Our firm is looking at residential development opportunities in the Port Coquitlam area.", status: "contacted", createdAt: "2026-03-08T10:00:00Z", updatedAt: "2026-03-09T09:00:00Z", leadSource: "Referral", notes: "Referred by Coastal Family Office. Very interested in Livy specifically.", followUpDate: "2026-03-15T00:00:00Z" },
+  { id: 3, name: "Michelle Wong", email: "mwong@pacificridge.ca", phone: "604-555-0287", entityType: "Trust", accreditationStatus: "Accredited", investmentRange: "$100K-$250K", interestedProjectId: 3, interestedProject: { id: 3, name: "Estrella" }, message: "Interested in the affordable housing component of Estrella.", status: "qualified", createdAt: "2026-03-05T16:45:00Z", updatedAt: "2026-03-07T11:00:00Z", leadSource: "Event", notes: "Met at Vancouver RE Investment Forum. Strong interest in impact investing.", followUpDate: "2026-03-25T00:00:00Z" },
+  { id: 4, name: "Robert Fraser", email: "rob.fraser@gmail.com", phone: null, entityType: "Individual", accreditationStatus: "Not Yet", investmentRange: "$50K-$100K", interestedProjectId: null, interestedProject: null, message: "Just learning about real estate investment.", status: "declined", createdAt: "2026-02-28T08:00:00Z", updatedAt: "2026-03-01T10:00:00Z", leadSource: "Cold Outreach", notes: "Not accredited. May revisit in future.", followUpDate: null },
+  { id: 5, name: "Jennifer Liu", email: "jliu@mapleleafcapital.ca", phone: "604-555-0456", entityType: "IRA", accreditationStatus: "Accredited", investmentRange: "$250K-$500K", interestedProjectId: 1, interestedProject: { id: 1, name: "Porthaven" }, message: "Looking to allocate from our self-directed IRA into real estate development.", status: "new", createdAt: "2026-03-12T09:15:00Z", updatedAt: "2026-03-12T09:15:00Z", leadSource: "Website", notes: "", followUpDate: "2026-03-20T00:00:00Z" },
 ];
 
 // Public — submit interest
@@ -714,6 +714,16 @@ export async function updateProspectStatus(id, status) {
     return p || { id, status };
   }
   return apiFetch(`/prospects/${id}`, { method: "PUT", body: JSON.stringify({ status }) });
+}
+
+// Admin — update prospect fields (notes, leadSource, followUpDate, etc.)
+export async function updateProspect(id, data) {
+  if (_demoMode) {
+    const p = _demoProspects.find(x => x.id === id);
+    if (p) { Object.assign(p, data, { updatedAt: new Date().toISOString() }); }
+    return p || { id, ...data };
+  }
+  return apiFetch(`/prospects/${id}`, { method: "PUT", body: JSON.stringify(data) });
 }
 
 // Admin — prospect stats
