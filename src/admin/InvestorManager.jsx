@@ -9,6 +9,7 @@ import Modal from "../components/Modal.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
 import ConfirmDialog from "../components/ConfirmDialog.jsx";
 import SearchFilterBar from "../components/SearchFilterBar.jsx";
+import KPIEditModal from "./KPIEditModal.jsx";
 
 function SortableHeader({ columns, sortBy, sortDir, onSort }) {
   return columns.map(col => (
@@ -46,16 +47,6 @@ function CredentialDialog({ name, email, tempPassword, onClose }) {
       </div>
       <p style={{ fontSize: 11, color: "#AAA", marginTop: 12 }}>A welcome email has been sent to {email}.</p>
     </Modal>
-  );
-}
-
-function KPIInput({ label, defaultValue, onSave }) {
-  const [val, setVal] = useState(defaultValue ?? "");
-  return (
-    <div style={{ flex: 1 }}>
-      <label style={{ fontSize: 10, color: "#AAA" }}>{label}</label>
-      <input value={val} onChange={e => setVal(e.target.value)} onBlur={() => onSave(val)} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} />
-    </div>
   );
 }
 
@@ -124,7 +115,7 @@ export default function InvestorManager({ toast, onViewProfile, hideHeader, init
     try { await updateInvestor(id, data); toast("Updated"); reload(); setEditing(null); } catch (e) { toast(e.message, "error"); }
   }
   async function handleKPISave(userId, projectId, data) {
-    try { await updateInvestorKPI(userId, projectId, data); toast("KPI updated"); reload(); setEditingKPI(null); } catch (e) { toast(e.message, "error"); }
+    try { await updateInvestorKPI(userId, projectId, data); toast("KPI updated"); reload(); } catch (e) { toast(e.message, "error"); }
   }
 
   function toggleSort(col) {
@@ -163,6 +154,7 @@ export default function InvestorManager({ toast, onViewProfile, hideHeader, init
     <>
       {confirmAction && <ConfirmDialog {...confirmAction} open={true} onCancel={() => setConfirmAction(null)} />}
       {credentialDialog && <CredentialDialog {...credentialDialog} onClose={() => setCredentialDialog(null)} />}
+      {editingKPI && (() => { const inv = investors.find(i => i.id === editingKPI); return inv ? <KPIEditModal investor={inv} onSave={handleKPISave} onClose={() => setEditingKPI(null)} /> : null; })()}
       {showBulkInvite && (
         <Modal open={true} onClose={() => setShowBulkInvite(false)} title="Bulk Invite Investors" maxWidth={520}>
           <p style={{ fontSize: 13, color: colors.mutedText, marginBottom: 16 }}>Upload a CSV file with <strong>name</strong> and <strong>email</strong> columns.</p>
@@ -272,25 +264,14 @@ export default function InvestorManager({ toast, onViewProfile, hideHeader, init
                 </div>
 
                 {/* Project KPIs */}
-                <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 8, color: "#666" }}>Project KPIs / Returns</div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: "#666" }}>Project KPIs / Returns</div>
+                  {inv.projects.length > 0 && <Button onClick={() => setEditingKPI(inv.id)} variant="outline" style={{ fontSize: 11, padding: "4px 10px" }}>Edit All KPIs</Button>}
+                </div>
                 {inv.projects.map(p => (
                   <div key={p.projectId} style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 8, padding: "8px 12px", background: colors.white, borderRadius: 4, border: "1px solid #E8E5DE" }}>
                     <span style={{ width: 100, fontWeight: 500, fontSize: 13 }}>{p.projectName}</span>
-                    {editingKPI === `${inv.id}-${p.projectId}` ? (
-                      <>
-                        <KPIInput label="Committed" defaultValue={p.committed} onSave={v => handleKPISave(inv.id, p.projectId, { committed: parseFloat(v) })} />
-                        <KPIInput label="Called" defaultValue={p.called} onSave={v => handleKPISave(inv.id, p.projectId, { called: parseFloat(v) })} />
-                        <KPIInput label="Value" defaultValue={p.currentValue} onSave={v => handleKPISave(inv.id, p.projectId, { currentValue: parseFloat(v) })} />
-                        <KPIInput label="IRR %" defaultValue={p.irr} onSave={v => handleKPISave(inv.id, p.projectId, { irr: parseFloat(v) })} />
-                        <KPIInput label="MOIC" defaultValue={p.moic} onSave={v => handleKPISave(inv.id, p.projectId, { moic: parseFloat(v) })} />
-                        <Button onClick={() => setEditingKPI(null)} variant="outline" style={{ fontSize: 11, padding: "4px 8px" }}>Done</Button>
-                      </>
-                    ) : (
-                      <>
-                        <span style={{ fontSize: 12, color: "#666" }}>${fmt(p.committed)} committed · ${fmt(p.currentValue)} value · {p.irr}% IRR · {p.moic}x</span>
-                        <Button onClick={() => setEditingKPI(`${inv.id}-${p.projectId}`)} variant="outline" style={{ fontSize: 11, padding: "4px 8px", marginLeft: "auto" }}>Edit KPIs</Button>
-                      </>
-                    )}
+                    <span style={{ fontSize: 12, color: "#666" }}>${fmt(p.committed)} committed · ${fmt(p.currentValue)} value · {p.irr}% IRR · {p.moic}x</span>
                   </div>
                 ))}
                 {inv.projects.length === 0 && <div style={{ fontSize: 12, color: colors.mutedText, fontStyle: "italic" }}>No project assignments</div>}
