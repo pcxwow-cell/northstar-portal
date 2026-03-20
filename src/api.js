@@ -626,7 +626,15 @@ export async function cancelSignatureRequest(id) {
 
 // ─── Notifications ───
 export async function fetchNotifications() {
-  if (_demoMode) return [];
+  if (_demoMode) return [
+    { id: 1, type: "document_uploaded", message: "Q2 2025 Quarterly Report uploaded for Porthaven", title: "New Document", preview: "Q2 2025 — Porthaven Quarterly Report", project: "Porthaven", read: false, createdAt: new Date(Date.now() - 2 * 3600000).toISOString() },
+    { id: 2, type: "distribution", message: "Q2 2025 distribution of $7,500 has been paid", title: "Distribution Paid", preview: "$7,500 — Income distribution", project: "Porthaven", read: false, createdAt: new Date(Date.now() - 8 * 3600000).toISOString() },
+    { id: 3, type: "message", message: "New message from Gord Wylie: Porthaven Q2 Update", title: "Message Received", preview: "Construction remains on schedule. We've reached 68% completion...", project: "Porthaven", read: false, createdAt: new Date(Date.now() - 24 * 3600000).toISOString() },
+    { id: 4, type: "capital_call", message: "Capital call notice #4 for Livy — $25,000 due", title: "Capital Call", preview: "Capital Call Notice #4 — due in 30 days", project: "Livy", read: true, createdAt: new Date(Date.now() - 3 * 86400000).toISOString() },
+    { id: 5, type: "project_update", message: "Porthaven reached 68% construction completion", title: "Project Update", preview: "Structural concrete complete on floors 1-4. Exterior cladding installation has begun.", project: "Porthaven", read: true, createdAt: new Date(Date.now() - 5 * 86400000).toISOString() },
+    { id: 6, type: "signature_request", message: "Subscription Agreement for Livy requires your signature", title: "Signature Request", preview: "Subscription Agreement — Livy", project: "Livy", read: true, createdAt: new Date(Date.now() - 7 * 86400000).toISOString() },
+    { id: 7, type: "document_uploaded", message: "Annual Investor Letter 2024 uploaded", title: "New Document", preview: "Annual Investor Letter 2024", project: "General", read: true, createdAt: new Date(Date.now() - 10 * 86400000).toISOString() },
+  ];
   return apiFetch("/notifications");
 }
 

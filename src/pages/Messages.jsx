@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { colors, fonts } from "../styles/theme.js";
 import { useTheme } from "../context/ThemeContext.jsx";
-import { fetchThreads, fetchThread, createThread, replyToThread } from "../api.js";
+import { fetchThreads, fetchThread, createThread, replyToThread, markThreadRead } from "../api.js";
 import Button from "../components/Button.jsx";
 import Card from "../components/Card.jsx";
 import Spinner from "../components/Spinner.jsx";
@@ -50,7 +50,7 @@ function MessagesSkeleton() {
   );
 }
 
-export default function MessagesPage({ toast, investor, initialThreadId }) {
+export default function MessagesPage({ toast, investor, initialThreadId, onMarkRead }) {
   const { bg, surface, line, t1, t2, t3, hover } = useTheme();
   const [threads, setThreads] = useState([]);
   const [selectedThread, setSelectedThread] = useState(null);
@@ -86,8 +86,12 @@ export default function MessagesPage({ toast, investor, initialThreadId }) {
     try {
       const detail = await fetchThread(thread.id);
       setThreadDetail(detail);
-      // Update unread status in list
+      // Update unread status in list and notify parent
       setThreads(prev => prev.map(t => t.id === thread.id ? { ...t, unread: false } : t));
+      if (thread.unread) {
+        markThreadRead(thread.id).catch(() => {});
+        onMarkRead?.(thread.id);
+      }
     } catch (e) { toast("Failed to load thread", "error"); }
     finally { setThreadLoading(false); }
   }

@@ -1,6 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import { useToast } from "./context/ToastContext.jsx";
-import { logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, fetchMyFlags, fetchNotifications } from "./api.js";
+import { logout as apiLogout, getMe, isAuthed as checkAuthed, fetchInvestorProjects, fetchDocuments, fetchDistributions, fetchMessages, fetchProjects, fetchMyFlags, fetchNotifications, markNotificationRead } from "./api.js";
 import { colors, fonts } from "./styles/theme.js";
 import Button from "./components/Button.jsx";
 import Card from "./components/Card.jsx";
@@ -105,6 +105,8 @@ export default function App() {
   const [announcement, setAnnouncement] = useState("");
   const [featureFlags, setFeatureFlags] = useState(null);
   const [notifCount, setNotifCount] = useState(0);
+  const [notifications, setNotifications] = useState([]);
+  const [bellOpen, setBellOpen] = useState(false);
   const [navParams, setNavParams] = useState({});
   const th = themes[themeMode];
 
@@ -173,15 +175,28 @@ export default function App() {
     fetchMyFlags().then(setFeatureFlags).catch(() => setFeatureFlags(null));
   }, []);
 
-  // Fetch notification count for bell indicator
+  // Fetch notifications for bell indicator + dropdown
   useEffect(() => {
     if (authed) {
       fetchNotifications().then(notifs => {
-        const unread = Array.isArray(notifs) ? notifs.filter(n => !n.read).length : 0;
-        setNotifCount(unread);
+        const list = Array.isArray(notifs) ? notifs : [];
+        setNotifications(list);
+        setNotifCount(list.filter(n => !n.read).length);
       }).catch(() => {});
     }
   }, [authed]);
+
+  function handleMarkNotifRead(id) {
+    markNotificationRead(id).catch(() => {});
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    setNotifCount(prev => Math.max(0, prev - 1));
+  }
+
+  function handleMarkAllNotifsRead() {
+    notifications.filter(n => !n.read).forEach(n => markNotificationRead(n.id).catch(() => {}));
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    setNotifCount(0);
+  }
 
   function toggleTheme() {
     const next = themeMode === "dark" ? "light" : "dark";
@@ -256,7 +271,7 @@ export default function App() {
     modeler: <FinancialModelerPage myProjects={myProjects} investor={investor} />,
     documents: <DocumentsPage toast={toast} allDocuments={allDocuments} myProjects={myProjects} investor={investor} />,
     distributions: <DistributionsPage allDistributions={allDistributions} myProjects={myProjects} />,
-    messages: <MessagesPage toast={toast} investor={investor} initialThreadId={navParams.threadId} />,
+    messages: <MessagesPage toast={toast} investor={investor} initialThreadId={navParams.threadId} onMarkRead={(threadId) => setMsgs(prev => prev.map(m => m.id === threadId ? { ...m, unread: false } : m))} />,
     activity: <ActivityPage toast={toast} onNavigate={navigateTo} />,
     profile: <ProfilePage investor={investor} toast={toast} onUpdate={(u) => setAppData(prev => ({ ...prev, investor: { ...prev.investor, ...u } }))} />,
     security: <SecurityPage toast={toast} />,
@@ -382,13 +397,49 @@ export default function App() {
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          {/* Notification bell */}
-          <Button aria-label={`Notifications${notifCount > 0 ? ` (${notifCount} unread)` : ""}`} onClick={() => navigateTo("activity")} variant="ghost" style={{ position: "relative", fontSize: 16, cursor: "pointer", padding: "4px 8px", borderRadius: 6, border: `1px solid ${th.line}`, transition: "border-color .15s", lineHeight: 1, background: "transparent", color: "inherit" }}>
-            &#x1F514;
-            {notifCount > 0 && (
-              <span style={{ position: "absolute", top: -4, right: -4, minWidth: 16, height: 16, borderRadius: "50%", background: red, color: colors.white, fontSize: 10, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", lineHeight: 1 }}>{notifCount > 99 ? "99+" : notifCount}</span>
-            )}
-          </Button>
+          {/* Notification bell with dropdown */}
+          <div style={{ position: "relative" }}>
+            <Button aria-label={`Notifications${notifCount > 0 ? ` (${notifCount} unread)` : ""}`} onClick={() => setBellOpen(prev => !prev)} variant="ghost" style={{ position: "relative", fontSize: 16, cursor: "pointer", padding: "4px 8px", borderRadius: 6, border: `1px solid ${bellOpen ? red : th.line}`, transition: "border-color .15s", lineHeight: 1, background: "transparent", color: "inherit" }}>
+              &#x1F514;
+              {notifCount > 0 && (
+                <span style={{ position: "absolute", top: -4, right: -4, minWidth: 16, height: 16, borderRadius: "50%", background: red, color: colors.white, fontSize: 10, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 3px", lineHeight: 1 }}>{notifCount > 99 ? "99+" : notifCount}</span>
+              )}
+            </Button>
+            {bellOpen && <>
+              <div onClick={() => setBellOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 99 }} />
+              <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, width: 360, maxHeight: 420, overflowY: "auto", background: th.surface, border: `1px solid ${th.line}`, borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,.12), 0 2px 8px rgba(0,0,0,.06)", zIndex: 100 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", borderBottom: `1px solid ${th.line}` }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: th.t1 }}>Notifications</span>
+                  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                    {notifCount > 0 && <span onClick={handleMarkAllNotifsRead} style={{ fontSize: 11, color: red, cursor: "pointer" }}>Mark all read</span>}
+                    <span onClick={() => { setBellOpen(false); navigateTo("activity"); }} style={{ fontSize: 11, color: th.t3, cursor: "pointer" }}>View all</span>
+                  </div>
+                </div>
+                {notifications.length === 0 ? (
+                  <div style={{ padding: "32px 16px", textAlign: "center", color: th.t3, fontSize: 13 }}>No notifications yet</div>
+                ) : notifications.slice(0, 8).map(n => {
+                  const icons = { document_uploaded: "\uD83D\uDCC4", distribution: "\uD83D\uDCB0", capital_call: "\uD83D\uDCCA", message: "\uD83D\uDCAC", signature_request: "\u270D\uFE0F", project_update: "\uD83C\uDFD7\uFE0F" };
+                  const navMap = { document_uploaded: "documents", distribution: "distributions", capital_call: "portfolio", message: "messages", signature_request: "documents", project_update: "portfolio" };
+                  return (
+                    <div key={n.id} onClick={() => { if (!n.read) handleMarkNotifRead(n.id); setBellOpen(false); navigateTo(navMap[n.type] || "activity"); }} style={{ display: "flex", gap: 12, padding: "12px 16px", borderBottom: `1px solid ${th.line}`, cursor: "pointer", background: n.read ? "transparent" : `${red}06`, transition: "background .12s" }}
+                      onMouseEnter={e => e.currentTarget.style.background = th.hover}
+                      onMouseLeave={e => e.currentTarget.style.background = n.read ? "transparent" : `${red}06`}>
+                      <span style={{ fontSize: 16, flexShrink: 0, marginTop: 2 }}>{icons[n.type] || "\uD83D\uDCCC"}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, color: th.t1, fontWeight: n.read ? 400 : 500, lineHeight: 1.4, marginBottom: 2 }}>{n.message || n.title}</div>
+                        {n.preview && <div style={{ fontSize: 12, color: th.t3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 2 }}>{n.preview}</div>}
+                        <div style={{ fontSize: 11, color: th.t3 }}>
+                          {n.project && <span>{n.project} · </span>}
+                          {n.createdAt ? (() => { const d = Date.now() - new Date(n.createdAt).getTime(); return d < 3600000 ? `${Math.max(1, Math.floor(d / 60000))}m ago` : d < 86400000 ? `${Math.floor(d / 3600000)}h ago` : `${Math.floor(d / 86400000)}d ago`; })() : ""}
+                        </div>
+                      </div>
+                      {!n.read && <div style={{ width: 7, height: 7, borderRadius: "50%", background: red, flexShrink: 0, marginTop: 6 }} />}
+                    </div>
+                  );
+                })}
+              </div>
+            </>}
+          </div>
           <Button className="theme-toggle" onClick={toggleTheme} aria-label={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"} variant="ghost" style={{ fontSize: 14, cursor: "pointer", padding: "4px 8px", borderRadius: 6, border: `1px solid ${th.line}`, transition: "border-color .15s", lineHeight: 1, background: "transparent", color: "inherit" }}
             title={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}>
             {themeMode === "dark" ? "\u2600" : "\u263D"}
