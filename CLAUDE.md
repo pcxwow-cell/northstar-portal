@@ -20,7 +20,7 @@ These rules apply to ALL agents working on this project.
 - **Production seed:** 5 users (1 admin + 4 investors, pw: northstar2025), 8 docs with real branded PDFs (pdfkit), 28 assignments, 23 cash flows, 8 waterfall tiers, 3 groups, 5 entities
 - **Issues:** 14 of 18 production issues fixed. 4 remaining (low priority): P11 (distribution id), P14 (feature flags path), P15 (FOUC), P16 (audit userId)
 - **Email:** Resend configured and working. Branding set via settings API (companyName, portalUrl, brandColor, footerText). Sender still `onboarding@resend.dev` (needs custom domain)
-- **Priority:** FULL-AUDIT Sprint 1 complete (5 critical fixes). Next: Sprint 2+ from FULL-AUDIT.md
+- **Priority:** FULL-AUDIT Sprint 5 complete (Admin UX Polish). Next: Sprint 6+ from FULL-AUDIT.md
 - **Live URLs:** Frontend: https://northstar-portal-roan.vercel.app/ | API: https://northstar-portal-production.up.railway.app/
 
 ## Key Docs
