@@ -34,7 +34,7 @@ import ProjectDetail from "./admin/ProjectDetail.jsx";
 
 
 // ─── PEOPLE SECTION (consolidated: Investors + Groups + Staff) ───
-function PeopleSection({ profileId, setProfileId, peopleTab, setPeopleTab, toast }) {
+function PeopleSection({ profileId, setProfileId, peopleTab, setPeopleTab, toast, initialAction, onActionConsumed }) {
   const subTabs = [
     { id: "investors", label: "Investors" },
     { id: "groups", label: "Groups" },
@@ -48,7 +48,7 @@ function PeopleSection({ profileId, setProfileId, peopleTab, setPeopleTab, toast
       {peopleTab === "investors" && (
         profileId
           ? <InvestorProfile investorId={profileId} onBack={() => setProfileId(null)} toast={toast} />
-          : <InvestorManager toast={toast} onViewProfile={(id) => setProfileId(id)} hideHeader />
+          : <InvestorManager toast={toast} onViewProfile={(id) => setProfileId(id)} hideHeader initialAction={initialAction} onActionConsumed={onActionConsumed} />
       )}
       {peopleTab === "groups" && <GroupManager toast={toast} hideHeader />}
       {peopleTab === "staff" && <StaffManager toast={toast} hideHeader />}
@@ -57,7 +57,7 @@ function PeopleSection({ profileId, setProfileId, peopleTab, setPeopleTab, toast
 }
 
 // ─── DOCUMENTS SECTION (consolidated: Documents + Signatures) ───
-function DocumentsSection({ docsTab, setDocsTab, toast }) {
+function DocumentsSection({ docsTab, setDocsTab, toast, initialAction, onActionConsumed }) {
   const subTabs = [
     { id: "documents", label: "All Documents" },
     { id: "signatures", label: "Signatures" },
@@ -67,7 +67,7 @@ function DocumentsSection({ docsTab, setDocsTab, toast }) {
     <>
       <SectionHeader title="Documents" size="lg" style={{ marginBottom: 8 }} />
       <Tabs tabs={subTabs} active={docsTab} onChange={setDocsTab} style={{ marginBottom: 24 }} />
-      {docsTab === "documents" && <DocumentManager toast={toast} hideHeader />}
+      {docsTab === "documents" && <DocumentManager toast={toast} hideHeader initialAction={initialAction} onActionConsumed={onActionConsumed} />}
       {docsTab === "signatures" && <SignatureManager toast={toast} hideHeader />}
     </>
   );
@@ -94,18 +94,23 @@ export default function AdminPanel({ user, onLogout }) {
   const [projectDetailId, setProjectDetailId] = useState(null);
   const [peopleTab, setPeopleTab] = useState("investors");
   const [docsTab, setDocsTab] = useState("documents");
+  const [pendingAction, setPendingAction] = useState(null);
+
+  // Clear pending action after it's consumed
+  function consumeAction() { setPendingAction(null); }
 
   const pages = {
-    dashboard: <Dashboard onNavigate={(v) => {
-      if (v === "investors") { setView("people"); setPeopleTab("investors"); }
-      else if (v === "documents") { setView("documents"); setDocsTab("documents"); }
-      else setView(v);
+    dashboard: <Dashboard onNavigate={(v, opts) => {
+      const action = opts?.action || null;
+      if (v === "investors") { setView("people"); setPeopleTab("investors"); setPendingAction(action); }
+      else if (v === "documents") { setView("documents"); setDocsTab("documents"); setPendingAction(action); }
+      else { setView(v); setPendingAction(action); }
     }} />,
     projects: projectDetailId
       ? <ProjectDetail projectId={projectDetailId} onBack={() => setProjectDetailId(null)} toast={toast} />
       : <ProjectManager toast={toast} onViewProject={(id) => setProjectDetailId(id)} />,
-    people: <PeopleSection profileId={profileId} setProfileId={setProfileId} peopleTab={peopleTab} setPeopleTab={setPeopleTab} toast={toast} />,
-    documents: <DocumentsSection docsTab={docsTab} setDocsTab={setDocsTab} toast={toast} />,
+    people: <PeopleSection profileId={profileId} setProfileId={setProfileId} peopleTab={peopleTab} setPeopleTab={setPeopleTab} toast={toast} initialAction={pendingAction} onActionConsumed={consumeAction} />,
+    documents: <DocumentsSection docsTab={docsTab} setDocsTab={setDocsTab} toast={toast} initialAction={pendingAction} onActionConsumed={consumeAction} />,
     prospects: <ProspectManager toast={toast} />,
     statements: <StatementManager toast={toast} />,
     inbox: <AdminInbox user={user} toast={toast} />,

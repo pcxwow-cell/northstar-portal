@@ -59,7 +59,7 @@ function KPIInput({ label, defaultValue, onSave }) {
   );
 }
 
-export default function InvestorManager({ toast, onViewProfile, hideHeader }) {
+export default function InvestorManager({ toast, onViewProfile, hideHeader, initialAction, onActionConsumed }) {
   const [investors, setInvestors] = useState([]);
   const [projects, setProjects] = useState([]);
   const [search, setSearch] = useState("");
@@ -68,6 +68,14 @@ export default function InvestorManager({ toast, onViewProfile, hideHeader }) {
   const [sortBy, setSortBy] = useState("name");
   const [sortDir, setSortDir] = useState("asc");
   const [showInvite, setShowInvite] = useState(false);
+
+  // Auto-open invite form when navigated with action hint
+  useEffect(() => {
+    if (initialAction === "invite") {
+      setShowInvite(true);
+      onActionConsumed?.();
+    }
+  }, [initialAction]);
   const [showBulkInvite, setShowBulkInvite] = useState(false);
   const [bulkFile, setBulkFile] = useState(null);
   const [bulkPreview, setBulkPreview] = useState([]);

@@ -13,7 +13,7 @@ import DataTable from "../components/DataTable.jsx";
 import SearchFilterBar from "../components/SearchFilterBar.jsx";
 import useSortable from "../hooks/useSortable.js";
 
-export default function DocumentManager({ toast, hideHeader }) {
+export default function DocumentManager({ toast, hideHeader, initialAction, onActionConsumed }) {
   const { projects } = useAdminData();
   const [docs, setDocs] = useState([]);
   const [projectFilter, setProjectFilter] = useState("");
@@ -55,6 +55,14 @@ export default function DocumentManager({ toast, hideHeader }) {
   const [uploadProjectId, setUploadProjectId] = useState("");
   const [uploadFile, setUploadFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+
+  // Auto-open upload form when navigated with action hint
+  useEffect(() => {
+    if (initialAction === "upload") {
+      setShowUpload(true);
+      onActionConsumed?.();
+    }
+  }, [initialAction]);
 
   useEffect(() => { loadDocs(); }, []);
   useEffect(() => { loadDocs(); }, [projectFilter, categoryFilter, search]);
