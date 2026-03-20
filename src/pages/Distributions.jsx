@@ -1,3 +1,5 @@
+import { useState, useMemo } from "react";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { colors, fonts } from "../styles/theme.js";
 import { useTheme } from "../context/ThemeContext.jsx";
 import { fmt } from "../api.js";
@@ -7,6 +9,7 @@ import DataTable from "../components/DataTable.jsx";
 import SectionHeader from "../components/SectionHeader.jsx";
 
 const serif = fonts.serif;
+const sans = fonts.sans;
 const red = colors.red;
 const green = colors.green;
 
@@ -25,18 +28,66 @@ function exportCSV(headers, rows, filename) {
   URL.revokeObjectURL(url);
 }
 
+function ChartTooltip({ active, payload, label }) {
+  const { surface, line, t1, t3 } = useTheme();
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{ background: surface, border: `1px solid ${line}`, borderRadius: 8, padding: "8px 12px", fontSize: 12, fontFamily: sans, boxShadow: "0 1px 4px rgba(0,0,0,.05)" }}>
+      <div style={{ color: t3, marginBottom: 4 }}>{label}</div>
+      {payload.map((p, i) => (
+        <div key={i} style={{ color: p.color || t1 }}>{p.name}: ${fmt(p.value)}</div>
+      ))}
+    </div>
+  );
+}
+
+// Calculate next estimated distribution from latest distribution data
+function getNextEstimate(distributions) {
+  if (!distributions.length) return "TBD";
+  const latest = distributions[0]; // already sorted newest first
+  if (!latest.quarter) return "TBD";
+  const match = latest.quarter.match(/Q(\d)\s*(\d{4})/);
+  if (!match) return "TBD";
+  let q = parseInt(match[1]);
+  let y = parseInt(match[2]);
+  q++;
+  if (q > 4) { q = 1; y++; }
+  return `Q${q} ${y} (est.)`;
+}
+
 export default function DistributionsPage({ allDistributions, myProjects }) {
   const { bg, surface, line, t1, t2, t3 } = useTheme();
-  const total = allDistributions.reduce((a, d) => a + d.amount, 0);
+  const [projectFilter, setProjectFilter] = useState("All");
+
+  // Filter distributions by project
+  const filteredDistributions = useMemo(() => {
+    if (projectFilter === "All") return allDistributions;
+    return allDistributions.filter(d => d.project === projectFilter);
+  }, [allDistributions, projectFilter]);
+
+  const total = filteredDistributions.reduce((a, d) => a + d.amount, 0);
+  const projectNames = ["All", ...new Set(allDistributions.map(d => d.project))];
+  const nextEstimate = getNextEstimate(allDistributions);
+
+  // Build cumulative returns chart data
+  const cumulativeData = useMemo(() => {
+    const sorted = [...filteredDistributions].sort((a, b) => new Date(a.date) - new Date(b.date));
+    let running = 0;
+    return sorted.map(d => {
+      running += d.amount;
+      return { quarter: d.quarter, amount: d.amount, cumulative: running, project: d.project };
+    });
+  }, [filteredDistributions]);
+
   return (
     <>
-      <SectionHeader title="Distributions" subtitle={`$${fmt(total)} total distributed · ${allDistributions.length} payments`} size="lg" style={{ marginBottom: 40 }} />
+      <SectionHeader title="Distributions" subtitle={`$${fmt(total)} total distributed \u00B7 ${filteredDistributions.length} payments`} size="lg" style={{ marginBottom: 40 }} />
 
       <div className="inline-stats-3" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, marginBottom: 40 }}>
         {[
           { label: "Total Distributed", value: `$${fmt(total)}`, accent: red },
-          { label: "Projects", value: [...new Set(allDistributions.map(d => d.project))].join(", ") || "—", accent: green },
-          { label: "Next Estimated", value: "See distributions", accent: "#5B8DEF" },
+          { label: "Projects", value: [...new Set(filteredDistributions.map(d => d.project))].join(", ") || "\u2014", accent: green },
+          { label: "Next Estimated", value: nextEstimate, accent: "#5B8DEF" },
         ].map((m, i) => (
           <Card key={i} accent={m.accent} padding="24px">
             <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: t3, marginBottom: 10, fontWeight: 500 }}>{m.label}</div>
@@ -45,15 +96,49 @@ export default function DistributionsPage({ allDistributions, myProjects }) {
         ))}
       </div>
 
+      {/* Project filter */}
+      {projectNames.length > 2 && (
+        <div style={{ display: "flex", gap: 4, marginBottom: 24, background: `${line}55`, borderRadius: 8, padding: 2, width: "fit-content" }}>
+          {projectNames.map(p => (
+            <span key={p} onClick={() => setProjectFilter(p)} style={{
+              fontSize: 12, padding: "6px 14px", borderRadius: 6, cursor: "pointer",
+              color: projectFilter === p ? t1 : t3,
+              background: projectFilter === p ? surface : "transparent",
+              boxShadow: projectFilter === p ? "0 1px 3px rgba(0,0,0,.08)" : "none",
+              fontWeight: projectFilter === p ? 500 : 400,
+              transition: "all .15s",
+            }}>{p}</span>
+          ))}
+        </div>
+      )}
+
+      {/* Cumulative Returns Chart */}
+      {cumulativeData.length > 1 && (
+        <div style={{ marginBottom: 40 }}>
+          <h2 style={{ fontFamily: serif, fontSize: 22, fontWeight: 400, color: t1, marginBottom: 20 }}>Cumulative Returns</h2>
+          <Card padding="24px">
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={cumulativeData}>
+                <XAxis dataKey="quarter" axisLine={false} tickLine={false} tick={{ fill: t3, fontSize: 10 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: t3, fontSize: 10 }} tickFormatter={v => `$${(v / 1000).toFixed(0)}K`} />
+                <Tooltip content={<ChartTooltip />} />
+                <Line type="monotone" dataKey="cumulative" stroke={red} strokeWidth={2} dot={{ fill: red, r: 4 }} name="Cumulative" />
+                <Line type="monotone" dataKey="amount" stroke={green} strokeWidth={1.5} strokeDasharray="4 3" dot={{ fill: green, r: 3 }} name="Per Period" />
+              </LineChart>
+            </ResponsiveContainer>
+          </Card>
+        </div>
+      )}
+
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 20 }}>
         <h2 style={{ fontFamily: serif, fontSize: 22, fontWeight: 400, color: t1 }}>Distribution History</h2>
         <span onClick={() => exportCSV(
           ["Project", "Period", "Payment Date", "Amount", "Type"],
-          allDistributions.map(d => [d.project, d.quarter, d.date, d.amount, d.type]),
+          filteredDistributions.map(d => [d.project, d.quarter, d.date, d.amount, d.type]),
           "northstar-distributions.csv"
         )} style={{ fontSize: 11, padding: "5px 12px", borderRadius: 2, border: `1px solid ${line}`, color: t3, cursor: "pointer" }}>Export CSV</span>
       </div>
-      {allDistributions.length === 0 ? (
+      {filteredDistributions.length === 0 ? (
         <EmptyState icon="$" title="No distributions have been recorded yet" subtitle="Distributions are typically paid quarterly and will appear here after processing." />
       ) : (
         <DataTable
@@ -65,7 +150,7 @@ export default function DistributionsPage({ allDistributions, myProjects }) {
             { key: "type", label: "Type", render: r => <span style={{ color: t3 }}>{formatType(r.type)}</span> },
             { key: "status", label: "Status", align: "right", sortable: false, render: (d) => <span style={{ fontSize: 11, color: green }}>{d.type ? formatType(d.type) : "Paid"}</span> },
           ]}
-          data={allDistributions}
+          data={filteredDistributions}
           emptyMessage="No distributions yet"
         />
       )}
