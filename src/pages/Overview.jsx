@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from "recharts";
 import { colors, fonts } from "../styles/theme.js";
 import { useTheme } from "../context/ThemeContext.jsx";
 import { fmt } from "../api.js";
@@ -141,6 +141,42 @@ export default function Overview({ onNavigate, investor, projects, myProjects, a
             </div>
           </Card>
         );
+      })()}
+
+      {/* Portfolio Allocation Chart */}
+      {myProjects.length > 1 && (() => {
+        const PIE_COLORS = [red, green, "#D4A574", "#5B8DEF", "#7C3AED", "#E07C24"];
+        const totalVal = myProjects.reduce((s, p) => s + (p.currentValue || 0), 0);
+        const pieData = myProjects.filter(p => p.currentValue > 0).map(p => ({
+          name: p.name, value: p.currentValue, pct: totalVal > 0 ? ((p.currentValue / totalVal) * 100).toFixed(1) : 0,
+        }));
+        return pieData.length > 0 ? (
+          <div style={{ marginBottom: 48 }}>
+            <LocalSectionHeader title="Portfolio Allocation" />
+            <Card padding="24px">
+              <div style={{ display: "flex", alignItems: "center", gap: 32, flexWrap: "wrap" }}>
+                <ResponsiveContainer width={180} height={180}>
+                  <PieChart>
+                    <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={2}>
+                      {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip formatter={(v) => `$${fmt(v)}`} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
+                  {pieData.map((d, i) => (
+                    <div key={d.name} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{ width: 10, height: 10, borderRadius: 2, background: PIE_COLORS[i % PIE_COLORS.length], flexShrink: 0 }} />
+                      <span style={{ fontSize: 13, color: t1, flex: 1 }}>{d.name}</span>
+                      <span style={{ fontSize: 13, fontWeight: 500, color: t2 }}>${fmt(d.value)}</span>
+                      <span style={{ fontSize: 11, color: t3, minWidth: 40, textAlign: "right" }}>{d.pct}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card>
+          </div>
+        ) : null;
       })()}
 
       {/* Project cards */}
