@@ -50,6 +50,14 @@ export default function StatementManager({ toast }) {
   const [qtrReportSummary, setQtrReportSummary] = useState("");
   const [qtrReportGenerating, setQtrReportGenerating] = useState(false);
 
+  // Send email customization modal
+  const [sendingStatement, setSendingStatement] = useState(null);
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailBody, setEmailBody] = useState("");
+
+  // Preview modal
+  const [previewStatement, setPreviewStatement] = useState(null);
+
   const authHeader = { Authorization: `Bearer ${localStorage.getItem("northstar_token")}` };
 
   useEffect(() => { loadStatements(); }, [filter]);
@@ -102,6 +110,28 @@ export default function StatementManager({ toast }) {
       toast("Statement approved");
       loadStatements();
       if (selectedId === id) loadDetail(id);
+    } catch (e) { toast(e.message, "error"); }
+  }
+
+  function openSendModal(stmt) {
+    setSendingStatement(stmt);
+    setEmailSubject(`Your ${stmt.period || "Capital Account"} Statement - ${stmt.projectName || "Northstar"}`);
+    setEmailBody(`Dear ${stmt.investorName || "Investor"},\n\nPlease find your ${stmt.period || "capital account"} statement for ${stmt.projectName || "your investment"} attached.\n\nIf you have any questions, please don't hesitate to reach out.\n\nBest regards,\nNorthstar Pacific Development Group`);
+  }
+
+  async function handleSendWithEmail() {
+    if (!sendingStatement) return;
+    try {
+      await fetch(`/api/v1/statements/${sendingStatement.id}/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeader },
+        body: JSON.stringify({ emailSubject, emailBody }),
+      });
+      toast("Statement sent");
+      setSendingStatement(null);
+      setEmailSubject(""); setEmailBody("");
+      loadStatements();
+      if (selectedId === sendingStatement.id) loadDetail(sendingStatement.id);
     } catch (e) { toast(e.message, "error"); }
   }
 
@@ -175,6 +205,12 @@ export default function StatementManager({ toast }) {
   // Format currency helper
   const fc = (v) => v != null ? "$" + Number(v).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : "--";
 
+  // Build preview content for a statement
+  function buildPreviewContent(stmt) {
+    const d = stmt.data ? (typeof stmt.data === "string" ? JSON.parse(stmt.data) : stmt.data) : null;
+    return { investor: d?.investor || { name: stmt.investorName, email: stmt.investorEmail }, project: d?.project || { name: stmt.projectName }, period: stmt.period, accountSummary: d?.accountSummary || null, transactions: d?.transactions || [] };
+  }
+
   return (
     <>
       <SectionHeader title="Statements" subtitle="Generate, review, and send capital account statements" size="lg" right={<div style={{ display: "flex", alignItems: "center", gap: 12 }}>{drafts > 0 && <span style={{ background: "#FFF8E1", color: "#B8860B", fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 12 }}>{drafts} awaiting approval</span>}<Button onClick={() => setShowGenerateForm(!showGenerateForm)} disabled={generating}>{generating ? "Generating..." : "Generate All"}</Button></div>} style={{ marginBottom: 24 }} />
@@ -243,6 +279,84 @@ export default function StatementManager({ toast }) {
         </div>
       </Modal>
 
+      {/* Send email customization modal */}
+      <Modal open={!!sendingStatement} onClose={() => { setSendingStatement(null); setEmailSubject(""); setEmailBody(""); }} title="Send Statement" maxWidth={560}>
+        {sendingStatement && (
+          <>
+            <div style={{ marginBottom: 16, padding: "10px 14px", background: colors.cardBg, borderRadius: 8, fontSize: 12, color: colors.mutedText }}>
+              Sending to: <strong style={{ color: colors.darkText }}>{sendingStatement.investorName}</strong> ({sendingStatement.investorEmail})
+            </div>
+            <FormInput label="Email Subject" value={emailSubject} onChange={e => setEmailSubject(e.target.value)} style={{ marginBottom: 16 }} />
+            <div style={{ marginBottom: 16 }}>
+              <label style={labelStyle}>Email Body</label>
+              <textarea value={emailBody} onChange={e => setEmailBody(e.target.value)} rows={6}
+                style={{ ...inputStyle, resize: "vertical", lineHeight: 1.6 }} />
+            </div>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <Button variant="outline" onClick={() => { setSendingStatement(null); setEmailSubject(""); setEmailBody(""); }}>Cancel</Button>
+              <Button onClick={handleSendWithEmail}>Send Statement</Button>
+            </div>
+          </>
+        )}
+      </Modal>
+
+      {/* Preview modal */}
+      <Modal open={!!previewStatement} onClose={() => setPreviewStatement(null)} title="Statement Preview" maxWidth={640}>
+        {previewStatement && (() => {
+          const pv = buildPreviewContent(previewStatement);
+          return (
+            <div>
+              <div style={{ padding: "16px 20px", background: colors.cardBg, borderRadius: 8, marginBottom: 16 }}>
+                <div style={{ fontSize: 10, color: "#888", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 8 }}>What the investor will receive</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div><span style={{ fontSize: 11, color: colors.mutedText }}>Investor:</span> <span style={{ fontSize: 13, fontWeight: 500 }}>{pv.investor.name}</span></div>
+                  <div><span style={{ fontSize: 11, color: colors.mutedText }}>Project:</span> <span style={{ fontSize: 13, fontWeight: 500 }}>{pv.project.name}</span></div>
+                  <div><span style={{ fontSize: 11, color: colors.mutedText }}>Period:</span> <span style={{ fontSize: 13, fontWeight: 500 }}>{pv.period || "--"}</span></div>
+                  <div><span style={{ fontSize: 11, color: colors.mutedText }}>Status:</span> <span style={{ fontSize: 13, fontWeight: 500 }}>{previewStatement.status}</span></div>
+                </div>
+              </div>
+              {pv.accountSummary && (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 8 }}>Account Summary</div>
+                  <div style={{ background: colors.white, border: `1px solid ${colors.lightBorder}`, borderRadius: 8, overflow: "hidden" }}>
+                    {Object.entries(pv.accountSummary).map(([k, v], i, arr) => (
+                      <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "10px 16px", borderBottom: i < arr.length - 1 ? `1px solid ${colors.lightBorder}` : "none", fontSize: 13 }}>
+                        <span style={{ color: colors.mutedText }}>{k.replace(/([A-Z])/g, " $1").replace(/^./, c => c.toUpperCase())}</span>
+                        <span style={{ fontWeight: 500 }}>{typeof v === "number" ? fc(v) : String(v)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {pv.transactions.length > 0 && (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 8 }}>Transactions</div>
+                  <div style={{ background: colors.white, border: `1px solid ${colors.lightBorder}`, borderRadius: 8, overflow: "hidden" }}>
+                    {pv.transactions.map((tx, i) => (
+                      <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "10px 16px", borderBottom: i < pv.transactions.length - 1 ? `1px solid ${colors.lightBorder}` : "none", fontSize: 13 }}>
+                        <span style={{ color: colors.mutedText }}>{tx.date || tx.type || `#${i + 1}`}</span>
+                        <span style={{ fontWeight: 500 }}>{tx.description || ""} {tx.amount != null ? fc(tx.amount) : ""}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {previewStatement.html && (
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 8 }}>HTML Preview</div>
+                  <div style={{ border: `1px solid ${colors.lightBorder}`, borderRadius: 8, overflow: "hidden", background: colors.white }}>
+                    <div dangerouslySetInnerHTML={{ __html: previewStatement.html }} style={{ padding: 20, maxHeight: 300, overflowY: "auto", fontSize: 13, lineHeight: 1.6 }} />
+                  </div>
+                </div>
+              )}
+              {!pv.accountSummary && !previewStatement.html && pv.transactions.length === 0 && (
+                <div style={{ padding: 24, textAlign: "center", color: colors.mutedText, fontSize: 13 }}>No detailed preview data available for this statement.</div>
+              )}
+            </div>
+          );
+        })()}
+      </Modal>
+
       {/* Statement detail panel */}
       {selectedId && (
         <div style={{ background: colors.white, borderRadius: 12, boxShadow: cardShadow, marginBottom: 24, overflow: "hidden" }}>
@@ -262,13 +376,15 @@ export default function StatementManager({ toast }) {
               <div style={{ display: "flex", gap: 8 }}>
                 {detail.status === "DRAFT" && (
                   <>
+                    <Button variant="outline" onClick={() => setPreviewStatement(detail)} style={{ padding: "6px 14px", fontSize: 11 }}>Preview</Button>
                     <Button variant="outline" onClick={() => handleApprove(detail.id)} style={{ padding: "6px 14px", fontSize: 11, color: colors.green, borderColor: colors.green }}>Approve</Button>
                     <Button variant="outline" onClick={() => { setRejectingId(detail.id); }} style={{ padding: "6px 14px", fontSize: 11, color: "#999" }}>Reject</Button>
                   </>
                 )}
                 {detail.status === "APPROVED" && (
                   <>
-                    <Button onClick={() => handleSend(detail.id)} style={{ padding: "6px 14px", fontSize: 11 }}>Send</Button>
+                    <Button variant="outline" onClick={() => setPreviewStatement(detail)} style={{ padding: "6px 14px", fontSize: 11 }}>Preview</Button>
+                    <Button onClick={() => openSendModal(detail)} style={{ padding: "6px 14px", fontSize: 11 }}>Send</Button>
                     <Button variant="outline" onClick={() => { setRejectingId(detail.id); }} style={{ padding: "6px 14px", fontSize: 11, color: "#999" }}>Reject</Button>
                   </>
                 )}
@@ -337,72 +453,7 @@ export default function StatementManager({ toast }) {
               )}
 
               {detailTab === "data" && (
-                <div style={{ padding: 24 }}>
-                  {detail.data ? (() => {
-                    const d = typeof detail.data === "string" ? JSON.parse(detail.data) : detail.data;
-                    return (
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-                        {/* Investor Info */}
-                        {d.investor && (
-                          <div style={{ background: colors.cardBg, borderRadius: 8, padding: 16, border: `1px solid ${colors.lightBorder}` }}>
-                            <div style={{ fontSize: 12, fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 10 }}>Investor Info</div>
-                            {Object.entries(d.investor).map(([k, v]) => (
-                              <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, borderBottom: `1px solid ${colors.lightBorder}` }}>
-                                <span style={{ color: colors.mutedText }}>{k}</span>
-                                <span style={{ fontWeight: 500 }}>{String(v)}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        {/* Project Info */}
-                        {d.project && (
-                          <div style={{ background: colors.cardBg, borderRadius: 8, padding: 16, border: `1px solid ${colors.lightBorder}` }}>
-                            <div style={{ fontSize: 12, fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 10 }}>Project Info</div>
-                            {Object.entries(d.project).map(([k, v]) => (
-                              <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, borderBottom: `1px solid ${colors.lightBorder}` }}>
-                                <span style={{ color: colors.mutedText }}>{k}</span>
-                                <span style={{ fontWeight: 500 }}>{typeof v === "number" ? fc(v) : String(v)}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        {/* Account Summary */}
-                        {d.accountSummary && (
-                          <div style={{ background: colors.cardBg, borderRadius: 8, padding: 16, border: `1px solid ${colors.lightBorder}` }}>
-                            <div style={{ fontSize: 12, fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 10 }}>Account Summary</div>
-                            {Object.entries(d.accountSummary).map(([k, v]) => (
-                              <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, borderBottom: `1px solid ${colors.lightBorder}` }}>
-                                <span style={{ color: colors.mutedText }}>{k}</span>
-                                <span style={{ fontWeight: 500 }}>{typeof v === "number" ? fc(v) : String(v)}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        {/* Transaction History */}
-                        {d.transactions && Array.isArray(d.transactions) && d.transactions.length > 0 && (
-                          <div style={{ background: colors.cardBg, borderRadius: 8, padding: 16, border: `1px solid ${colors.lightBorder}` }}>
-                            <div style={{ fontSize: 12, fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 10 }}>Transaction History</div>
-                            {d.transactions.map((tx, ti) => (
-                              <div key={ti} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, borderBottom: `1px solid ${colors.lightBorder}` }}>
-                                <span style={{ color: colors.mutedText }}>{tx.date || tx.type || `#${ti + 1}`}</span>
-                                <span style={{ fontWeight: 500 }}>{tx.description || tx.type || ""} {tx.amount != null ? fc(tx.amount) : ""}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        {/* Fallback: show raw keys not covered above */}
-                        {Object.entries(d).filter(([k]) => !["investor", "project", "accountSummary", "transactions"].includes(k)).map(([k, v]) => (
-                          <div key={k} style={{ background: colors.cardBg, borderRadius: 8, padding: 16, border: `1px solid ${colors.lightBorder}` }}>
-                            <div style={{ fontSize: 12, fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 10 }}>{k}</div>
-                            <pre style={{ fontSize: 12, whiteSpace: "pre-wrap", wordBreak: "break-word", margin: 0, color: "#444" }}>{typeof v === "object" ? JSON.stringify(v, null, 2) : String(v)}</pre>
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })() : (
-                    <div style={{ textAlign: "center", padding: 40, color: colors.mutedText, fontSize: 13 }}>No parsed data available for this statement.</div>
-                  )}
-                </div>
+                <StatementDataTab detail={detail} fc={fc} />
               )}
             </>
           ) : (
@@ -439,12 +490,13 @@ export default function StatementManager({ toast }) {
           { key: "createdAt", label: "Date", sortable: false, muted: true, render: (s) => new Date(s.createdAt).toLocaleDateString() },
           { key: "actions", label: "Actions", sortable: false, render: (s) => (
             <div style={{ display: "flex", gap: 6 }} onClick={e => e.stopPropagation()}>
+              <Button variant="outline" onClick={() => setPreviewStatement(s)} style={{ padding: "4px 10px", fontSize: 10 }}>Preview</Button>
               {s.status === "DRAFT" && (
                 <Button variant="outline" onClick={() => handleApprove(s.id)} style={{ padding: "4px 10px", fontSize: 10, color: colors.green, borderColor: colors.green }}>Approve</Button>
               )}
               {s.status === "APPROVED" && (
                 <>
-                  <Button onClick={() => handleSend(s.id)} style={{ padding: "4px 10px", fontSize: 10 }}>Send</Button>
+                  <Button onClick={() => openSendModal(s)} style={{ padding: "4px 10px", fontSize: 10 }}>Send</Button>
                   <Button variant="outline" onClick={() => { setRejectingId(s.id); }} style={{ padding: "4px 10px", fontSize: 10, color: "#999" }}>Reject</Button>
                 </>
               )}
@@ -558,5 +610,86 @@ export default function StatementManager({ toast }) {
         )}
       </div>
     </>
+  );
+}
+
+// Extracted to keep main component under 300 lines
+function StatementDataTab({ detail, fc }) {
+  if (!detail.data) {
+    return <div style={{ padding: 40, textAlign: "center", color: colors.mutedText, fontSize: 13 }}>No parsed data available for this statement.</div>;
+  }
+
+  const d = typeof detail.data === "string" ? JSON.parse(detail.data) : detail.data;
+  const sectionStyle = { background: colors.cardBg, borderRadius: 8, padding: 16, border: `1px solid ${colors.lightBorder}` };
+  const headerStyle = { fontSize: 12, fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: ".05em", marginBottom: 10 };
+  const rowStyle = { display: "flex", justifyContent: "space-between", padding: "8px 0", fontSize: 13, borderBottom: `1px solid ${colors.lightBorder}` };
+  const labelColor = colors.mutedText;
+
+  const formatKey = (k) => k.replace(/([A-Z])/g, " $1").replace(/_/g, " ").replace(/^./, c => c.toUpperCase());
+
+  return (
+    <div style={{ padding: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+        {d.investor && (
+          <div style={sectionStyle}>
+            <div style={headerStyle}>Investor Info</div>
+            {Object.entries(d.investor).map(([k, v]) => (
+              <div key={k} style={rowStyle}>
+                <span style={{ color: labelColor }}>{formatKey(k)}</span>
+                <span style={{ fontWeight: 500 }}>{String(v)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {d.project && (
+          <div style={sectionStyle}>
+            <div style={headerStyle}>Project Info</div>
+            {Object.entries(d.project).map(([k, v]) => (
+              <div key={k} style={rowStyle}>
+                <span style={{ color: labelColor }}>{formatKey(k)}</span>
+                <span style={{ fontWeight: 500 }}>{typeof v === "number" ? fc(v) : String(v)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {d.accountSummary && (
+          <div style={sectionStyle}>
+            <div style={headerStyle}>Account Summary</div>
+            {Object.entries(d.accountSummary).map(([k, v]) => (
+              <div key={k} style={rowStyle}>
+                <span style={{ color: labelColor }}>{formatKey(k)}</span>
+                <span style={{ fontWeight: 500 }}>{typeof v === "number" ? fc(v) : String(v)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {d.transactions && Array.isArray(d.transactions) && d.transactions.length > 0 && (
+          <div style={sectionStyle}>
+            <div style={headerStyle}>Transaction History</div>
+            {d.transactions.map((tx, ti) => (
+              <div key={ti} style={rowStyle}>
+                <span style={{ color: labelColor }}>{tx.date || tx.type || `#${ti + 1}`}</span>
+                <span style={{ fontWeight: 500 }}>{tx.description || tx.type || ""} {tx.amount != null ? fc(tx.amount) : ""}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {Object.entries(d).filter(([k]) => !["investor", "project", "accountSummary", "transactions"].includes(k)).map(([k, v]) => (
+          <div key={k} style={sectionStyle}>
+            <div style={headerStyle}>{formatKey(k)}</div>
+            {typeof v === "object" && v !== null && !Array.isArray(v) ? (
+              Object.entries(v).map(([sk, sv]) => (
+                <div key={sk} style={rowStyle}>
+                  <span style={{ color: labelColor }}>{formatKey(sk)}</span>
+                  <span style={{ fontWeight: 500 }}>{typeof sv === "number" ? fc(sv) : String(sv)}</span>
+                </div>
+              ))
+            ) : (
+              <div style={{ fontSize: 13, color: "#444" }}>{typeof v === "object" ? JSON.stringify(v, null, 2) : String(v)}</div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
