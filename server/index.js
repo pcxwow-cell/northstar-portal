@@ -100,6 +100,7 @@ app.use("/api/v1/threads", authenticate, require("./routes/threads"));
 app.use("/api/v1/signatures", authenticate, signaturesRouter);
 app.use("/api/v1/notifications", authenticate, require("./routes/notifications"));
 app.use("/api/v1/admin", authenticate, require("./routes/admin"));
+app.use("/api/v1/admin/export", authenticate, require("./routes/export"));
 app.use("/api/v1/settings", authenticate, require("./routes/settings"));
 app.use("/api/v1/finance", authenticate, require("./routes/finance"));
 app.use("/api/v1/features", authenticate, require("./routes/features"));

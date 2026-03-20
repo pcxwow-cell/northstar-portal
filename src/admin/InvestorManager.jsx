@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchAdminInvestors, fetchAdminProjects, inviteInvestor, approveInvestor, deactivateInvestor, resetInvestorPassword, updateInvestor, updateInvestorKPI, fmt } from "../api.js";
+import { fetchAdminInvestors, fetchAdminProjects, inviteInvestor, approveInvestor, deactivateInvestor, resetInvestorPassword, updateInvestor, updateInvestorKPI, exportInvestorsCSV, fmt } from "../api.js";
 import { colors, inputStyle } from "../styles/theme.js";
 import Spinner from "../components/Spinner.jsx";
 import SectionHeader from "../components/SectionHeader.jsx";
@@ -125,7 +125,8 @@ export default function InvestorManager({ toast, onViewProfile, hideHeader }) {
       {confirmAction && <ConfirmDialog {...confirmAction} open={true} onCancel={() => setConfirmAction(null)} />}
       {credentialDialog && <CredentialDialog {...credentialDialog} onClose={() => setCredentialDialog(null)} />}
       {!hideHeader && <SectionHeader title="Investors" size="lg" style={{ marginBottom: 24 }} />}
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 16 }}>
+        <Button variant="outline" onClick={() => exportInvestorsCSV().catch(e => toast?.(e.message, "error"))} style={{ fontSize: 12 }}>Export CSV</Button>
         <Button onClick={() => setShowInvite(!showInvite)}>{showInvite ? "Cancel" : "Invite Investor"}</Button>
       </div>
 

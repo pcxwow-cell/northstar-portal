@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchAuditLog } from "../api.js";
+import { fetchAuditLog, exportAuditLogCSV } from "../api.js";
 import { colors } from "../styles/theme.js";
 import Spinner from "../components/Spinner.jsx";
 import EmptyState from "../components/EmptyState.jsx";
@@ -45,8 +45,8 @@ export default function AuditLogViewer() {
 
   return (
     <>
-      <SectionHeader title="Audit Log" size="lg" style={{ marginBottom: 24 }} />
-      <p style={{ fontSize: 13, color: colors.mutedText, marginBottom: 24 }}>Compliance log of key system actions. Last 100 entries shown.</p>
+      <SectionHeader title="Audit Log" size="lg" right={<Button onClick={() => exportAuditLogCSV().catch(() => {})} variant="outline" style={{ fontSize: 12 }}>Export CSV</Button>} style={{ marginBottom: 24 }} />
+      <p style={{ fontSize: 13, color: colors.mutedText, marginBottom: 24 }}>Compliance log of key system actions.</p>
 
       {/* Search */}
       <div style={{ marginBottom: 20 }}>

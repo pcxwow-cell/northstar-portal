@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchAdminProjects, updateProject, postUpdate, createProject, deleteProject, fmtCurrency } from "../api.js";
+import { fetchAdminProjects, updateProject, postUpdate, createProject, deleteProject, uploadProjectImage, exportProjectsCSV, fmtCurrency } from "../api.js";
 import { colors, inputStyle } from "../styles/theme.js";
 import Spinner from "../components/Spinner.jsx";
 import EmptyState from "../components/EmptyState.jsx";
@@ -74,7 +74,7 @@ export default function ProjectManager({ toast, onViewProject }) {
   return (
     <>
       {confirmAction && <ConfirmDialog {...confirmAction} open={true} onCancel={() => setConfirmAction(null)} />}
-      <SectionHeader title="Projects" size="lg" right={<Button onClick={() => setShowCreate(!showCreate)}>{showCreate ? "Cancel" : "Create Project"}</Button>} style={{ marginBottom: 16 }} />
+      <SectionHeader title="Projects" size="lg" right={<div style={{ display: "flex", gap: 8 }}><Button variant="outline" onClick={() => exportProjectsCSV().catch(e => toast?.(e.message, "error"))} style={{ fontSize: 12 }}>Export CSV</Button><Button onClick={() => setShowCreate(!showCreate)}>{showCreate ? "Cancel" : "Create Project"}</Button></div>} style={{ marginBottom: 16 }} />
 
       {/* Search & Filter */}
       <SearchFilterBar search={search} onSearchChange={setSearch} placeholder="Search by name or location..." filters={[
@@ -158,14 +158,25 @@ export default function ProjectManager({ toast, onViewProject }) {
           <EmptyState title="No projects found" subtitle={search || statusFilter ? "Try adjusting your search or filter." : "Create your first project to get started."} />
         )}
         {filteredProjects.map(p => {
-          // Project thumbnail from Northstar's actual images
-          const thumbs = {
+          // Use uploaded imageUrl, then fall back to hardcoded Northstar images, then placeholder
+          const fallbackThumbs = {
             "Porthaven": "https://northstardevelopment.ca/public/images/porthaven-1.jpg",
             "Livy": "https://northstardevelopment.ca/public/images/livy-2.jpeg",
             "Estrella": "https://northstardevelopment.ca/public/images/estrella-1.jpg",
             "Panorama B6": "https://northstardevelopment.ca/public/images/panorama-1.jpg",
           };
-          const thumb = thumbs[p.name] || null;
+          const thumb = p.imageUrl || fallbackThumbs[p.name] || null;
+
+          async function handleImageUpload(e) {
+            e.stopPropagation();
+            const file = e.target.files?.[0];
+            if (!file) return;
+            try {
+              const result = await uploadProjectImage(p.id, file);
+              setProjects(prev => prev.map(x => x.id === p.id ? { ...x, imageUrl: result.imageUrl } : x));
+              toast("Image uploaded");
+            } catch (err) { toast(err.message, "error"); }
+          }
 
           return (
           <Card key={p.id} padding="0" style={{ overflow: "hidden", cursor: "pointer", transition: "box-shadow .15s, transform .15s" }}
@@ -173,14 +184,22 @@ export default function ProjectManager({ toast, onViewProject }) {
             onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,.1)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
             onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 1px 4px rgba(0,0,0,.05), 0 4px 16px rgba(0,0,0,.03)"; e.currentTarget.style.transform = "none"; }}>
             <div style={{ display: "flex" }}>
-              {/* Thumbnail */}
-              {thumb && (
-                <div style={{ width: 120, minHeight: 100, flexShrink: 0, backgroundImage: `url(${thumb})`, backgroundSize: "cover", backgroundPosition: "center" }} />
-              )}
-              {!thumb && (
-                <div style={{ width: 120, minHeight: 100, flexShrink: 0, background: `linear-gradient(135deg, ${colors.red}15, ${colors.red}05)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ fontSize: 32, fontWeight: 300, color: `${colors.red}40` }}>{p.name?.[0] || "P"}</span>
+              {/* Thumbnail with upload overlay */}
+              {thumb ? (
+                <div style={{ width: 120, minHeight: 100, flexShrink: 0, backgroundImage: `url(${thumb})`, backgroundSize: "cover", backgroundPosition: "center", position: "relative" }}>
+                  <label onClick={e => e.stopPropagation()} style={{ position: "absolute", inset: 0, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0)", transition: "background .15s" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "rgba(0,0,0,0.4)"}
+                    onMouseLeave={e => e.currentTarget.style.background = "rgba(0,0,0,0)"}>
+                    <span style={{ color: "#fff", fontSize: 10, opacity: 0, transition: "opacity .15s" }} className="img-upload-label">Change</span>
+                    <input type="file" accept=".jpg,.jpeg,.png,.webp" onChange={handleImageUpload} style={{ display: "none" }} />
+                  </label>
                 </div>
+              ) : (
+                <label onClick={e => e.stopPropagation()} style={{ width: 120, minHeight: 100, flexShrink: 0, background: `linear-gradient(135deg, ${colors.red}15, ${colors.red}05)`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexDirection: "column", gap: 4 }}>
+                  <span style={{ fontSize: 32, fontWeight: 300, color: `${colors.red}40` }}>{p.name?.[0] || "P"}</span>
+                  <span style={{ fontSize: 9, color: `${colors.red}60` }}>Upload</span>
+                  <input type="file" accept=".jpg,.jpeg,.png,.webp" onChange={handleImageUpload} style={{ display: "none" }} />
+                </label>
               )}
               <div style={{ flex: 1, padding: "16px 20px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>

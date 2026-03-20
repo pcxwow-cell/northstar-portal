@@ -831,6 +831,27 @@ export async function createProject(data) {
   return apiFetch("/admin/projects", { method: "POST", body: JSON.stringify(data) });
 }
 
+// ─── Project Image Upload ───
+export async function uploadProjectImage(projectId, file) {
+  if (_demoMode) {
+    // Return a fake URL in demo mode
+    return { imageUrl: URL.createObjectURL(file) };
+  }
+  const formData = new FormData();
+  formData.append("image", file);
+  const token = localStorage.getItem("northstar_token");
+  const res = await fetch(`${API_BASE}/admin/projects/${projectId}/image`, {
+    method: "POST",
+    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: formData,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `Upload failed (${res.status})`);
+  }
+  return res.json();
+}
+
 // ─── Investor Entities ───
 const _demoEntities = [
   { id: 1, name: "James Chen (Individual)", type: "Individual", taxId: "***-**-1234", address: "1234 Marine Drive, Vancouver BC", state: "BC", isDefault: true, investmentCount: 1, createdAt: new Date().toISOString() },
@@ -996,4 +1017,170 @@ export async function updateUserFlags(userId, flags) {
 export async function fetchFeatureDefaults() {
   if (_demoMode) return { roleDefaults: { INVESTOR: DEFAULT_FLAGS }, globalFlags: {} };
   return apiFetch("/features/defaults");
+}
+
+// ─── CSV Export (Sprint 2) ───
+
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function generateDemoCsv(headers, rows) {
+  const escape = v => {
+    if (v == null) return "";
+    const s = String(v);
+    return s.includes(",") || s.includes('"') || s.includes("\n") ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const lines = [headers.map(escape).join(","), ...rows.map(r => r.map(escape).join(","))];
+  return new Blob([lines.join("\r\n") + "\r\n"], { type: "text/csv" });
+}
+
+async function fetchCsvDownload(path, filename) {
+  const token = getToken();
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error("Export failed");
+  const blob = await res.blob();
+  triggerDownload(blob, filename);
+}
+
+export async function exportInvestorsCSV() {
+  if (_demoMode) {
+    const blob = generateDemoCsv(
+      ["Name", "Email", "Status", "Total Committed", "Total Value", "Projects"],
+      [["James Chen", "j.chen@pacificventures.ca", "ACTIVE", "850000", "672500", "Porthaven; Livy"]]
+    );
+    triggerDownload(blob, "investors.csv");
+    return;
+  }
+  return fetchCsvDownload("/admin/export/investors", "investors.csv");
+}
+
+export async function exportProjectsCSV() {
+  if (_demoMode) {
+    const blob = generateDemoCsv(
+      ["Name", "Location", "Status", "Total Raise", "Completion %", "Investor Count"],
+      demoProjects.map(p => [p.name, p.location, p.status, p.totalRaise, p.completion, p.capTable.length])
+    );
+    triggerDownload(blob, "projects.csv");
+    return;
+  }
+  return fetchCsvDownload("/admin/export/projects", "projects.csv");
+}
+
+export async function exportDistributionsCSV() {
+  if (_demoMode) {
+    const rows = [];
+    demoProjects.forEach(p => p.distributions.forEach(d => rows.push([p.name, d.quarter, d.date, d.amount, d.type])));
+    const blob = generateDemoCsv(["Project", "Quarter", "Date", "Amount", "Type"], rows);
+    triggerDownload(blob, "distributions.csv");
+    return;
+  }
+  return fetchCsvDownload("/admin/export/distributions", "distributions.csv");
+}
+
+export async function exportDocumentsCSV() {
+  if (_demoMode) {
+    const blob = generateDemoCsv(
+      ["Name", "Category", "Project", "Date", "Size", "Status"],
+      demoAllDocuments.map(d => [d.name, d.category, d.project, d.date, d.size, d.status])
+    );
+    triggerDownload(blob, "documents.csv");
+    return;
+  }
+  return fetchCsvDownload("/admin/export/documents", "documents.csv");
+}
+
+export async function exportAuditLogCSV(params = {}) {
+  if (_demoMode) {
+    const blob = generateDemoCsv(
+      ["Timestamp", "User", "Action", "Resource", "IP"],
+      [
+        [new Date().toISOString(), "Northstar Admin", "login", "user:2", "127.0.0.1"],
+        [new Date(Date.now() - 3600000).toISOString(), "James Chen", "document_download", "document:1", "127.0.0.1"],
+      ]
+    );
+    triggerDownload(blob, "audit-log.csv");
+    return;
+  }
+  const qs = new URLSearchParams(params).toString();
+  return fetchCsvDownload(`/admin/export/audit-log${qs ? "?" + qs : ""}`, "audit-log.csv");
+}
+
+export async function exportCapTableCSV(projectId) {
+  if (_demoMode) {
+    const p = demoProjects.find(x => x.id === projectId);
+    if (!p) return;
+    const blob = generateDemoCsv(
+      ["Holder", "Type", "Committed", "Called", "Ownership %", "Unfunded"],
+      p.capTable.map(e => [e.holder, e.type, e.committed, e.called, e.ownership, e.unfunded])
+    );
+    triggerDownload(blob, `cap-table-${p.name.toLowerCase().replace(/\s+/g, "-")}.csv`);
+    return;
+  }
+  return fetchCsvDownload(`/admin/export/cap-table/${projectId}`, `cap-table-${projectId}.csv`);
+}
+
+// ─── Bulk Operations (Sprint 2) ───
+
+export async function bulkInviteInvestors(csvFile) {
+  if (_demoMode) {
+    const text = await csvFile.text();
+    const lines = text.trim().split("\n").filter(l => l.trim());
+    const count = Math.max(0, lines.length - 1);
+    return { success: count, failed: [] };
+  }
+  const formData = new FormData();
+  formData.append("file", csvFile);
+  const token = getToken();
+  const res = await fetch(`${API_BASE}/admin/bulk/invite-investors`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || "Bulk invite failed");
+  }
+  return res.json();
+}
+
+export async function bulkApproveInvestors(ids) {
+  if (_demoMode) return { success: ids.length, failed: [] };
+  return apiFetch("/admin/bulk/approve-investors", { method: "POST", body: JSON.stringify({ ids }) });
+}
+
+export async function bulkDeactivateInvestors(ids) {
+  if (_demoMode) return { success: ids.length, failed: [] };
+  return apiFetch("/admin/bulk/deactivate-investors", { method: "POST", body: JSON.stringify({ ids }) });
+}
+
+export async function bulkImportCashFlows(projectId, csvFile) {
+  if (_demoMode) {
+    const text = await csvFile.text();
+    const lines = text.trim().split("\n").filter(l => l.trim());
+    const count = Math.max(0, lines.length - 1);
+    return { success: count, failed: [] };
+  }
+  const formData = new FormData();
+  formData.append("file", csvFile);
+  const token = getToken();
+  const res = await fetch(`${API_BASE}/admin/bulk/cash-flows/${projectId}`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || "Cash flow import failed");
+  }
+  return res.json();
 }
