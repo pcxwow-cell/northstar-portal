@@ -72,13 +72,31 @@ export default function Portfolio({ myProjects, investor, initialProjectId }) {
     return (
       <>
         <p style={{ fontSize: 12, color: red, cursor: "pointer", marginBottom: 24 }} onClick={() => { setSelected(null); setCapitalAccount(null); setCashFlows([]); }}>{"\u2190"} Back to portfolio</p>
-        <div style={{ marginBottom: 40 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 8 }}>
-            <h1 style={{ fontFamily: serif, fontSize: 36, fontWeight: 400 }}>{project.name}</h1>
-            <StatusBadge status={project.status} />
-          </div>
-          <p style={{ fontSize: 14, color: t2 }}>{project.location} {"\u00B7"} {project.type}</p>
-        </div>
+        {(() => {
+          const fallbackImgMap = { Porthaven: "https://northstardevelopment.ca/public/images/porthaven-1.jpg", Livy: "https://northstardevelopment.ca/public/images/livy-2.jpeg", Estrella: "https://northstardevelopment.ca/public/images/estrella-1.jpg", "Panorama Building 6": "https://northstardevelopment.ca/public/images/panorama-1.jpg" };
+          const heroImg = project.imageUrl || fallbackImgMap[project.name];
+          if (heroImg) {
+            return (
+              <div style={{ borderRadius: 12, overflow: "hidden", marginBottom: 32, height: 200, backgroundImage: `url(${heroImg})`, backgroundSize: "cover", backgroundPosition: "center", position: "relative" }}>
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(0deg, rgba(0,0,0,.5) 0%, transparent 60%)" }} />
+                <div style={{ position: "absolute", bottom: 20, left: 24, color: colors.white, zIndex: 1 }}>
+                  <h1 style={{ fontFamily: serif, fontSize: 32, fontWeight: 400, margin: 0 }}>{project.name}</h1>
+                  <p style={{ fontSize: 13, opacity: 0.9, marginTop: 4 }}>{project.location} {"\u00B7"} {project.type}</p>
+                </div>
+                <span style={{ position: "absolute", top: 14, right: 14, fontSize: 10, padding: "4px 10px", borderRadius: 20, background: "rgba(255,255,255,.9)", color: colors.darkText, fontWeight: 500, zIndex: 1 }}>{project.status}</span>
+              </div>
+            );
+          }
+          return (
+            <div style={{ marginBottom: 40 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 8 }}>
+                <h1 style={{ fontFamily: serif, fontSize: 36, fontWeight: 400 }}>{project.name}</h1>
+                <StatusBadge status={project.status} />
+              </div>
+              <p style={{ fontSize: 14, color: t2 }}>{project.location} {"\u00B7"} {project.type}</p>
+            </div>
+          );
+        })()}
         <div className="stat-grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 40 }}>
           {[
             { label: "Your Committed", value: `$${fmt(project.investorCommitted)}`, accent: red },
