@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { requireRole } = require("../middleware/auth");
 const { getFlagsForUser, setUserFlags, getUserOverrides, ROLE_DEFAULTS, GLOBAL_FLAGS } = require("../services/featureFlags");
+const audit = require("../services/audit");
 
 // ─── GET /my-flags — Current user's resolved feature flags ───
 router.get("/my-flags", async (req, res) => {
@@ -24,8 +25,29 @@ router.put("/flags/:userId", requireRole("ADMIN"), async (req, res) => {
   if (!flags || typeof flags !== "object") {
     return res.status(400).json({ error: "flags object is required" });
   }
+
+  // Capture old values before update for audit trail
+  const oldOverrides = await getUserOverrides(userId);
+  const changedFlags = {};
+  for (const [key, newValue] of Object.entries(flags)) {
+    const oldValue = oldOverrides[key];
+    if (oldValue !== !!newValue) {
+      changedFlags[key] = { old: oldValue !== undefined ? oldValue : "(role default)", new: !!newValue };
+    }
+  }
+
   await setUserFlags(userId, flags);
   const overrides = await getUserOverrides(userId);
+
+  // Audit log the permission change
+  if (Object.keys(changedFlags).length > 0) {
+    audit.log(req, "permission_flags_update", `user:${userId}`, {
+      targetUserId: userId,
+      changedBy: req.user.id,
+      changes: changedFlags,
+    });
+  }
+
   res.json({ message: "Feature flags updated", overrides });
 });
 
