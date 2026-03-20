@@ -148,7 +148,7 @@ export default function DocumentManager({ toast, hideHeader, initialAction, onAc
             </div>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <Button variant="outline" onClick={() => { const url = getDocumentPreviewUrl(docDetail.id); if (url) setPreviewUrl(url); else toast("Preview not available in demo mode", "error"); }} style={{ fontSize: 12 }}>Preview PDF</Button>
+            <Button variant="outline" onClick={() => { const url = getDocumentPreviewUrl(docDetail.id) || docDetail.file; if (url) setPreviewUrl(url); else toast("Preview not available", "error"); }} style={{ fontSize: 12 }}>Preview PDF</Button>
             <Button onClick={openSignModal} style={{ fontSize: 12 }}>Request Signature</Button>
             <Button variant="outline" onClick={() => setConfirmAction({ title: "Delete Document", message: `Delete "${docDetail.name}"? This cannot be undone.`, danger: true, onConfirm: async () => { setConfirmAction(null); try { await deleteDocument(docDetail.id); toast("Document deleted"); setSelectedDoc(null); setDocDetail(null); loadDocs(); } catch (e) { toast(e.message, "error"); } } })} style={{ fontSize: 12, color: colors.red, borderColor: colors.red }}>Delete</Button>
           </div>

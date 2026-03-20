@@ -520,7 +520,7 @@ export async function deleteDocument(id) {
 export function getDocumentPreviewUrl(docId) {
   if (_demoMode) return null;
   const BASE = import.meta.env.VITE_API_URL || "";
-  const token = localStorage.getItem("token");
+  const token = getToken();
   return `${BASE}/api/v1/documents/${docId}/preview?token=${encodeURIComponent(token)}`;
 }
 
@@ -603,7 +603,7 @@ export async function downloadSignedDocument(requestId) {
     return;
   }
   const BASE = import.meta.env.VITE_API_URL || "";
-  const token = localStorage.getItem("token");
+  const token = getToken();
   const resp = await fetch(`${BASE}/api/v1/signatures/${requestId}/document`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -937,7 +937,7 @@ export async function runFinancialModel(data) {
     const lpReturn = roc + pref + rest * (100 - carryPct) / 100;
     const gpReturn = catchup + rest * carryPct / 100;
     const lpMOIC = totalInvestment > 0 ? Math.round((lpReturn / totalInvestment) * 100) / 100 : 0;
-    const lpIRR = holdPeriodYears > 0 ? Math.round((Math.pow(lpReturn / totalInvestment, 1 / holdPeriodYears) - 1) * 10000) / 10000 : 0;
+    const lpIRR = holdPeriodYears > 0 && totalInvestment > 0 ? Math.round((Math.pow(lpReturn / totalInvestment, 1 / holdPeriodYears) - 1) * 10000) / 10000 : 0;
     const yearByYear = [{ year: 0, cashFlow: -totalInvestment, cumulativeCashFlow: -totalInvestment, balance: totalInvestment }];
     let cumCF = -totalInvestment;
     for (let y = 1; y <= holdPeriodYears; y++) {
