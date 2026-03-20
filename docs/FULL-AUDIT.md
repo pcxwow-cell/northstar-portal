@@ -276,12 +276,12 @@
 4. **Confirmation dialogs** — group deletion, investor deactivation
 5. **Group circular reference check** — validate parentId on create/update
 
-### Sprint 2: Data Export & Bulk Operations (est. 2-3 days)
-1. **CSV export** for investors, projects, distributions, documents, audit log
-2. **Bulk investor invite** — CSV upload with name/email columns
-3. **Bulk approve** — checkbox selection + "Approve Selected" button
-4. **Cash flow CSV import** — upload spreadsheet of capital calls/distributions
-5. **Audit log pagination** — load more, date range filter
+### Sprint 2: Data Export & Bulk Operations (COMPLETE)
+1. **CSV export** for investors, projects, distributions, documents, audit log -- DONE
+2. **Bulk investor invite** -- CSV upload with name/email columns -- DONE
+3. **Bulk approve** -- checkbox selection + "Approve Selected" / "Deactivate Selected" buttons -- DONE
+4. **Cash flow CSV import** -- upload spreadsheet of capital calls/distributions -- DONE
+5. **Audit log pagination** -- page/limit, date range filter, total count -- DONE
 
 ### Sprint 3: Document & Statement Polish (est. 2-3 days)
 1. **Document versioning** — track versions, show history, restore previous
