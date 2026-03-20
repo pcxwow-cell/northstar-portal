@@ -10,8 +10,22 @@ const { validate, uploadDocumentSchema } = require("../middleware/validate");
 const { requireFeature } = require("../middleware/featureGuard");
 const router = Router();
 
+// Allowed file types for document uploads
+const ALLOWED_DOC_TYPES = [".pdf", ".doc", ".docx", ".xlsx", ".csv", ".jpg", ".jpeg", ".png"];
+
 // Multer config — store in memory, then pass to storage adapter
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } }); // 50MB max
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ALLOWED_DOC_TYPES.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Invalid file type "${ext}". Allowed: ${ALLOWED_DOC_TYPES.join(", ")}`));
+    }
+  },
+});
 
 // GET /api/v1/documents?investorId=1&category=Tax&projectId=1
 router.get("/", async (req, res, next) => {
@@ -373,6 +387,20 @@ router.delete("/:id", requireRole("ADMIN", "GP"), async (req, res, next) => {
     audit.log(req, "document_delete", `document:${docId}`, { name: doc.name });
     res.json({ ok: true, name: doc.name });
   } catch (err) { next(err); }
+});
+
+// Handle multer errors (file type / size rejections)
+router.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(400).json({ error: "File too large. Maximum size is 50MB." });
+    }
+    return res.status(400).json({ error: err.message });
+  }
+  if (err.message && err.message.includes("Invalid file type")) {
+    return res.status(400).json({ error: err.message });
+  }
+  next(err);
 });
 
 module.exports = router;
