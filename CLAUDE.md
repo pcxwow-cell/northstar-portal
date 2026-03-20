@@ -12,15 +12,14 @@ These rules apply to ALL agents working on this project.
 
 ## Project State (as of 2026-03-19)
 
-- **Overall: 8/10** — strong backend (8.5), improving frontend (7), Sprint 1 critical fixes done
+- **Overall: 8.5/10** — strong backend (9), polished frontend (8), all 6 audit sprints complete
 - **Deploy:** Vercel (frontend) → Railway (backend) → Supabase (PostgreSQL)
-- **Backend:** Express 4 + Prisma ORM, 22 models, 136 tests, adapter patterns for email/storage/e-sign
-- **Frontend:** React 18 + Vite 5, fully extracted: App.jsx (724 lines), Admin.jsx (226 lines), 12 pages, 14 admin managers, 15 shared components
-- **Auth:** JWT + bcrypt + TOTP MFA, roles: INVESTOR, ADMIN, GP
-- **Production seed:** 5 users (1 admin + 4 investors, pw: northstar2025), 8 docs with real branded PDFs (pdfkit), 28 assignments, 23 cash flows, 8 waterfall tiers, 3 groups, 5 entities
-- **Issues:** 14 of 18 production issues fixed. 4 remaining (low priority): P11 (distribution id), P14 (feature flags path), P15 (FOUC), P16 (audit userId)
-- **Email:** Resend configured and working. Branding set via settings API (companyName, portalUrl, brandColor, footerText). Sender still `onboarding@resend.dev` (needs custom domain)
-- **Priority:** FULL-AUDIT Sprint 5 complete (Admin UX Polish). Next: Sprint 6+ from FULL-AUDIT.md
+- **Backend:** Express 4 + Prisma ORM, 22+ models, 136 tests, adapter patterns for email/storage/e-sign, permission enforcement, CSV export, bulk operations
+- **Frontend:** React 18 + Vite 5, fully extracted: App.jsx (489 lines), Admin.jsx (182 lines), 12 pages, 15 admin managers, 19 shared components, 6 hooks
+- **Auth:** JWT + bcrypt + TOTP MFA, roles: INVESTOR, ADMIN, GP, permission flags enforced on backend
+- **Recent improvements (30 commits):** Project image upload, backend permission enforcement, file upload security, CSV export (6 endpoints), bulk investor invite/approve, cash flow CSV import, audit log pagination, statement preview/email customization, prospect pipeline (lead source/notes/follow-up), dashboard AUM/trends, distribution charts, portfolio allocation chart, message search, empty states, accreditation tracking, onboarding checklist, scenario save/compare, NAV history chart, KPI editing modal, email template preview, admin mobile polish, configurable document categories
+- **Email:** Resend configured and working. Sender still `onboarding@resend.dev` (needs custom domain)
+- **Priority:** Remaining low-priority items: P11 (distribution id), P14 (feature flags path), P15 (FOUC), P16 (audit userId). Then FEATURE-FIX-PLAN.md Sprint C-L
 - **Live URLs:** Frontend: https://northstar-portal-roan.vercel.app/ | API: https://northstar-portal-production.up.railway.app/
 
 ## Key Docs
