@@ -5,6 +5,7 @@ import { colors, inputStyle } from "../styles/theme.js";
 import SectionHeader from "../components/SectionHeader.jsx";
 import Card from "../components/Card.jsx";
 import Button from "../components/Button.jsx";
+import ConfirmDialog from "../components/ConfirmDialog.jsx";
 
 export default function GroupManager({ toast, hideHeader }) {
   const { investors } = useAdminData();
@@ -16,6 +17,8 @@ export default function GroupManager({ toast, hideHeader }) {
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [groupDetail, setGroupDetail] = useState(null);
   const [addSearch, setAddSearch] = useState("");
+  const [confirmAction, setConfirmAction] = useState(null);
+  const [editingGroup, setEditingGroup] = useState(null); // { name, tier }
 
   useEffect(() => { loadGroups(); }, []);
   function loadGroups() { fetchGroups().then(setGroups); }
@@ -37,8 +40,23 @@ export default function GroupManager({ toast, hideHeader }) {
     try { await createGroup({ name: newName, color: newColor, parentId: newParentId ? parseInt(newParentId) : null, tier: newTier }); toast("Group created"); setNewName(""); setNewParentId(""); loadGroups(); } catch (e) { toast(e.message, "error"); }
   }
 
-  async function handleDelete(id) {
-    try { await deleteGroup(id); toast("Group deleted"); if (selectedGroup === id) { setSelectedGroup(null); setGroupDetail(null); } loadGroups(); } catch (e) { toast(e.message, "error"); }
+  function handleDelete(id) {
+    const group = groups.find(g => g.id === id);
+    const memberCount = group?.memberCount || 0;
+    setConfirmAction({
+      title: "Delete Group",
+      message: `Delete group "${group?.name}"?${memberCount > 0 ? ` This group has ${memberCount} member${memberCount > 1 ? "s" : ""} who will be removed.` : ""} This cannot be undone.`,
+      danger: true,
+      onConfirm: async () => {
+        setConfirmAction(null);
+        try {
+          await deleteGroup(id, memberCount > 0);
+          toast("Group deleted");
+          if (selectedGroup === id) { setSelectedGroup(null); setGroupDetail(null); }
+          loadGroups();
+        } catch (e) { toast(e.message, "error"); }
+      },
+    });
   }
 
   async function openGroup(id) {
@@ -59,8 +77,20 @@ export default function GroupManager({ toast, hideHeader }) {
     ? investors.filter(inv => !groupDetail.members.some(m => m.id === inv.id) && (inv.name.toLowerCase().includes(addSearch.toLowerCase()) || inv.email.toLowerCase().includes(addSearch.toLowerCase())))
     : [];
 
+  async function handleSaveEdit() {
+    if (!editingGroup || !selectedGroup) return;
+    try {
+      await updateGroup(selectedGroup, { name: editingGroup.name, tier: editingGroup.tier });
+      toast("Group updated");
+      setEditingGroup(null);
+      loadGroups();
+      openGroup(selectedGroup);
+    } catch (e) { toast(e.message, "error"); }
+  }
+
   return (
     <>
+      {confirmAction && <ConfirmDialog {...confirmAction} open={true} onCancel={() => setConfirmAction(null)} />}
       {!hideHeader && <SectionHeader title="Investor Groups" size="lg" style={{ marginBottom: 24 }} />}
 
       {/* Create group */}
@@ -129,9 +159,25 @@ export default function GroupManager({ toast, hideHeader }) {
             <Card>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
                 <div style={{ width: 14, height: 14, borderRadius: "50%", background: groupDetail.color || "#CCC" }} />
-                <h2 style={{ fontSize: 18, fontWeight: 500 }}>{groupDetail.name}</h2>
-                <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 3, background: `${tierColors[groupDetail.tier] || "#999"}15`, color: tierColors[groupDetail.tier] || "#999" }}>{tierLabels[groupDetail.tier] || groupDetail.tier}</span>
-                <span style={{ fontSize: 12, color: colors.mutedText }}>{groupDetail.members.length} members</span>
+                {editingGroup ? (
+                  <>
+                    <input value={editingGroup.name} onChange={e => setEditingGroup(g => ({ ...g, name: e.target.value }))} style={{ ...inputStyle, fontSize: 16, fontWeight: 500, width: 180 }} />
+                    <select value={editingGroup.tier} onChange={e => setEditingGroup(g => ({ ...g, tier: e.target.value }))} style={{ ...inputStyle, width: 130 }}>
+                      <option value="primary">Primary LP</option>
+                      <option value="sub-lp">Sub-LP</option>
+                      <option value="fund-of-funds">Fund of Funds</option>
+                    </select>
+                    <Button onClick={handleSaveEdit} style={{ padding: "4px 12px", fontSize: 11 }}>Save</Button>
+                    <span onClick={() => setEditingGroup(null)} style={{ fontSize: 12, color: colors.mutedText, cursor: "pointer" }}>Cancel</span>
+                  </>
+                ) : (
+                  <>
+                    <h2 style={{ fontSize: 18, fontWeight: 500 }}>{groupDetail.name}</h2>
+                    <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 3, background: `${tierColors[groupDetail.tier] || "#999"}15`, color: tierColors[groupDetail.tier] || "#999" }}>{tierLabels[groupDetail.tier] || groupDetail.tier}</span>
+                    <span style={{ fontSize: 12, color: colors.mutedText }}>{groupDetail.members.length} members</span>
+                    <span onClick={() => setEditingGroup({ name: groupDetail.name, tier: groupDetail.tier })} style={{ fontSize: 11, color: colors.red, cursor: "pointer", marginLeft: 4 }}>Edit</span>
+                  </>
+                )}
               </div>
               {groupDetail.parent && (
                 <div style={{ fontSize: 12, color: colors.mutedText, marginBottom: 12 }}>Parent: <strong onClick={() => openGroup(groupDetail.parent.id)} style={{ cursor: "pointer", color: colors.red }}>{groupDetail.parent.name}</strong></div>

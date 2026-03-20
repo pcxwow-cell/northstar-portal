@@ -724,9 +724,32 @@ router.post("/groups", async (req, res, next) => {
 
 router.put("/groups/:id", async (req, res, next) => {
   try {
+    const groupId = parseInt(req.params.id);
     const { name, description, color, parentId, tier } = req.body;
+
+    // Circular reference check: verify parentId isn't a descendant of this group
+    if (parentId !== undefined && parentId !== null) {
+      const targetParentId = parseInt(parentId);
+      if (targetParentId === groupId) {
+        return res.status(400).json({ error: "A group cannot be its own parent" });
+      }
+      // Walk up the chain from targetParentId to ensure we don't find groupId
+      let current = targetParentId;
+      const visited = new Set();
+      while (current) {
+        if (visited.has(current)) break; // prevent infinite loop
+        visited.add(current);
+        const parent = await prisma.investorGroup.findUnique({ where: { id: current }, select: { parentId: true } });
+        if (!parent) break;
+        if (parent.parentId === groupId) {
+          return res.status(400).json({ error: "Circular reference detected: the selected parent is a descendant of this group" });
+        }
+        current = parent.parentId;
+      }
+    }
+
     const group = await prisma.investorGroup.update({
-      where: { id: parseInt(req.params.id) },
+      where: { id: groupId },
       data: {
         ...(name !== undefined && { name }), ...(description !== undefined && { description }),
         ...(color !== undefined && { color }), ...(parentId !== undefined && { parentId: parentId ? parseInt(parentId) : null }),
@@ -739,7 +762,24 @@ router.put("/groups/:id", async (req, res, next) => {
 
 router.delete("/groups/:id", async (req, res, next) => {
   try {
-    await prisma.investorGroup.delete({ where: { id: parseInt(req.params.id) } });
+    const groupId = parseInt(req.params.id);
+    const force = req.query.force === "true";
+
+    // Check if group has members
+    const memberCount = await prisma.groupMember.count({ where: { groupId } });
+    if (memberCount > 0 && !force) {
+      return res.status(400).json({
+        error: `Group has ${memberCount} member${memberCount > 1 ? "s" : ""}. Use force=true to delete anyway, or remove members first.`,
+        memberCount,
+      });
+    }
+
+    // Remove members if force deleting
+    if (memberCount > 0 && force) {
+      await prisma.groupMember.deleteMany({ where: { groupId } });
+    }
+
+    await prisma.investorGroup.delete({ where: { id: groupId } });
     res.json({ ok: true });
   } catch (err) { next(err); }
 });
@@ -950,29 +990,47 @@ router.post("/staff/:id/reset-password", async (req, res, next) => {
 // ─── AUDIT LOG ───
 router.get("/audit-log", async (req, res, next) => {
   try {
-    const { action, limit = 100, userId } = req.query;
+    const { action, limit = 50, userId, page = 1, startDate, endDate } = req.query;
     const where = {};
     if (action && action !== "all") where.action = action;
     if (userId) where.userId = parseInt(userId);
+    if (startDate || endDate) {
+      where.createdAt = {};
+      if (startDate) where.createdAt.gte = new Date(startDate);
+      if (endDate) where.createdAt.lte = new Date(endDate + "T23:59:59.999Z");
+    }
 
-    const logs = await prisma.auditLog.findMany({
-      where,
-      include: { user: { select: { id: true, name: true, email: true } } },
-      orderBy: { createdAt: "desc" },
-      take: Math.min(parseInt(limit) || 100, 500),
+    const pageNum = Math.max(1, parseInt(page) || 1);
+    const take = Math.min(parseInt(limit) || 50, 500);
+    const skip = (pageNum - 1) * take;
+
+    const [logs, total] = await Promise.all([
+      prisma.auditLog.findMany({
+        where,
+        include: { user: { select: { id: true, name: true, email: true } } },
+        orderBy: { createdAt: "desc" },
+        take,
+        skip,
+      }),
+      prisma.auditLog.count({ where }),
+    ]);
+
+    res.json({
+      entries: logs.map(l => ({
+        id: l.id,
+        user: l.user ? l.user.name : "System",
+        userEmail: l.user?.email || null,
+        action: l.action,
+        resource: l.resource,
+        details: l.details,
+        ipAddress: l.ipAddress,
+        userAgent: l.userAgent,
+        createdAt: l.createdAt,
+      })),
+      total,
+      page: pageNum,
+      limit: take,
     });
-
-    res.json(logs.map(l => ({
-      id: l.id,
-      user: l.user ? l.user.name : "System",
-      userEmail: l.user?.email || null,
-      action: l.action,
-      resource: l.resource,
-      details: l.details,
-      ipAddress: l.ipAddress,
-      userAgent: l.userAgent,
-      createdAt: l.createdAt,
-    })));
   } catch (err) { next(err); }
 });
 
