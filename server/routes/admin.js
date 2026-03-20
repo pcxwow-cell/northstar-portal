@@ -682,6 +682,10 @@ router.get("/investors/:id/profile", async (req, res, next) => {
     res.json({
       id: user.id, name: user.name, email: user.email, initials: user.initials,
       role: user.role, status: user.status, joined: user.joined,
+      accreditationStatus: user.accreditationStatus || "not_verified",
+      accreditationDate: user.accreditationDate,
+      accreditationExpiry: user.accreditationExpiry,
+      accreditationType: user.accreditationType,
       projects: user.investorProjects.map(ip => ({
         projectId: ip.projectId, projectName: ip.project.name, projectStatus: ip.project.status,
         committed: ip.committed, called: ip.called, currentValue: ip.currentValue, irr: ip.irr, moic: ip.moic,
@@ -696,6 +700,29 @@ router.get("/investors/:id/profile", async (req, res, next) => {
       recentThreads: user.threadRecipients.map(tr => ({
         id: tr.thread.id, subject: tr.thread.subject, updatedAt: tr.thread.updatedAt, targetType: tr.thread.targetType, unread: tr.unread,
       })),
+    });
+  } catch (err) { next(err); }
+});
+
+// PUT /admin/investors/:id/accreditation — update accreditation status
+router.put("/investors/:id/accreditation", async (req, res, next) => {
+  try {
+    const { accreditationStatus, accreditationType, accreditationDate, accreditationExpiry } = req.body;
+    const user = await prisma.user.update({
+      where: { id: parseInt(req.params.id) },
+      data: {
+        ...(accreditationStatus !== undefined && { accreditationStatus }),
+        ...(accreditationType !== undefined && { accreditationType }),
+        ...(accreditationDate !== undefined && { accreditationDate: accreditationDate ? new Date(accreditationDate) : null }),
+        ...(accreditationExpiry !== undefined && { accreditationExpiry: accreditationExpiry ? new Date(accreditationExpiry) : null }),
+      },
+    });
+    audit.log(req, "accreditation_update", `user:${user.id}`, { accreditationStatus, accreditationType });
+    res.json({
+      id: user.id, accreditationStatus: user.accreditationStatus,
+      accreditationType: user.accreditationType,
+      accreditationDate: user.accreditationDate,
+      accreditationExpiry: user.accreditationExpiry,
     });
   } catch (err) { next(err); }
 });

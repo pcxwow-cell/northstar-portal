@@ -48,6 +48,10 @@ model User {
   mfaSecret            String?   @map("mfa_secret")
   mfaEnabled           Boolean   @default(false) @map("mfa_enabled")
   mfaBackupCodes       String?   @map("mfa_backup_codes") // JSON array of hashed backup codes
+  accreditationStatus  String?   @map("accreditation_status") // not_verified | pending | verified | expired
+  accreditationDate    DateTime? @map("accreditation_date")
+  accreditationExpiry  DateTime? @map("accreditation_expiry")
+  accreditationType    String?   @map("accreditation_type") // income | net_worth | entity | professional
 
   @@map("users")
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchInvestorProfile, fetchAdminProjects, fetchEntities, createEntity, updateEntity, deleteEntity, approveInvestor, deactivateInvestor, unlockInvestor, resetInvestorPassword, assignInvestorProject, updateInvestor, updateInvestorKPI, fetchAuditLog, recordCashFlow, updateCashFlow, deleteCashFlow, fetchProjectCashFlows, fmt, fmtCurrency } from "../api.js";
+import { fetchInvestorProfile, fetchAdminProjects, fetchEntities, createEntity, updateEntity, deleteEntity, approveInvestor, deactivateInvestor, unlockInvestor, resetInvestorPassword, assignInvestorProject, updateInvestor, updateInvestorKPI, fetchAuditLog, recordCashFlow, updateCashFlow, deleteCashFlow, fetchProjectCashFlows, updateAccreditation, fmt, fmtCurrency } from "../api.js";
 import { colors, fonts, inputStyle } from "../styles/theme.js";
 import Spinner from "../components/Spinner.jsx";
 import SectionHeader from "../components/SectionHeader.jsx";
@@ -169,6 +169,99 @@ function InvestorCashFlowsSection({ investorId, investorName, projects, toast })
   );
 }
 
+function AccreditationSection({ investorId, profile, setProfile, toast }) {
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ status: "", type: "", date: "", expiry: "" });
+
+  const status = profile.accreditationStatus || "not_verified";
+  const statusColors = { not_verified: { bg: "#F5F5F5", color: "#666" }, pending: { bg: "#FFF8E1", color: "#B8860B" }, verified: { bg: "#EFE", color: colors.green }, expired: { bg: colors.errorBg, color: colors.red } };
+  const sc = statusColors[status] || statusColors.not_verified;
+  const statusLabel = { not_verified: "Not Verified", pending: "Pending", verified: "Verified", expired: "Expired" };
+  const typeLabel = { income: "Income", net_worth: "Net Worth", entity: "Entity", professional: "Professional" };
+  const sectionTitle = { fontSize: 13, fontWeight: 600, color: "#666", textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 14 };
+
+  function startEdit() {
+    setForm({
+      status: status,
+      type: profile.accreditationType || "",
+      date: profile.accreditationDate ? new Date(profile.accreditationDate).toISOString().split("T")[0] : "",
+      expiry: profile.accreditationExpiry ? new Date(profile.accreditationExpiry).toISOString().split("T")[0] : "",
+    });
+    setEditing(true);
+  }
+
+  async function handleSave(e) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await updateAccreditation(investorId, {
+        accreditationStatus: form.status,
+        accreditationType: form.type || null,
+        accreditationDate: form.date || null,
+        accreditationExpiry: form.expiry || null,
+      });
+      setProfile(p => ({ ...p, accreditationStatus: form.status, accreditationType: form.type || null, accreditationDate: form.date || null, accreditationExpiry: form.expiry || null }));
+      toast("Accreditation updated");
+      setEditing(false);
+    } catch (err) { toast(err.message, "error"); }
+    finally { setSaving(false); }
+  }
+
+  return (
+    <Card style={{ marginBottom: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+        <div style={sectionTitle}>Accreditation</div>
+        {!editing && <Button variant="outline" onClick={startEdit} style={{ padding: "4px 10px", fontSize: 11 }}>Update</Button>}
+      </div>
+      {editing ? (
+        <form onSubmit={handleSave} style={{ padding: 12, background: colors.cardBg, borderRadius: 4 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
+            <div>
+              <label style={{ fontSize: 10, color: colors.mutedText }}>Status</label>
+              <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }}>
+                <option value="not_verified">Not Verified</option>
+                <option value="pending">Pending</option>
+                <option value="verified">Verified</option>
+                <option value="expired">Expired</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: 10, color: colors.mutedText }}>Type</label>
+              <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }}>
+                <option value="">--</option>
+                <option value="income">Income</option>
+                <option value="net_worth">Net Worth</option>
+                <option value="entity">Entity</option>
+                <option value="professional">Professional</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: 10, color: colors.mutedText }}>Verification Date</label>
+              <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 10, color: colors.mutedText }}>Expiry Date</label>
+              <input type="date" value={form.expiry} onChange={e => setForm(f => ({ ...f, expiry: e.target.value }))} style={{ ...inputStyle, padding: "6px 8px", fontSize: 12 }} />
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+            <Button variant="outline" type="button" onClick={() => setEditing(false)} style={{ padding: "4px 10px", fontSize: 11 }}>Cancel</Button>
+            <Button type="submit" disabled={saving} style={{ padding: "4px 10px", fontSize: 11, opacity: saving ? 0.5 : 1 }}>{saving ? "Saving..." : "Save"}</Button>
+          </div>
+        </form>
+      ) : (
+        <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
+          <span style={{ fontSize: 12, padding: "4px 12px", borderRadius: 16, background: sc.bg, color: sc.color, fontWeight: 500 }}>{statusLabel[status] || status}</span>
+          {profile.accreditationType && <div style={{ fontSize: 12, color: "#666" }}><span style={{ color: colors.mutedText }}>Type:</span> {typeLabel[profile.accreditationType] || profile.accreditationType}</div>}
+          {profile.accreditationDate && <div style={{ fontSize: 12, color: "#666" }}><span style={{ color: colors.mutedText }}>Verified:</span> {new Date(profile.accreditationDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>}
+          {profile.accreditationExpiry && <div style={{ fontSize: 12, color: "#666" }}><span style={{ color: colors.mutedText }}>Expires:</span> {new Date(profile.accreditationExpiry).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>}
+        </div>
+      )}
+    </Card>
+  );
+}
+
 export default function InvestorProfile({ investorId, onBack, toast }) {
   const [profile, setProfile] = useState(null);
   const [entities, setEntities] = useState([]);
@@ -244,6 +337,9 @@ export default function InvestorProfile({ investorId, onBack, toast }) {
           )) : <span style={{ fontSize: 12, color: "#BBB", fontStyle: "italic" }}>No groups assigned</span>}
         </div>
       </Card>
+
+      {/* Accreditation */}
+      <AccreditationSection investorId={investorId} profile={profile} setProfile={setProfile} toast={toast} />
 
       {/* Investment Entities */}
       <Card style={{ marginBottom: 16 }}>

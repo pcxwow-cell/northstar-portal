@@ -391,8 +391,16 @@ export async function updateInvestorKPI(userId, projectId, data) {
 }
 
 export async function fetchInvestorProfile(id) {
-  if (_demoMode) return { id: 1, name: "James Chen", email: "j.chen@pacificventures.ca", initials: "JC", role: "INVESTOR", status: "ACTIVE", joined: "March 2023", groups: [], projects: demoMyProjects.map(p => ({ projectId: p.id, projectName: p.name, projectStatus: p.status, committed: p.investorCommitted, called: p.investorCalled, currentValue: p.currentValue, irr: p.irr, moic: p.moic })), documents: { assigned: [], projectDocs: demoAllDocuments.filter(d => d.project !== "General"), generalDocs: demoAllDocuments.filter(d => d.project === "General") }, recentThreads: demoMessages.map((m, i) => ({ id: i + 1, subject: m.subject, updatedAt: new Date().toISOString(), targetType: "ALL", unread: m.unread })) };
+  if (_demoMode) return { id: 1, name: "James Chen", email: "j.chen@pacificventures.ca", initials: "JC", role: "INVESTOR", status: "ACTIVE", joined: "March 2023", accreditationStatus: "verified", accreditationType: "net_worth", accreditationDate: "2025-06-15T00:00:00.000Z", accreditationExpiry: "2026-06-15T00:00:00.000Z", groups: [], projects: demoMyProjects.map(p => ({ projectId: p.id, projectName: p.name, projectStatus: p.status, committed: p.investorCommitted, called: p.investorCalled, currentValue: p.currentValue, irr: p.irr, moic: p.moic })), documents: { assigned: [], projectDocs: demoAllDocuments.filter(d => d.project !== "General"), generalDocs: demoAllDocuments.filter(d => d.project === "General") }, recentThreads: demoMessages.map((m, i) => ({ id: i + 1, subject: m.subject, updatedAt: new Date().toISOString(), targetType: "ALL", unread: m.unread })) };
   return apiFetch(`/admin/investors/${id}/profile`);
+}
+
+// ─── Accreditation ───
+export async function updateAccreditation(userId, data) {
+  if (_demoMode) {
+    return { id: userId, ...data };
+  }
+  return apiFetch(`/admin/investors/${userId}/accreditation`, { method: "PUT", body: JSON.stringify(data) });
 }
 
 // Groups
