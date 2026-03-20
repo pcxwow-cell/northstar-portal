@@ -9,6 +9,7 @@ import Tabs from "../components/Tabs.jsx";
 import DataTable from "../components/DataTable.jsx";
 import SectionHeader from "../components/SectionHeader.jsx";
 import EmptyState from "../components/EmptyState.jsx";
+import NAVHistoryChart from "../components/NAVHistoryChart.jsx";
 
 const serif = fonts.serif;
 const sans = fonts.sans;
@@ -151,6 +152,9 @@ export default function Portfolio({ myProjects, investor, initialProjectId }) {
             ));
           })()}
         </Card>
+
+        {/* NAV History Chart */}
+        <NAVHistoryChart projectId={project.id} />
 
         {/* Cash Flow Timeline */}
         {cashFlows.length > 0 && (

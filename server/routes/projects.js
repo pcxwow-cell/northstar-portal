@@ -98,6 +98,24 @@ router.get("/", async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// GET /api/v1/projects/:id/performance-history — monthly NAV snapshots
+router.get("/:id/performance-history", async (req, res, next) => {
+  try {
+    const projectId = parseInt(req.params.id);
+    if (req.user.role === "INVESTOR") {
+      const assignment = await prisma.investorProject.findUnique({
+        where: { userId_projectId: { userId: req.user.id, projectId } },
+      });
+      if (!assignment) return res.status(403).json({ error: "Access denied" });
+    }
+    const history = await prisma.performanceHistory.findMany({
+      where: { projectId },
+      orderBy: { id: "asc" },
+    });
+    res.json(history.map(h => ({ month: h.month, value: h.value, benchmark: h.benchmark })));
+  } catch (err) { next(err); }
+});
+
 // GET /api/v1/projects/:id — full project with all nested data (investors can only see assigned projects)
 router.get("/:id", async (req, res, next) => {
   try {

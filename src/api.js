@@ -967,6 +967,20 @@ export async function runFinancialModel(data) {
   return apiFetch("/finance/model-scenario", { method: "POST", body: JSON.stringify(data) });
 }
 
+// ─── Performance History ───
+export async function fetchPerformanceHistory(projectId) {
+  if (_demoMode) {
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const baseValue = 450000;
+    return months.map((m, i) => ({
+      month: m,
+      value: Math.round(baseValue + (i * 12000) + (Math.sin(i * 0.8) * 8000)),
+      benchmark: Math.round(baseValue + (i * 10000)),
+    }));
+  }
+  return apiFetch(`/projects/${projectId}/performance-history`);
+}
+
 // ─── Document Categories (configurable) ───
 export const DOCUMENT_CATEGORIES = ["Reporting", "Property Update", "Offering", "Capital Call", "Legal", "Tax", "Distribution"];
 
