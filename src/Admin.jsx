@@ -128,12 +128,14 @@ export default function AdminPanel({ user, onLogout }) {
 
         .admin-header { padding: 0 32px; }
         .admin-nav { padding: 8px 32px; flex-wrap: nowrap; }
+        .admin-nav span { white-space: nowrap; }
         .admin-main { padding: 32px; }
         .admin-user-name { display: inline; }
 
         @media (max-width: 900px) {
           .admin-header { padding: 0 16px; }
-          .admin-nav { padding: 6px 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+          .admin-nav { padding: 6px 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+          .admin-nav::-webkit-scrollbar { display: none; }
           .admin-main { padding: 20px 16px; }
           .admin-user-name { display: none; }
           .admin-stat-grid { grid-template-columns: repeat(2, 1fr) !important; }
