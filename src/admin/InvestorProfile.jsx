@@ -8,6 +8,7 @@ import Button from "../components/Button.jsx";
 import Modal from "../components/Modal.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
 import FormInput from "../components/FormInput.jsx";
+import OnboardingChecklist from "./OnboardingChecklist.jsx";
 
 function ActivityTimeline({ userId }) {
   const [activities, setActivities] = useState([]);
@@ -327,6 +328,9 @@ export default function InvestorProfile({ investorId, onBack, toast }) {
           )}
         </div>
       </div>
+
+      {/* Onboarding Progress */}
+      <OnboardingChecklist profile={profile} />
 
       {/* Groups */}
       <Card style={{ marginBottom: 16 }}>
