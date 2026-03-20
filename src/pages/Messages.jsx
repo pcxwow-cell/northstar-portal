@@ -230,7 +230,16 @@ export default function MessagesPage({ toast, investor, initialThreadId }) {
         </div>
       ) : (() => {
         const filteredThreads = threads
-          .filter(t => !searchTerm || t.subject.toLowerCase().includes(searchTerm.toLowerCase()))
+          .filter(t => {
+            if (!searchTerm) return true;
+            const q = searchTerm.toLowerCase();
+            if (t.subject.toLowerCase().includes(q)) return true;
+            if (t.lastMessage?.body?.toLowerCase().includes(q)) return true;
+            if (t.lastMessage?.sender?.name?.toLowerCase().includes(q)) return true;
+            if (t.creator?.name?.toLowerCase().includes(q)) return true;
+            if (t.project?.toLowerCase().includes(q)) return true;
+            return false;
+          })
           .sort((a, b) => {
             if (sortMode === "unread") return (b.unread ? 1 : 0) - (a.unread ? 1 : 0) || new Date(b.lastMessage?.date || 0) - new Date(a.lastMessage?.date || 0);
             if (sortMode === "oldest") return new Date(a.lastMessage?.date || 0) - new Date(b.lastMessage?.date || 0);
@@ -256,6 +265,7 @@ export default function MessagesPage({ toast, investor, initialThreadId }) {
                   {t.lastMessage?.sender.name || t.creator.name}
                   {t.messageCount > 1 && <span> {"\u00B7"} {t.messageCount} messages</span>}
                   {t.project && <span> {"\u00B7"} {t.project}</span>}
+                  {(t.hasAttachments || t.attachmentCount > 0) && <span style={{ marginLeft: 6, fontSize: 10, color: "#999" }}>{"\uD83D\uDCCE"}</span>}
                 </div>
                 {t.lastMessage && (
                   <div style={{ fontSize: 12, color: t3, marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
