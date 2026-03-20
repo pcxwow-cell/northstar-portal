@@ -325,7 +325,17 @@ export async function markThreadRead(id) {
 
 // ─── Admin endpoints ───
 export async function fetchDashboard() {
-  if (_demoMode) return { projectCount: demoProjects.length, investorCount: 1, docCount: demoAllDocuments.length, unreadMessages: demoMessages.filter(m => m.unread).length, recentDocs: demoAllDocuments.slice(0, 5).map(d => ({ id: d.id, name: d.name, date: d.date, project: { name: d.project } })) };
+  if (_demoMode) {
+    const totalCommitted = demoProjects.reduce((s, p) => s + (p.totalRaise || 0), 0);
+    const totalCurrentValue = demoProjects.reduce((s, p) => s + (p.currentValue || 0), 0);
+    return {
+      projectCount: demoProjects.length, investorCount: 1, docCount: demoAllDocuments.length,
+      unreadMessages: demoMessages.filter(m => m.unread).length,
+      recentDocs: demoAllDocuments.slice(0, 5).map(d => ({ id: d.id, name: d.name, date: d.date, project: { name: d.project } })),
+      totalCommitted, totalCurrentValue,
+      trends: { investors: "+3 this week", projects: "1 new this month", documents: "+5 this week", messages: "+2 today" },
+    };
+  }
   return apiFetch("/admin/dashboard");
 }
 
@@ -399,8 +409,8 @@ export async function updateGroup(id, data) {
   return apiFetch(`/admin/groups/${id}`, { method: "PUT", body: JSON.stringify(data) });
 }
 
-export async function deleteGroup(id) {
-  return apiFetch(`/admin/groups/${id}`, { method: "DELETE" });
+export async function deleteGroup(id, force = false) {
+  return apiFetch(`/admin/groups/${id}${force ? "?force=true" : ""}`, { method: "DELETE" });
 }
 
 export async function fetchGroupDetail(id) {

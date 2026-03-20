@@ -7,6 +7,12 @@ import StatCard from "../components/StatCard.jsx";
 import Card from "../components/Card.jsx";
 import Button from "../components/Button.jsx";
 
+const fmtAum = (n) => {
+  if (n >= 1000000) return `$${(n / 1000000).toFixed(1)}M`;
+  if (n >= 1000) return `$${(n / 1000).toFixed(0)}K`;
+  return `$${n}`;
+};
+
 function AdminError({ message, onRetry }) {
   return (
     <div style={{ padding: 24, textAlign: "center" }}>
@@ -26,7 +32,6 @@ export default function Dashboard({ onNavigate }) {
 
   useEffect(() => {
     fetchDashboard().then(setData).catch(e => setError(e.message));
-    // Fetch pending actions data in parallel
     Promise.allSettled([
       fetchAdminInvestors({ status: "PENDING" }),
       fetchSignatureRequests(),
@@ -64,84 +69,59 @@ export default function Dashboard({ onNavigate }) {
   if (error) return <AdminError message={error} onRetry={() => { setError(null); fetchDashboard().then(setData).catch(e => setError(e.message)); }} />;
   if (!data) return <Spinner />;
 
+  const trends = data.trends || {};
   const statCards = [
-    { label: "Projects", value: data.projectCount, accent: colors.red, nav: "projects" },
-    { label: "Investors", value: data.investorCount, accent: colors.green, nav: "investors" },
-    { label: "Documents", value: data.docCount, accent: "#D4A574", nav: "documents" },
-    { label: "Unread Messages", value: data.unreadMessages, accent: "#5B8DEF", nav: "inbox" },
+    { label: "Projects", value: data.projectCount, accent: colors.red, nav: "projects", trend: trends.projects },
+    { label: "Investors", value: data.investorCount, accent: colors.green, nav: "investors", trend: trends.investors },
+    { label: "Documents", value: data.docCount, accent: "#D4A574", nav: "documents", trend: trends.documents },
+    { label: "Unread Messages", value: data.unreadMessages, accent: "#5B8DEF", nav: "inbox", trend: trends.messages },
   ];
 
   const pendingSigs = signatureRequests.filter(s => s.status === "pending" || s.status === "sent");
+
+  // Quick action handlers that navigate AND trigger actions
+  const quickActions = [
+    { label: "Invite Investor", icon: "+", nav: "investors", accent: colors.green, action: "invite" },
+    { label: "Upload Document", icon: "\u2191", nav: "documents", accent: "#D4A574", action: "upload" },
+    { label: "Post Update", icon: "\u270E", nav: "projects", accent: colors.red, action: "update" },
+    { label: "Record Distribution", icon: "$", nav: "projects", accent: "#5B8DEF", action: "distribution" },
+  ];
 
   return (
     <>
       <SectionHeader title="Admin Dashboard" size="lg" style={{ marginBottom: 32 }} />
 
-      {/* Stat Cards */}
+      {/* AUM Summary */}
+      {(data.totalCommitted || data.totalCurrentValue) && (
+        <div className="admin-stat-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
+          <Card accent={colors.red} padding="20px 24px">
+            <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: colors.mutedText, fontWeight: 500, marginBottom: 6 }}>Total Capital Committed (AUM)</div>
+            <div style={{ fontSize: 28, fontWeight: 400, fontFamily: fonts.serif }}>{fmtAum(data.totalCommitted || 0)}</div>
+            <div style={{ fontSize: 11, color: colors.mutedText, marginTop: 4 }}>Across {data.projectCount} projects</div>
+          </Card>
+          <Card accent={colors.green} padding="20px 24px">
+            <div style={{ fontSize: 10, letterSpacing: ".1em", textTransform: "uppercase", color: colors.mutedText, fontWeight: 500, marginBottom: 6 }}>Total Current Value</div>
+            <div style={{ fontSize: 28, fontWeight: 400, fontFamily: fonts.serif }}>{fmtAum(data.totalCurrentValue || 0)}</div>
+            <div style={{ fontSize: 11, color: colors.mutedText, marginTop: 4 }}>Net asset value across all projects</div>
+          </Card>
+        </div>
+      )}
+
+      {/* Stat Cards with Trends */}
       <div className="admin-stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 32 }}>
         {statCards.map((s, i) => (
-          <StatCard key={i} label={s.label} value={s.value} accent={s.accent} onClick={() => onNavigate(s.nav)} />
+          <StatCard key={i} label={s.label} value={s.value} accent={s.accent} onClick={() => onNavigate(s.nav)}
+            sub={s.trend ? <span style={{ color: colors.green, fontSize: 11 }}>{s.trend}</span> : undefined} />
         ))}
       </div>
 
       {/* Pending Actions */}
-      <Card padding="24px 28px" style={{ marginBottom: 24 }}>
-        <h2 style={{ fontSize: 16, fontWeight: 500, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-          Pending Actions
-          {!pendingLoading && (pendingInvestors.length + pendingSigs.length) > 0 && (
-            <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 10, background: `${colors.red}15`, color: colors.red, fontWeight: 600 }}>
-              {pendingInvestors.length + pendingSigs.length}
-            </span>
-          )}
-        </h2>
-        {pendingLoading ? (
-          <div style={{ padding: "12px 0", fontSize: 13, color: colors.mutedText }}>Checking for pending items...</div>
-        ) : (pendingInvestors.length === 0 && pendingSigs.length === 0) ? (
-          <div style={{ padding: "12px 0", fontSize: 13, color: colors.mutedText }}>No pending actions. You are all caught up.</div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {/* Pending Investors */}
-            {pendingInvestors.length > 0 && (
-              <div style={{ border: `1px solid ${colors.lightBorder}`, borderRadius: 8, overflow: "hidden" }}>
-                <div style={{ padding: "10px 16px", background: colors.cardBg, fontSize: 12, fontWeight: 500, color: colors.mutedText, borderBottom: `1px solid ${colors.lightBorder}` }}>
-                  Investors Awaiting Approval ({pendingInvestors.length})
-                </div>
-                {pendingInvestors.map(inv => (
-                  <div key={inv.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", borderBottom: "1px solid #F8F7F4", fontSize: 13 }}>
-                    <div>
-                      <span style={{ fontWeight: 500 }}>{inv.name}</span>
-                      <span style={{ color: colors.mutedText, marginLeft: 8 }}>{inv.email}</span>
-                    </div>
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <Button onClick={() => handleQuickApprove(inv.id)} style={{ padding: "4px 12px", fontSize: 11, background: colors.green }}>Approve</Button>
-                      <Button onClick={() => handleQuickReject(inv.id)} variant="outline" style={{ padding: "4px 12px", fontSize: 11, color: colors.red, borderColor: colors.red }}>Reject</Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            {/* Pending Signatures */}
-            {pendingSigs.length > 0 && (
-              <div style={{ border: `1px solid ${colors.lightBorder}`, borderRadius: 8, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div style={{ fontSize: 13 }}>
-                  <span style={{ fontWeight: 500 }}>{pendingSigs.length}</span> document{pendingSigs.length !== 1 ? "s" : ""} awaiting signature
-                </div>
-                <Button onClick={() => onNavigate("documents")} variant="outline" style={{ padding: "4px 12px", fontSize: 11 }}>Review</Button>
-              </div>
-            )}
-          </div>
-        )}
-      </Card>
+      <PendingActions pendingLoading={pendingLoading} pendingInvestors={pendingInvestors} pendingSigs={pendingSigs} onNavigate={onNavigate} handleQuickApprove={handleQuickApprove} handleQuickReject={handleQuickReject} />
 
       {/* Quick Actions */}
       <div className="admin-stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
-        {[
-          { label: "Invite Investor", icon: "+", nav: "investors", accent: colors.green },
-          { label: "Upload Document", icon: "\u2191", nav: "documents", accent: "#D4A574" },
-          { label: "Post Update", icon: "\u270E", nav: "projects", accent: colors.red },
-          { label: "Record Distribution", icon: "$", nav: "projects", accent: "#5B8DEF" },
-        ].map((a, i) => (
-          <Button key={i} onClick={() => onNavigate(a.nav)} style={{
+        {quickActions.map((a, i) => (
+          <Button key={i} onClick={() => onNavigate(a.nav, { action: a.action })} style={{
             background: colors.white, border: "1px solid #ECEAE5", borderRadius: 10, padding: "16px 20px",
             fontFamily: fonts.sans, fontSize: 13, fontWeight: 500, color: colors.darkText,
             display: "flex", alignItems: "center", gap: 10, transition: "all .15s",
@@ -161,11 +141,9 @@ export default function Dashboard({ onNavigate }) {
           <div style={{ fontSize: 13, color: colors.mutedText, padding: "8px 0" }}>No recent activity recorded.</div>
         ) : (
           <div style={{ position: "relative", paddingLeft: 24 }}>
-            {/* Timeline line */}
             <div style={{ position: "absolute", left: 5, top: 6, bottom: 6, width: 2, background: "#ECEAE5" }} />
             {auditLog.map((entry, i) => (
               <div key={entry.id || i} style={{ position: "relative", paddingBottom: i < auditLog.length - 1 ? 16 : 0, fontSize: 13 }}>
-                {/* Timeline dot */}
                 <div style={{ position: "absolute", left: -20, top: 5, width: 10, height: 10, borderRadius: "50%", background: colors.white, border: `2px solid ${colors.red}`, zIndex: 1 }} />
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
                   <div>
@@ -198,5 +176,56 @@ export default function Dashboard({ onNavigate }) {
         )}
       </Card>
     </>
+  );
+}
+
+// Extracted sub-component to keep main under 300 lines
+function PendingActions({ pendingLoading, pendingInvestors, pendingSigs, onNavigate, handleQuickApprove, handleQuickReject }) {
+  return (
+    <Card padding="24px 28px" style={{ marginBottom: 24 }}>
+      <h2 style={{ fontSize: 16, fontWeight: 500, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+        Pending Actions
+        {!pendingLoading && (pendingInvestors.length + pendingSigs.length) > 0 && (
+          <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 10, background: `${colors.red}15`, color: colors.red, fontWeight: 600 }}>
+            {pendingInvestors.length + pendingSigs.length}
+          </span>
+        )}
+      </h2>
+      {pendingLoading ? (
+        <div style={{ padding: "12px 0", fontSize: 13, color: colors.mutedText }}>Checking for pending items...</div>
+      ) : (pendingInvestors.length === 0 && pendingSigs.length === 0) ? (
+        <div style={{ padding: "12px 0", fontSize: 13, color: colors.mutedText }}>No pending actions. You are all caught up.</div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {pendingInvestors.length > 0 && (
+            <div style={{ border: `1px solid ${colors.lightBorder}`, borderRadius: 8, overflow: "hidden" }}>
+              <div style={{ padding: "10px 16px", background: colors.cardBg, fontSize: 12, fontWeight: 500, color: colors.mutedText, borderBottom: `1px solid ${colors.lightBorder}` }}>
+                Investors Awaiting Approval ({pendingInvestors.length})
+              </div>
+              {pendingInvestors.map(inv => (
+                <div key={inv.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", borderBottom: "1px solid #F8F7F4", fontSize: 13 }}>
+                  <div>
+                    <span style={{ fontWeight: 500 }}>{inv.name}</span>
+                    <span style={{ color: colors.mutedText, marginLeft: 8 }}>{inv.email}</span>
+                  </div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <Button onClick={() => handleQuickApprove(inv.id)} style={{ padding: "4px 12px", fontSize: 11, background: colors.green }}>Approve</Button>
+                    <Button onClick={() => handleQuickReject(inv.id)} variant="outline" style={{ padding: "4px 12px", fontSize: 11, color: colors.red, borderColor: colors.red }}>Reject</Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {pendingSigs.length > 0 && (
+            <div style={{ border: `1px solid ${colors.lightBorder}`, borderRadius: 8, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ fontSize: 13 }}>
+                <span style={{ fontWeight: 500 }}>{pendingSigs.length}</span> document{pendingSigs.length !== 1 ? "s" : ""} awaiting signature
+              </div>
+              <Button onClick={() => onNavigate("documents")} variant="outline" style={{ padding: "4px 12px", fontSize: 11 }}>Review</Button>
+            </div>
+          )}
+        </div>
+      )}
+    </Card>
   );
 }
